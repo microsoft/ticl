@@ -1,7 +1,9 @@
+from functools import partial
 from train import train, Losses
 import priors
 import encoders
 
+from priors.utils import trunc_norm_sampler_f, gamma_sampler_f
 from collections import defaultdict
 
 from priors.utils import trunc_norm_sampler_f, gamma_sampler_f
@@ -43,7 +45,7 @@ def get_gpu_memory():
 
 def load_model(path, filename, device, eval_positions, verbose):
     # TODO: This function only restores evaluation functionality but training canät be continued. It is also not flexible.
-
+    print('Loading....')
     model_state, optimizer_state, config_sample = torch.load(
         os.path.join(path, filename), map_location='cpu')
     if ('differentiable_hyperparameters' in config_sample
@@ -74,6 +76,7 @@ def load_model(path, filename, device, eval_positions, verbose):
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model[2].load_state_dict(model_state)
     model[2].to(device)
+    model[2].eval()
 
     return model, config_sample
 
@@ -103,6 +106,9 @@ def get_default_spec(test_datasets, valid_datasets):
 
 def get_mlp_prior_hyperparameters(config):
     config = {hp: (list(config[hp].values())[0]) if type(config[hp]) is dict else config[hp] for hp in config}
+
+    if 'random_feature_rotation' not in config:
+        config['random_feature_rotation'] = True
 
     if "prior_sigma_gamma_k" in config:
         sigma_sampler = gamma_sampler_f(config["prior_sigma_gamma_k"], config["prior_sigma_gamma_theta"])
@@ -155,16 +161,17 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
 
     def make_get_batch(model_proto, **extra_kwargs):
-        extra_kwargs = defaultdict(lambda: None, **extra_kwargs)
-        return (lambda batch_size, seq_len, num_features, hyperparameters
-                , device, model_proto=model_proto, get_batch=extra_kwargs['get_batch']
-                       , prior_bag_priors=extra_kwargs['prior_bag_priors']: model_proto.get_batch(
-            batch_size=batch_size
-            , seq_len=seq_len
-            , device=device
-            , get_batch=get_batch
-            , hyperparameters=hyperparameters
-            , num_features=num_features))
+        def new_get_batch(batch_size, seq_len, num_features, hyperparameters
+                , device, model_proto=model_proto
+                , **kwargs):
+            kwargs = {**extra_kwargs, **kwargs} # new args overwrite pre-specified args
+            return model_proto.get_batch(
+                batch_size=batch_size
+                , seq_len=seq_len
+                , device=device
+                , hyperparameters=hyperparameters
+                , num_features=num_features, **kwargs)
+        return new_get_batch
 
     if config['prior_type'] == 'prior_bag':
         # Prior bag combines priors
@@ -196,6 +203,14 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
             extra_kwargs['get_batch'] = get_batch_base
             model_proto = priors.flexible_categorical
 
+    if config.get('flexible'):
+        prior_hyperparameters['normalize_labels'] = True
+        prior_hyperparameters['check_is_compatible'] = True
+    prior_hyperparameters['prior_mlp_scale_weights_sqrt'] = config[
+        'prior_mlp_scale_weights_sqrt'] if 'prior_mlp_scale_weights_sqrt' in prior_hyperparameters else None
+    prior_hyperparameters['rotate_normalized_labels'] = config[
+        'rotate_normalized_labels'] if 'rotate_normalized_labels' in prior_hyperparameters else True
+
     use_style = False
 
     if 'differentiable' in config and config['differentiable']:
@@ -210,18 +225,12 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
         ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
         encoder = encoders.NanHandlingEncoder
     else:
-        encoder = encoders.Linear
+        encoder = partial(encoders.Linear, replace_nan_by_zero=True)
 
-    num_outputs = config['num_outputs'] if 'num_outputs' in config else 1
     if config['max_num_classes'] == 2:
-        if 'joint_loss' in config and config['joint_loss']:
-            loss = JointBCELossWithLogits
-        else:
-            loss = Losses.bce
+        loss = Losses.bce
     elif config['max_num_classes'] > 2:
-        loss = Losses.ce(torch.ones((config['max_num_classes'])))
-    else:
-        loss = BarDistribution(borders=get_bucket_limits(500, full_range=(-10, 10)))
+        loss = Losses.ce(config['max_num_classes'])
 
     aggregate_k_gradients = 1 if 'aggregate_k_gradients' not in config else config['aggregate_k_gradients']
     check_is_compatible = False if 'multiclass_loss_type' not in config else (config['multiclass_loss_type'] == 'compatible')
@@ -232,42 +241,40 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     config['eval_positions'] = [int(config['bptt'] * 0.95)] if config['bptt_extra_samples'] is None else [int(config['bptt'])]
 
     epochs = 0 if not should_train else config['epochs']
+    print('MODEL BUILDER', model_proto, extra_kwargs['get_batch'])
     model = train(model_proto.DataLoader
                   , loss
                   , encoder
                   , style_encoder_generator = encoders.StyleEncoder if use_style else None
                   , emsize=config['emsize']
                   , nhead=config['nhead']
+                  # For unsupervised learning change to NanHandlingEncoder
                   , y_encoder_generator= encoders.get_Canonical(config['max_num_classes']) if config.get('canonical_y_encoder', False) else encoders.Linear
                   , pos_encoder_generator=None
                   , batch_size=config['batch_size']
                   , nlayers=config['nlayers']
                   , nhid=config['emsize'] * config['nhid_factor']
                   , epochs=epochs
-                  , total_available_time_in_s=config.get('total_available_time_in_s', None)
                   , warmup_epochs=20
                   , bptt=config['bptt']
                   , gpu_device=device
                   , dropout=config['dropout']
                   , steps_per_epoch=config['num_steps']
-                  , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config['bptt'])
+                  , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
                   , load_weights_from_this_state_dict=state_dict
                   , aggregate_k_gradients=aggregate_k_gradients
-                  , check_is_compatible=check_is_compatible
                   , recompute_attn=config['recompute_attn']
                   , epoch_callback=epoch_callback
                   , bptt_extra_samples = config['bptt_extra_samples']
                   , extra_prior_kwargs_dict={
             'num_features': config['num_features']
-            , 'fuse_x_y': False
             , 'hyperparameters': prior_hyperparameters
-            , 'num_outputs':num_outputs
-            , 'dynamic_batch_size': 1 if ('num_global_att_tokens' in config and config['num_global_att_tokens']) else 2
+            #, 'dynamic_batch_size': 1 if ('num_global_att_tokens' in config and config['num_global_att_tokens']) else 2
+            , 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None)
             , **extra_kwargs
         }
                   , lr=config['lr']
                   , verbose=verbose_train,
-                  weight_decay=config.get('weight_decay', 0.0),
-                  normalize_labels=True)
+                  weight_decay=config.get('weight_decay', 0.0))
 
     return model
