@@ -63,6 +63,7 @@ def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='
 
     def check_file(e):
         model_file, model_path, results_file = get_file(e)
+        print(f"loading model from file {model_file}")
         if not Path(model_path).is_file():  # or Path(results_file).is_file():
             print('We have to download the TabPFN, as there is no checkpoint at ', model_path)
             print('It has about 100MB, so this might take a moment.')
@@ -107,14 +108,16 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, epoch=-1):
         # Model file specification (Model name, Epoch)
         i = 0
+        self.epoch = epoch
         model_key = model_string+'|'+str(device)
         if model_string in self.models_in_memory:
+            print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
-            model, c, results_file = load_model_workflow(i, -1, add_name=model_string, base_path=base_path, device=device,
+            model, c, results_file = load_model_workflow(i, epoch, add_name=model_string, base_path=base_path, device=device,
                                                          eval_addition='', only_inference=only_inference)
             self.models_in_memory[model_key] = (model, c, results_file)
             if len(self.models_in_memory) == 2:
