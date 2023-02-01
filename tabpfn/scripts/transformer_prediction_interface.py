@@ -54,24 +54,28 @@ def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='
         """
         Returns the different paths of model_file, model_path and results_file
         """
-        model_file = f'models_diff/prior_diff_real_checkpoint{add_name}_n_{i}_epoch_{e}.cpkt'
+        model_file = f'models_diff/prior_diff_real_checkpoint_{add_name}_n_{i}_epoch_{e}.cpkt'
         model_path = os.path.join(base_path, model_file)
         # print('Evaluate ', model_path)
         results_file = os.path.join(base_path,
-                                    f'models_diff/prior_diff_real_results{add_name}_n_{i}_epoch_{e}_{eval_addition}.pkl')
+                                    f'models_diff/prior_diff_real_results_{add_name}_n_{i}_epoch_{e}_{eval_addition}.pkl')
         return model_file, model_path, results_file
 
     def check_file(e):
         model_file, model_path, results_file = get_file(e)
-        print(f"loading model from file {model_file}")
-        if not Path(model_path).is_file():  # or Path(results_file).is_file():
-            print('We have to download the TabPFN, as there is no checkpoint at ', model_path)
-            print('It has about 100MB, so this might take a moment.')
-            import requests
-            url = 'https://github.com/automl/TabPFN/raw/main/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_42.cpkt'
-            r = requests.get(url, allow_redirects=True)
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            open(model_path, 'wb').write(r.content)
+        if not Path(model_path).is_file():
+            if add_name == "download":
+                print('We have to download the TabPFN, as there is no checkpoint at ', model_path)
+                print('It has about 100MB, so this might take a moment.')
+                import requests
+                url = 'https://github.com/automl/TabPFN/raw/main/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_42.cpkt'
+                r = requests.get(url, allow_redirects=True)
+                os.makedirs(os.path.dirname(model_path), exist_ok=True)
+                open(model_path, 'wb').write(r.content)
+            else:
+                model_file = None
+        else:
+            print(f"loading model from file {model_file}")
         return model_file, model_path, results_file
 
     model_file = None
@@ -106,7 +110,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     models_in_memory = {}
 
-    def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='',
+    def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
                  multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, epoch=-1):
         # Model file specification (Model name, Epoch)
