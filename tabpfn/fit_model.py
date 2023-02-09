@@ -78,10 +78,11 @@ def train_function(config_sample, i, add_name=''):
             model.last_saved_epoch = 0
         # if ((time.time() - start_time) / (maximum_runtime * 60 / N_epochs_to_save)) > model.last_saved_epoch:
         print(f"epoch: {epoch* config_sample['epochs']} save_every: {save_every}")
-        if (epoch * config_sample['epochs']) % save_every == 0:
-            print('Saving model..')
+        if (epoch * config_sample['epochs']) % save_every == 0 or model.last_saved_epoch <10:
+            file_name = f'models_diff/prior_diff_real_checkpoint{add_name}_n_{i}_epoch_{model.last_saved_epoch}.cpkt'
+            print(f'Saving model to {file_name}')
             config_sample['epoch_in_training'] = epoch
-            save_model(model, base_path, f'models_diff/prior_diff_real_checkpoint{add_name}_n_{i}_epoch_{model.last_saved_epoch}.cpkt',
+            save_model(model, base_path, file_name,
                            config_sample)
             model.last_saved_epoch = model.last_saved_epoch + 1 # TODO: Rename to checkpoint
     
@@ -104,7 +105,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_batch_64_aggregate_16'
+    model_string = '_defaults_k_aggregate_2_batch_128_lr00001'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -168,16 +169,22 @@ config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
+#config['lr'] = 0.00005
+config['lr'] = 0.00001
+#config['nlayers'] = 18
+#config['nlayers'] = 12
 config['emsize'] = 512
+#config['emsize'] = 1024
 config['nhead'] = config['emsize'] // 128
 config['bptt'] = 1024+128
 config['canonical_y_encoder'] = False
 
     
 #config['aggregate_k_gradients'] = 8
+# config['aggregate_k_gradients'] = 8
 config['aggregate_k_gradients'] = 2
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
-config['batch_size'] = 64
+config['batch_size'] = 128
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024//8
 config['epochs'] = 800

@@ -89,6 +89,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
 
 
     # learning rate
+    print(f"learning rate:{lr}")
     if lr is None:
         lr = get_openai_lr(model)
         print(f"Using OpenAI max lr of {lr}.")
