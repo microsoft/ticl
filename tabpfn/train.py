@@ -32,7 +32,7 @@ class Losses():
 
 def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=200, nlayers=6, nhead=2, dropout=0.0,
           epochs=10, steps_per_epoch=100, batch_size=200, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, input_normalization=False,
-          y_encoder_generator=None, pos_encoder_generator=None, decoder=None, extra_prior_kwargs_dict={}, scheduler=get_cosine_schedule_with_warmup,
+          y_encoder=None, pos_encoder_generator=None, decoder=None, extra_prior_kwargs_dict={}, scheduler=get_cosine_schedule_with_warmup,
           load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, style_encoder_generator=None, epoch_callback=None,
           initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, **model_extra_args
@@ -63,7 +63,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
         n_out = 1
 
     model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
-                             y_encoder=y_encoder_generator(1, emsize), input_normalization=input_normalization,
+                             y_encoder=y_encoder, input_normalization=input_normalization,
                              pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
                              decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
                              )
@@ -325,7 +325,7 @@ if __name__ == '__main__':
         return encoder_generator
 
     encoder_generator = get_encoder_generator(encoder)
-    y_encoder_generator = get_encoder_generator(y_encoder)
+    y_encoder_generator = encoders.OneHotAndLinear
 
     pos_encoder = args.__dict__.pop('pos_encoder')
 

@@ -291,7 +291,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , emsize=config['emsize']
                   , nhead=config['nhead']
                   # For unsupervised learning change to NanHandlingEncoder
-                  , y_encoder_generator= encoders.get_Canonical(config['max_num_classes']) if config.get('canonical_y_encoder', False) else encoders.Linear
+                  , y_encoder=   encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize']) # encoders.Linear(1, config['emsize'])
                   , pos_encoder_generator=None
                   , batch_size=config['batch_size']
                   , nlayers=config['nlayers']

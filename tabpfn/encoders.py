@@ -203,6 +203,28 @@ class Linear(nn.Linear):
         self.__dict__.setdefault('replace_nan_by_zero', True)
 
 
+class OneHotAndLinear(nn.Linear):
+    def __init__(self, num_classes, emsize):
+        super().__init__(num_classes, emsize)
+        self.num_classes = num_classes
+        self.emsize = emsize
+
+    def forward(self, x):
+        if (x == -100).any():
+            # mport pdb; pdb.set_trace()
+            pass
+        y = x.squeeze().long()
+        mask = y==-100
+        y[mask] = 0
+        x = torch.nn.functional.one_hot(y, self.num_classes).float()
+        x[:, :, 0][mask] = 0
+        return super().forward(x)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+
+
+
 class Conv(nn.Module):
     def __init__(self, input_size, emsize):
         super().__init__()
