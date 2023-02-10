@@ -45,7 +45,8 @@ def load_openml_list(dids, filter_for_nan=False
                      , multiclass=True
                      , max_num_classes=10
                      , shuffled=True
-                     , return_capped = False):
+                     , return_capped = False,
+                     verbose=0):
     datasets = []
     openml_list = openml.datasets.list_datasets(dids)
     print(f'Number of datasets: {len(openml_list)}')
@@ -58,8 +59,8 @@ def load_openml_list(dids, filter_for_nan=False
     for ds in datalist.index:
         modifications = {'samples_capped': False, 'classes_capped': False, 'feats_capped': False}
         entry = datalist.loc[ds]
-
-        print('Loading', entry['name'], entry.did, '..')
+        if verbose > 0:
+            print('Loading', entry['name'], entry.did, '..')
 
         if entry['NumberOfClasses'] == 0.0:
             raise Exception("Regression not supported")

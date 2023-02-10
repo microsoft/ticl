@@ -110,7 +110,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     models_in_memory = {}
 
-    def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
+    def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
                  multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, epoch=-1):
         # Model file specification (Model name, Epoch)
