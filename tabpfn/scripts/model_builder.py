@@ -58,14 +58,12 @@ def load_model_only_inference(path, filename, device):
     encoder = encoder(config_sample['num_features'], config_sample['emsize'])
 
     nhid = config_sample['emsize'] * config_sample['nhid_factor']
-    y_encoder_generator = encoders.get_Canonical(config_sample['max_num_classes']) \
-        if config_sample.get('canonical_y_encoder', False) else encoders.Linear
 
     assert config_sample['max_num_classes'] > 2
     loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config_sample['max_num_classes'])))
 
     model = TransformerModel(encoder, n_out, config_sample['emsize'], config_sample['nhead'], nhid,
-                             config_sample['nlayers'], y_encoder=y_encoder_generator(1, config_sample['emsize']),
+                             config_sample['nlayers'], y_encoder=encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize']),
                              dropout=config_sample['dropout'],
                              efficient_eval_masking=config_sample['efficient_eval_masking'])
 
