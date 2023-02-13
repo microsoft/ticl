@@ -76,7 +76,7 @@ def load_model_only_inference(path, filename, device):
         raise ValueError(f"Unknown y_encoder: {config_sample['y_encoder']}")
 
     model = TransformerModel(encoder, n_out, config_sample['emsize'], config_sample['nhead'], nhid,
-                             config_sample['nlayers'], y_encoder=encoders.OneHotAndLinear(y_encoder, emsize=config_sample['emsize']),
+                             config_sample['nlayers'], y_encoder=y_encoder,
                              dropout=config_sample['dropout'],
                              efficient_eval_masking=config_sample['efficient_eval_masking'])
 
