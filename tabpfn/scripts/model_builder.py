@@ -62,8 +62,21 @@ def load_model_only_inference(path, filename, device):
     assert config_sample['max_num_classes'] > 2
     loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config_sample['max_num_classes'])))
 
+    if 'y_encoder' not in config_sample:
+        if 'onehot' in filename:
+            config_sample['y_encoder'] = 'one_hot'
+        else:
+            config_sample['y_encoder'] = 'linear'
+
+    if config_sample['y_encoder'] == 'one_hot':
+        y_encoder = encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize'])
+    elif config_sample['y_encoder'] == 'linear':
+        y_encoder = encoders.Linear(1, emsize=config_sample['emsize'])
+    else:
+        raise ValueError(f"Unknown y_encoder: {config_sample['y_encoder']}")
+
     model = TransformerModel(encoder, n_out, config_sample['emsize'], config_sample['nhead'], nhid,
-                             config_sample['nlayers'], y_encoder=encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize']),
+                             config_sample['nlayers'], y_encoder=encoders.OneHotAndLinear(y_encoder, emsize=config_sample['emsize']),
                              dropout=config_sample['dropout'],
                              efficient_eval_masking=config_sample['efficient_eval_masking'])
 
@@ -282,6 +295,13 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
     epochs = 0 if not should_train else config['epochs']
     #print('MODEL BUILDER', model_proto, extra_kwargs['get_batch'])
+    if config['y_encoder'] == 'one_hot':
+        y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
+    elif config['y_encoder'] == 'linear':
+        y_encoder = encoders.Linear(1, emsize=config['emsize'])
+    else:
+        raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
+
     model = train(model_proto.DataLoader
                   , loss
                   , encoder
@@ -289,7 +309,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , emsize=config['emsize']
                   , nhead=config['nhead']
                   # For unsupervised learning change to NanHandlingEncoder
-                  , y_encoder=   encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize']) # encoders.Linear(1, config['emsize'])
+                  , y_encoder=y_encoder # encoders.Linear(1, config['emsize'])
                   , pos_encoder_generator=None
                   , batch_size=config['batch_size']
                   , nlayers=config['nlayers']

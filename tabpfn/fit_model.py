@@ -177,7 +177,7 @@ config['emsize'] = 512
 #config['emsize'] = 1024
 config['nhead'] = config['emsize'] // 128
 config['bptt'] = 1024+128
-config['canonical_y_encoder'] = False
+config['y_encoder'] = "one_hot"
 
     
 #config['aggregate_k_gradients'] = 8
