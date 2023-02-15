@@ -15,6 +15,8 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils import column_or_1d
+from sklearn.utils import gen_batches
+
 from pathlib import Path
 from tabpfn.scripts.model_builder import load_model, load_model_only_inference
 import os
@@ -193,7 +195,15 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         # Return the classifier
         return self
 
-    def predict_proba(self, X, normalize_with_test=False):
+    def predict_proba(self, X):
+        batches = gen_batches(len(X), batch_size=1024)
+        probas = []
+        for batch in batches:
+            probas.append(self._predict_proba(X[batch]))
+        probas = np.concatenate(probas, axis=0)
+        return probas
+
+    def _predict_proba(self, X, normalize_with_test=False):
         # Check is fit had been called
         check_is_fitted(self)
 
