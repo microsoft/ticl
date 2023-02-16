@@ -16,12 +16,15 @@ from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils import column_or_1d
 from sklearn.utils import gen_batches
+from sklearn.preprocessing import OneHotEncoder
 
 from pathlib import Path
 from tabpfn.scripts.model_builder import load_model, load_model_only_inference
 import os
 import pickle
 import io
+from tqmd import tqmd
+from annoy import AnnoyIndex
 
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
@@ -195,11 +198,11 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         # Return the classifier
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, X, normalize_with_test=False):
         batches = gen_batches(len(X), batch_size=1024)
         probas = []
         for batch in batches:
-            probas.append(self._predict_proba(X[batch]))
+            probas.append(self._predict_proba(X[batch], normalize_with_test=normalize_with_test))
         probas = np.concatenate(probas, axis=0)
         return probas
 
@@ -241,6 +244,65 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         if return_winning_probability:
             return y, p.max(axis=-1)
         return y
+    
+
+class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, **kwargs):
+        self.predict_batch_size = predict_batch_size
+        self.n_neighbors = n_neighbors
+        self.kwargs = kwargs
+        self.verbose = verbose
+    
+    def fit(self, X, y):
+        self.X_ = X
+        self.y_ = y
+        self.clf_ = TabPFNClassifier(**self.kwargs)
+        self.classes_ = np.unique(y)
+
+        f = X.shape[1]
+        t = AnnoyIndex(f, 'angular')
+        for i in range(len(X)):
+            v = X[i]
+            t.add_item(i, v)
+        t.build(self.n_trees_annoy)
+
+    def predict_proba(self, X):
+        pred_probs = []
+        batches = gen_batches(len(X), batch_size=self.predict_batch_size)
+        if self.verbose :
+            iter = tqdm(list(batches))
+        else:
+            iter = batches
+
+        for batch in iter:
+            closest = []
+            this_X_test = X[batch]
+            for row in this_X_test:
+                closest.extend(t.get_nns_by_vector(row, 20))
+            closest = np.unique(closest)
+            
+            this_X_train = self.X_[closest]
+            this_y_train = self.y_[closest]
+            if len(np.unique(this_y_train)) > 1:
+                self.clf_.fit(this_X_train, this_y_train)
+                y_pred_prob = self.clf_.predict_proba(this_X_test)
+                if y_pred_prob.shape[1] != 7:
+                    reshaped_y_prob = np.zeros((len(this_X_test), 7))
+                    unique_y = np.unique(this_y_train)
+                    reshaped_y_prob[:, unique_y - 1] = y_pred_prob
+                    y_pred_prob = reshaped_y_prob
+            else:
+                # only one class present, gotta be that class
+                y_pred_prob = OneHotEncoder(sparse_output=False, categories=[list(range(1, 8))]).fit_transform(this_y_train[[0]].reshape(-1, 1))
+            pred_probs.append(y_pred_prob)
+            
+        return np.concatenate(pred_probs)
+
+    def predict(self, X, y):
+        p = self.predict_proba(X)
+        y = np.argmax(p, axis=-1)
+        y = self.classes_.take(np.asarray(y, dtype=np.intp))
+
 
 import time
 def transformer_predict(model, eval_xs, eval_ys, eval_position,
