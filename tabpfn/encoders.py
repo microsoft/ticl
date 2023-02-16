@@ -184,6 +184,24 @@ class NanHandlingEncoder(nn.Module):
         else:
             x = torch.nan_to_num(x, nan=0.0)
         return self.layer(x)
+    
+class FeaturewiseMLP(nn.Module):
+    def __init__(self, num_features, emsize=512, hidden_size=64, replace_nan_by_zero=False):
+        super().__init__()
+        self.emsize = emsize
+        self.num_features = num_features
+        self.hidden_size = hidden_size
+        self.replace_nan_by_zero = replace_nan_by_zero
+
+        self.mlp = nn.Sequential(nn.Linear(1, hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, emsize))
+        
+    def forward(self, x):
+        if self.replace_nan_by_zero:
+            x = torch.nan_to_num(x, nan=0.0)
+        result = self.mlp(x.unsqueeze(-1))
+        return result.sum(-2)
 
 
 class Linear(nn.Linear):
@@ -211,7 +229,6 @@ class OneHotAndLinear(nn.Linear):
 
     def forward(self, x):
         if (x == -100).any():
-            # mport pdb; pdb.set_trace()
             pass
         y = x.squeeze().long()
         mask = y==-100

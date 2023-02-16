@@ -280,6 +280,9 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     else:
         encoder = partial(encoders.Linear, replace_nan_by_zero=True)
 
+    if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
+        encoder = encoders.FeaturewiseMLP
+
     if config['max_num_classes'] == 2:
         loss = Losses.bce
     elif config['max_num_classes'] > 2:
