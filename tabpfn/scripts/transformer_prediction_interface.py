@@ -15,12 +15,16 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils import column_or_1d
-from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import gen_batches
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+
 from pathlib import Path
 from tabpfn.scripts.model_builder import load_model, load_model_only_inference
 import os
 import pickle
 import io
+from tqdm import tqdm
+from annoy import AnnoyIndex
 
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
@@ -197,6 +201,14 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict_proba(self, X, normalize_with_test=False):
+        batches = gen_batches(len(X), batch_size=1024)
+        probas = []
+        for batch in batches:
+            probas.append(self._predict_proba(X[batch], normalize_with_test=normalize_with_test))
+        probas = np.concatenate(probas, axis=0)
+        return probas
+
+    def _predict_proba(self, X, normalize_with_test=False):
         # Check is fit had been called
         check_is_fitted(self)
 
@@ -234,6 +246,96 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         if return_winning_probability:
             return y, p.max(axis=-1)
         return y
+
+class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, n_neighbors=10, n_trees=10):
+        self.n_neighbors = n_neighbors
+        self.n_trees = n_trees
+
+    def fit(self, X, y):
+        self.X_ = X
+        self.y_ = y
+        self.ann_index = AnnoyIndex(X.shape[1], 'angular')
+        for i in range(len(X)):
+            v = X[i]
+            self.ann_index.add_item(i, v)
+        self.ann_index.build(self.n_trees)
+
+        self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
+
+    def predict_proba(self, X):
+        pred_probs = []
+        for i in range(len(X)):
+            closest = self.ann_index.get_nns_by_vector(X[i], self.n_neighbors)
+            this_y_train = self.y_onehot_[closest]
+            pred_probs.append(this_y_train.mean(axis=0))
+        y_pred_prob = np.c_[pred_probs]
+        return y_pred_prob
+    
+    def predict(self, X):
+        p = self.predict_proba(X)
+        y = np.argmax(p, axis=-1)
+        return self.classes_.take(np.asarray(y, dtype=np.intp))
+
+class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, **kwargs):
+        self.predict_batch_size = predict_batch_size
+        self.n_neighbors = n_neighbors
+        self.kwargs = kwargs
+        self.verbose = verbose
+        self.n_trees_annoy = n_trees_annoy
+    
+    def fit(self, X, y):
+        self.X_ = X
+        self.y_ = y
+        self.clf_ = TabPFNClassifier(**self.kwargs)
+        self.classes_ = np.unique(y)
+        self.le_ = LabelEncoder().fit(y)
+
+        f = X.shape[1]
+        self.ann_index = AnnoyIndex(f, 'angular')
+        for i in range(len(X)):
+            v = X[i]
+            self.ann_index.add_item(i, v)
+        self.ann_index.build(self.n_trees_annoy)
+
+    def predict_proba(self, X):
+        pred_probs = []
+        batches = gen_batches(len(X), batch_size=self.predict_batch_size)
+        if self.verbose :
+            iter = tqdm(list(batches))
+        else:
+            iter = batches
+
+        for batch in iter:
+            closest = []
+            this_X_test = X[batch]
+            for row in this_X_test:
+                closest.extend(self.ann_index.get_nns_by_vector(row, self.n_neighbors))
+            closest = np.unique(closest)
+            
+            this_X_train = self.X_[closest]
+            this_y_train = self.y_[closest]
+            if len(np.unique(this_y_train)) > 1:
+                self.clf_.fit(this_X_train, this_y_train)
+                y_pred_prob = self.clf_.predict_proba(this_X_test)
+                if y_pred_prob.shape[1] != len(self.classes_):
+                    reshaped_y_prob = np.zeros((len(this_X_test), len(self.classes_)))
+                    unique_y_indexes = self.le_.transform(np.unique(this_y_train))
+                    reshaped_y_prob[:, unique_y_indexes] = y_pred_prob
+                    y_pred_prob = reshaped_y_prob
+            else:
+                # only one class present, gotta be that class
+                y_pred_prob = OneHotEncoder(sparse_output=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1))
+            pred_probs.append(y_pred_prob)
+            
+        return np.concatenate(pred_probs)
+
+    def predict(self, X):
+        p = self.predict_proba(X)
+        y = np.argmax(p, axis=-1)
+        return self.classes_.take(np.asarray(y, dtype=np.intp))
+
 
 import time
 def transformer_predict(model, eval_xs, eval_ys, eval_position,
