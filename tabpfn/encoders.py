@@ -216,9 +216,14 @@ class OneHotAndLinear(nn.Linear):
         y = x.squeeze().long()
         mask = y==-100
         y[mask] = 0
-        x = torch.nn.functional.one_hot(y, self.num_classes).float()
-        x[:, :, 0][mask] = 0
-        return super().forward(x)
+        out = torch.nn.functional.one_hot(y, self.num_classes).float()
+        
+        if out.ndim == 3:
+            out[:, :, 0][mask] = 0
+        else:
+            out[:, 0][mask] = 0
+            out = out.unsqueeze(1)
+        return super().forward(out)
 
     def __setstate__(self, state):
         super().__setstate__(state)
