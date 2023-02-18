@@ -90,6 +90,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
 
     # learning rate
     print(f"learning rate:{lr}")
+    print(f"steps_per_epoch:{steps_per_epoch}")
     if lr is None:
         lr = get_openai_lr(model)
         print(f"Using OpenAI max lr of {lr}.")
@@ -188,6 +189,8 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
     total_positional_losses = float('inf')
     try:
         for epoch in (range(1, epochs + 1) if epochs is not None else itertools.count(1)):
+            if verbose:
+                print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
             total_loss, total_positional_losses, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
