@@ -433,7 +433,10 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         # Removing empty features
         eval_xs = eval_xs[:, 0, :]
-        sel = [len(torch.unique(eval_xs[0:eval_ys.shape[0], col])) > 1 for col in range(eval_xs.shape[1])]
+        sel = eval_xs[0:eval_ys.shape[0]].var(dim=0) > 0
+        # sel2 = [len(torch.unique(eval_xs[0:eval_ys.shape[0], col])) > 1 for col in range(eval_xs.shape[1])]
+        # if (np.array(sel) != np.array(sel2)).any():
+        #    import pdb; pdb.set_trace()
         eval_xs = eval_xs[:, sel]
 
         warnings.simplefilter('error')
