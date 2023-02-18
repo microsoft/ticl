@@ -186,7 +186,7 @@ class NanHandlingEncoder(nn.Module):
         return self.layer(x)
     
 class FeaturewiseMLP(nn.Module):
-    def __init__(self, num_features, emsize=512, hidden_size=64, replace_nan_by_zero=False):
+    def __init__(self, num_features, emsize=512, hidden_size=512, replace_nan_by_zero=False):
         super().__init__()
         self.emsize = emsize
         self.num_features = num_features
