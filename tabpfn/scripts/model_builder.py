@@ -52,6 +52,9 @@ def load_model_only_inference(path, filename, device):
     else:
         encoder = partial(encoders.Linear, replace_nan_by_zero=True)
 
+    if 'encoder' in config_sample and config_sample['encoder'] == 'featurewise_mlp':
+        encoder = encoders.FeaturewiseMLP
+
     n_out = config_sample['max_num_classes']
 
     device = device if torch.cuda.is_available() else 'cpu:0'
@@ -119,6 +122,12 @@ def load_model(path, filename, device, eval_positions, verbose):
     config_sample['bptt_extra_samples'] = None
 
     #print('Memory', str(get_gpu_memory()))
+    if 'y_encoder' not in config_sample:
+        if 'onehot' in filename:
+            config_sample['y_encoder'] = 'one_hot'
+        else:
+            config_sample['y_encoder'] = 'linear'
+
 
     model = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
@@ -298,6 +307,12 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
     epochs = 0 if not should_train else config['epochs']
     #print('MODEL BUILDER', model_proto, extra_kwargs['get_batch'])
+    if 'y_encoder' not in config:
+        if True:
+            config['y_encoder'] = 'one_hot'
+        else:
+            config['y_encoder'] = 'linear'
+
     if config['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
     elif config['y_encoder'] == 'linear':
