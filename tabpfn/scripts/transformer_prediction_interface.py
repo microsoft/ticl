@@ -253,17 +253,18 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
         self.n_trees = n_trees
 
     def fit(self, X, y):
-        self.X_ = X
-        self.y_ = y
-        self.ann_index = AnnoyIndex(X.shape[1], 'angular')
+        self.X_ = np.array(X)
+        self.y_ = np.array(y)
+        self.ann_index = AnnoyIndex(self.X_.shape[1], 'angular')
         for i in range(len(X)):
-            v = X[i]
+            v = self.X_[i]
             self.ann_index.add_item(i, v)
         self.ann_index.build(self.n_trees)
 
-        self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
+        self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(self.y_.reshape(-1, 1))
 
     def predict_proba(self, X):
+        X = np.array(X)
         pred_probs = []
         for i in range(len(X)):
             closest = self.ann_index.get_nns_by_vector(X[i], self.n_neighbors)
@@ -285,21 +286,23 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
         self.verbose = verbose
         self.n_trees_annoy = n_trees_annoy
     
-    def fit(self, X, y):
-        self.X_ = X
-        self.y_ = y
+    def fit(self, X, y, overwrite_warning=False):
+        self.X_ = np.array(X)
+        self.y_ = np.array(y)
+        self.overwrite_warning_ = overwrite_warning
         self.clf_ = TabPFNClassifier(**self.kwargs)
-        self.classes_ = np.unique(y)
-        self.le_ = LabelEncoder().fit(y)
+        self.classes_ = np.unique(self.y_)
+        self.le_ = LabelEncoder().fit(self.y_)
 
-        f = X.shape[1]
+        f = self.X_.shape[1]
         self.ann_index = AnnoyIndex(f, 'angular')
         for i in range(len(X)):
-            v = X[i]
+            v = self.X_[i]
             self.ann_index.add_item(i, v)
         self.ann_index.build(self.n_trees_annoy)
 
     def predict_proba(self, X):
+        X = np.array(X)
         pred_probs = []
         batches = gen_batches(len(X), batch_size=self.predict_batch_size)
         if self.verbose :
@@ -317,7 +320,7 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
             this_X_train = self.X_[closest]
             this_y_train = self.y_[closest]
             if len(np.unique(this_y_train)) > 1:
-                self.clf_.fit(this_X_train, this_y_train)
+                self.clf_.fit(this_X_train, this_y_train, overwrite_warning=self.overwrite_warning_)
                 y_pred_prob = self.clf_.predict_proba(this_X_test)
                 if y_pred_prob.shape[1] != len(self.classes_):
                     reshaped_y_prob = np.zeros((len(this_X_test), len(self.classes_)))
