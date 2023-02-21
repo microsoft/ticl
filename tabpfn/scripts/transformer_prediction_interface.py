@@ -334,7 +334,11 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
                     y_pred_prob = reshaped_y_prob
             else:
                 # only one class present, gotta be that class
-                y_pred_prob = OneHotEncoder(sparse_output=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1)).repeat(len(this_X_test), axis=0)
+                try:
+                    y_pred_prob = OneHotEncoder(sparse_output=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1)).repeat(len(this_X_test), axis=0)
+                except TypeError:
+                    y_pred_prob = OneHotEncoder(sparse=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1)).repeat(len(this_X_test), axis=0)
+
             assert len(y_pred_prob) == len(this_X_test)
             pred_probs.append(y_pred_prob)
         results = np.concatenate(pred_probs)
