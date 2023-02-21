@@ -279,17 +279,17 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
         return self.classes_.take(np.asarray(y, dtype=np.intp))
 
 class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, **kwargs):
+    def __init__(self, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, overwrite_warning=False, **kwargs):
         self.predict_batch_size = predict_batch_size
         self.n_neighbors = n_neighbors
         self.kwargs = kwargs
         self.verbose = verbose
+        self.overwrite_warning = overwrite_warning
         self.n_trees_annoy = n_trees_annoy
     
     def fit(self, X, y, overwrite_warning=False):
         self.X_ = np.array(X)
         self.y_ = np.array(y)
-        self.overwrite_warning_ = overwrite_warning
         self.clf_ = TabPFNClassifier(**self.kwargs)
         self.classes_ = np.unique(self.y_)
         self.le_ = LabelEncoder().fit(self.y_)
@@ -320,7 +320,7 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
             this_X_train = self.X_[closest]
             this_y_train = self.y_[closest]
             if len(np.unique(this_y_train)) > 1:
-                self.clf_.fit(this_X_train, this_y_train, overwrite_warning=self.overwrite_warning_)
+                self.clf_.fit(this_X_train, this_y_train, overwrite_warning=self.overwrite_warning)
                 y_pred_prob = self.clf_.predict_proba(this_X_test)
                 if y_pred_prob.shape[1] != len(self.classes_):
                     reshaped_y_prob = np.zeros((len(this_X_test), len(self.classes_)))
@@ -329,10 +329,12 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
                     y_pred_prob = reshaped_y_prob
             else:
                 # only one class present, gotta be that class
-                y_pred_prob = OneHotEncoder(sparse_output=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1))
+                y_pred_prob = OneHotEncoder(sparse_output=False, categories=[self.classes_]).fit_transform(this_y_train[[0]].reshape(-1, 1)).repeat(len(this_X_test), axis=0)
+            assert len(y_pred_prob) == len(this_X_test)
             pred_probs.append(y_pred_prob)
-            
-        return np.concatenate(pred_probs)
+        results = np.concatenate(pred_probs)
+        assert len(results) == len(X)
+        return results
 
     def predict(self, X):
         p = self.predict_proba(X)
