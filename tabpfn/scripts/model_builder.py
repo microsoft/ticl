@@ -71,6 +71,10 @@ def load_model_only_inference(path, filename, device):
         else:
             config_sample['y_encoder'] = 'linear'
 
+    if 'encoder' in config_sample and config_sample['encoder'] == 'featurewise_mlp':
+        encoder = encoders.FeaturewiseMLP
+
+
     if config_sample['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize'])
     elif config_sample['y_encoder'] == 'linear':
