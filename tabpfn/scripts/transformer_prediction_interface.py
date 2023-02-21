@@ -255,13 +255,17 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         self.X_ = X
         self.y_ = y
+        self.classes_ = np.unique(y)
         self.ann_index = AnnoyIndex(X.shape[1], 'angular')
         for i in range(len(X)):
             v = X[i]
             self.ann_index.add_item(i, v)
         self.ann_index.build(self.n_trees)
-
-        self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
+        try: 
+            self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
+        except TypeError:  # old sklearn
+            self.y_onehot_  = OneHotEncoder(sparse=False).fit_transform(y.reshape(-1, 1))
+        return self
 
     def predict_proba(self, X):
         pred_probs = []
@@ -298,6 +302,7 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
             v = X[i]
             self.ann_index.add_item(i, v)
         self.ann_index.build(self.n_trees_annoy)
+        return self
 
     def predict_proba(self, X):
         pred_probs = []
