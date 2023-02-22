@@ -282,19 +282,20 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
         y = np.argmax(p, axis=-1)
         return self.classes_.take(np.asarray(y, dtype=np.intp))
 
-class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, overwrite_warning=False, **kwargs):
+class NeighborsMetaClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, clf=None, predict_batch_size=10, n_neighbors=10, n_trees_annoy=10, verbose=0, overwrite_warning=False):
         self.predict_batch_size = predict_batch_size
         self.n_neighbors = n_neighbors
-        self.kwargs = kwargs
+        if clf is None:
+            clf = TabPFNClassifier(**self.kwargs)
+        self.clf = clf
         self.verbose = verbose
         self.overwrite_warning = overwrite_warning
         self.n_trees_annoy = n_trees_annoy
     
-    def fit(self, X, y, overwrite_warning=False):
+    def fit(self, X, y):
         self.X_ = np.array(X)
         self.y_ = np.array(y)
-        self.clf_ = TabPFNClassifier(**self.kwargs)
         self.classes_ = np.unique(self.y_)
         self.le_ = LabelEncoder().fit(self.y_)
 
@@ -325,8 +326,12 @@ class NeighborsTabPFNClassifier(ClassifierMixin, BaseEstimator):
             this_X_train = self.X_[closest]
             this_y_train = self.y_[closest]
             if len(np.unique(this_y_train)) > 1:
-                self.clf_.fit(this_X_train, this_y_train, overwrite_warning=self.overwrite_warning)
-                y_pred_prob = self.clf_.predict_proba(this_X_test)
+                if isinstance(self.clf, TabPFNClassifier):
+                    self.clf.fit(this_X_train, this_y_train, overwrite_warning=self.overwrite_warning)
+                else:
+                    self.clf.fit(this_X_train, this_y_train)
+
+                y_pred_prob = self.clf.predict_proba(this_X_test)
                 if y_pred_prob.shape[1] != len(self.classes_):
                     reshaped_y_prob = np.zeros((len(this_X_test), len(self.classes_)))
                     unique_y_indexes = self.le_.transform(np.unique(this_y_train))
