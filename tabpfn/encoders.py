@@ -193,14 +193,16 @@ class FeaturewiseMLP(nn.Module):
         self.hidden_size = hidden_size
         self.replace_nan_by_zero = replace_nan_by_zero
 
-        self.mlp = nn.Sequential(nn.Linear(1, hidden_size),
+        self.mlp = nn.Sequential(nn.Linear(2, hidden_size),
                                  nn.ReLU(),
                                  nn.Linear(hidden_size, emsize))
         
     def forward(self, x):
         if self.replace_nan_by_zero:
             x = torch.nan_to_num(x, nan=0.0)
-        result = self.mlp(x.unsqueeze(-1))
+        my_range = torch.arange(0, self.num_features).float().broadcast_to(x.shape)
+        x2 = torch.cat([x.unsqueeze(-1), my_range.unsqueeze(-1)], -1)
+        result = self.mlp(x2)
         return result.sum(-2)
 
 
