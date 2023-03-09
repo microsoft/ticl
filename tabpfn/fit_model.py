@@ -105,7 +105,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_feature_wise_experiments'
+    model_string = '_feature_wise_experiments_nlayers12_deep_mlp'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -172,8 +172,8 @@ config["mix_activations"] = False # False heisst eig True
 #config['lr'] = 0.00005
 config['lr'] = 0.0001
 #config['nlayers'] = 18
-#config['nlayers'] = 12
-config['nlayers'] = 6
+config['nlayers'] = 12
+# config['nlayers'] = 6
 config['emsize'] = 512
 #config['emsize'] = 1024
 # config['nhead'] = config['emsize'] // 128
@@ -194,6 +194,8 @@ config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety.
 
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
+
+config['weight_decay'] = 1e-5
 
 config_sample = evaluate_hypers(config)
 
