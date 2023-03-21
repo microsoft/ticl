@@ -124,7 +124,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
 config, model_string = reload_config(longer=1)
 
 path = "models_diff"
-filename = "prior_diff_real_checkpoint_batch_512_onehot_classes_multiclass_02_13_2023_17_36_07_n_0_epoch_20.cpkt"
+filename = "prior_diff_real_checkpointtry_retraining_batch_512_onehot_n_0_epoch_18.cpkt"
 # model = get_model(config_sample, device, should_train=True, verbose=1)
 config['device'] = 'cuda'
 # import pdb; pdb.set_trace()
@@ -133,14 +133,18 @@ model_state, optimizer_state, config_sample = torch.load(
 module_prefix = 'module.'
 model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
 # model_old, config_sample =  load_model(path=path, filename=filename, device=config['device'], eval_positions=None, verbose=1)
-model_string = "try_retraining_batch_512_onehot"
+model_string = "_retraining_batch_2048_lr0001"
 #config_sample['emsize'] = 512
 config_sample['differentiable_hyperparameters']["prior_mlp_activations"] ={'distribution': 'meta_choice_mixed', 'choice_values': [
             torch.nn.Tanh
             , torch.nn.Identity
             , torch.nn.ReLU
         ]}
-config_sample['batch_size'] = 512
+config_sample['batch_size'] = 2048
+config_sample['epochs'] = 100
+config_sample['lr'] = 0.00001
+config_sample['num_steps'] = 512 / 32
+config_sample['aggregate_k_gradients'] = 32
 config_sample['num_classes'] = uniform_int_sampler_f(2, config_sample['max_num_classes'])
 config_sample['num_features_used'] = {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
 

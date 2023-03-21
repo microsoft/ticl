@@ -195,24 +195,29 @@ class FeaturewiseMLP(nn.Module):
         self.d_per_feature = 6
 
 
-        self.mlp = nn.Sequential(nn.Linear(2 + self.d_per_feature * 2 , hidden_size),
+#        self.mlp = nn.Sequential(nn.Linear(2 + self.d_per_feature * 2 , hidden_size),
+#                                 nn.ReLU(),
+#                                 nn.Linear(hidden_size, emsize))
+#        self.mlp = nn.Linear(num_features, emsize)
+        self.mlp = nn.Sequential(nn.Linear(num_features * (self.d_per_feature + 1),  hidden_size),
                                  nn.ReLU(),
                                  nn.Linear(hidden_size, emsize))
-        
+
     def forward(self, x):
         if self.replace_nan_by_zero:
             x = torch.nan_to_num(x, nan=0.0)
-        x = x.unsqueeze(-1)
-        my_range = torch.arange(0, self.num_features).float().unsqueeze(-1).broadcast_to(x.shape)
+        #x = x.unsqueeze(-1)
+        my_range = torch.arange(0, self.num_features, device=x.get_device()).float().broadcast_to(x.shape)
         interval_size = 100
-        div_term = (1./interval_size) * 2*math.pi*torch.exp(torch.arange(0, self.d_per_feature, 2).float()*math.log(math.sqrt(2)))
-        sin_range = torch.sin(my_range * div_term)
-        cos_range = torch.cos(my_range * div_term)
-        sin_x = torch.sin(x * div_term)
-        cos_x = torch.cos(x * div_term)
-        x2 = torch.cat([x, sin_x, cos_x, sin_range, cos_range, my_range], -1)
+        div_term = (1./interval_size) * 2*math.pi*torch.exp(torch.arange(0, self.d_per_feature, 2, device=x.get_device()).float()*math.log(math.sqrt(2)))
+        sin_range = torch.sin(my_range.unsqueeze(-1) * div_term)
+        cos_range = torch.cos(my_range.unsqueeze(-1) * div_term)
+        #sin_x = torch.sin(x * div_term)
+        #cos_x = torch.cos(x * div_term)
+        new_shape = x.shape[:-1] + (-1,)
+        x2 = torch.cat([x, sin_range.reshape(new_shape), cos_range.reshape(new_shape)], -1)
         result = self.mlp(x2)
-        return result.sum(-2)
+        return result
 
 
 class Linear(nn.Linear):

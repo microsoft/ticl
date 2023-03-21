@@ -9,6 +9,7 @@ from contextlib import nullcontext
 
 import torch
 from torch import nn
+from torch import autograd
 
 import tabpfn.utils as utils
 from tabpfn.transformer import TransformerModel
@@ -123,7 +124,6 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
                     single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
                 else:
                     single_eval_pos = targets.shape[0] - bptt_extra_samples
-
                 with autocast(enabled=scaler is not None):
                     # If style is set to None, it should not be transferred to device
                     output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
