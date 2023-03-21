@@ -73,8 +73,8 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
         model.load_state_dict(load_weights_from_this_state_dict)
     if initialize_with_model is not None:
         model.init_from_small_model(initialize_with_model)
-
-    print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
+    if verbose:
+        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
 
     try:
         for (k, v), (k2, v2) in zip(model.state_dict().items(), initialize_with_model.state_dict().items()):
@@ -168,7 +168,9 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
 
                 step_time = time.time() - before_forward
 
-                if not torch.isnan(loss):
+                if torch.isnan(loss):
+                    print("NAN loss encountered")
+                else:
                     total_loss += losses.mean().cpu().detach().item()
                     total_positional_losses += losses.mean(1).cpu().detach() if single_eval_pos is None else \
                         nn.functional.one_hot(torch.tensor(single_eval_pos), bptt)*\
