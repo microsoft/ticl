@@ -7,7 +7,7 @@ import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
 
-from transformer_prediction_interface import TabPFNClassifier
+from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 class NeuralNetwork(nn.Module):
     def __init__(self, n_features=784, n_classes=10, hidden_size=512):
@@ -31,10 +31,11 @@ class NeuralNetwork(nn.Module):
 
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3):
+    def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3, verbose=0):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
+        self.verbose = verbose
         
     def fit(self, X, y):
         if not isinstance(y, torch.Tensor):
@@ -60,7 +61,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
                 loss.backward()
                 optimizer.step()
 
-                if epoch % 10 == 0:
+                if epoch % 10 == 0 and self.verbose:
                     loss, current = loss.item(), (batch + 1) * len(X)
                     print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         self.model_ = model
@@ -89,3 +90,6 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         return self.mlp_.predict(X)
     def predict_proba(self, X):
         return self.mlp_.predict_proba(X)
+    @property
+    def classes_(self):
+        return self.mlp_.classes_

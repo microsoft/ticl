@@ -117,13 +117,14 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, verbose=0):
         # Model file specification (Model name, Epoch)
         i = 0
         self.epoch = epoch
         model_key = model_string+'|'+str(device)
         if model_string in self.models_in_memory:
-            print(f"using model {model_key}")
+            if verbose:
+                print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
             model, c, results_file = load_model_workflow(i, epoch, add_name=model_string, base_path=base_path, device=device,
@@ -133,6 +134,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                 print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
         #style, temperature = self.load_result_minimal(style_file, i, e)
 
+        self.verbose = verbose
         self.device = device
         self.model = model
         self.c = c
@@ -233,7 +235,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          multiclass_decoder=self.multiclass_decoder,
                                          feature_shift_decoder=self.feature_shift_decoder,
                                          differentiable_hps_as_style=self.differentiable_hps_as_style,
-                                         seed=self.seed,
+                                         seed=self.seed, verbose=self.verbose,
                                          **get_params_from_config(self.c))
         prediction_, y_ = prediction.squeeze(0), y_full.squeeze(1).long()[eval_pos:]
 
