@@ -7,6 +7,9 @@ from sklearn.model_selection import cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 
+from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
+
 def make_logreg(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore'), categorical_features), remainder=cont_pipe)
@@ -27,21 +30,31 @@ def make_rf(categorical_features):
 
 def make_tabpfn(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
-    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False,max_categories=10), categorical_features), remainder=cont_pipe)
+    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False, max_categories=10), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, TabPFNClassifier())
 
+def make_mlp(categorical_features):
+    cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
+    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
+    return make_pipeline(preprocess, TorchMLP(n_epochs=100))
+
+def make_distilled_tabpfn(categorical_features):
+    cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
+    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False, max_categories=10), categorical_features), remainder=cont_pipe)
+    return make_pipeline(preprocess, DistilledTabPFNMLP(n_epochs=100))
 
 def evaluate():
     from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True)
 
-    models = {'logreg': make_logreg,
-            'knn': make_knn,
-            'hgb': make_hgb,
-            'rf': make_rf,
-            'tabpfn': make_tabpfn}
-
+    models = {'mlp': make_mlp,
+            'distilled_tabpfn': make_distilled_tabpfn,
+            'logreg': make_logreg,
+                'knn': make_knn,
+                'hgb': make_hgb,
+                'rf': make_rf,
+                'tabpfn': make_tabpfn}
 
 
     from collections import defaultdict

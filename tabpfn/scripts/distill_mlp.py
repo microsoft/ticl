@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
+from sklearn.preprocessing import LabelEncoder
 
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
@@ -38,12 +39,18 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.verbose = verbose
         
     def fit(self, X, y):
-        if not isinstance(y, torch.Tensor):
-            y = torch.from_numpy(y)
+        self.le_ = LabelEncoder()
+        if isinstance(y, torch.Tensor):
+            y = y.detach().numpy()
         if y.ndim == 1:
-            self.classes_ = y.unique().detach().numpy()
+            self.classes_ = np.unique(y)
+            y = self.le_.fit_transform(y)
+            self.classes_ = self.le_.classes_
         else:
             self.classes_ = torch.arange(y.shape[1])
+        if not isinstance(y, torch.Tensor):
+            y = torch.tensor(y)
+
         train_dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)), y)
         dataloader = DataLoader(train_dataset, batch_size=X.shape[0])
         model = NeuralNetwork(n_features=X.shape[1], n_classes=len(self.classes_))
@@ -69,7 +76,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         
     def predict(self, X):
         pred = self.model_(torch.from_numpy(X.astype(np.float32)))
-        return pred.argmax(1).detach().numpy()
+        return self.classes_[pred.argmax(1).detach().numpy()]
     
     def predict_proba(self, X):
         pred = self.model_(torch.from_numpy(X.astype(np.float32)))
@@ -83,8 +90,9 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
     def fit(self, X, y):
-        y_train_probs = TabPFNClassifier(N_ensemble_configurations=32).fit(X, y).predict_proba(X)
-        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size).fit(X, y_train_probs)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature).fit(X, y)
+        y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
+        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size).fit(X, y_train_soft_probs)
         return self
     def predict(self, X):
         return self.mlp_.predict(X)
