@@ -84,13 +84,14 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=512, learning_rate=1e-3):
+    def __init__(self, temperature=1, n_epochs=10, hidden_size=512, learning_rate=1e-3, device="cpu"):
         self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
+        self.device = device
     def fit(self, X, y):
-        tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature).fit(X, y)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature, device=self.device).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size).fit(X, y_train_soft_probs)
         return self
