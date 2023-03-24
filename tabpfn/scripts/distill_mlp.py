@@ -12,16 +12,20 @@ from sklearn.preprocessing import LabelEncoder
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, n_features=784, n_classes=10, hidden_size=512, n_layers=2):
+    def __init__(self, n_features=784, n_classes=10, hidden_size=512, n_layers=2, dropout_rate=0.0):
         super().__init__()
         self.n_features = n_features
         self.n_classes = n_classes
         self.hidden_size = hidden_size
+        self.dropout_rate = dropout_rate
         self.flatten = nn.Flatten()
         layers = OrderedDict()
         layers['input'] = nn.Linear(n_features, hidden_size)
         for i in range(1, n_layers):
+            # optionally add dropout
             layers[f"hidden_{i - 1}_activation"] = nn.ReLU()
+            if dropout_rate > 0:
+                layers[f"dropout_{i}"] = nn.Dropout(dropout_rate)
             layers[f"hidden_{i}"] = nn.Linear(hidden_size, hidden_size)
         layers[f"hidden_{n_layers}_activation"] = nn.ReLU()
         layers['output'] = nn.Linear(hidden_size, n_classes)
@@ -34,12 +38,14 @@ class NeuralNetwork(nn.Module):
 
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3, n_layers=2, verbose=0):
+    def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3, n_layers=2, verbose=0, dropout_rate=0.0, device='cuda'):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
         self.verbose = verbose
         self.n_layers = n_layers
+        self.dropout_rate = dropout_rate
+        self.device = device
         
     def fit(self, X, y):
         self.le_ = LabelEncoder()
@@ -54,9 +60,10 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         if not isinstance(y, torch.Tensor):
             y = torch.tensor(y)
 
-        train_dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)), y)
+        train_dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)).to(self.device), y.to(self.device))
         dataloader = DataLoader(train_dataset, batch_size=X.shape[0])
-        model = NeuralNetwork(n_features=X.shape[1], n_classes=len(self.classes_), n_layers=self.n_layers, hidden_size=self.hidden_size)
+        model = NeuralNetwork(n_features=X.shape[1], n_classes=len(self.classes_), n_layers=self.n_layers, hidden_size=self.hidden_size, dropout_rate=self.dropout_rate)
+        model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate)
         for epoch in range(self.n_epochs):
@@ -78,26 +85,28 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         return self
         
     def predict(self, X):
-        pred = self.model_(torch.from_numpy(X.astype(np.float32)))
-        return self.classes_[pred.argmax(1).detach().numpy()]
+        pred = self.model_(torch.from_numpy(X.astype(np.float32)).to(self.device))
+        return self.classes_[pred.argmax(1).detach().cpu().numpy()]
     
     def predict_proba(self, X):
-        pred = self.model_(torch.from_numpy(X.astype(np.float32)))
-        return pred.softmax(dim=1).detach().numpy()
+        pred = self.model_(torch.from_numpy(X.astype(np.float32)).to(self.device))
+        return pred.softmax(dim=1).detach().cpu().numpy()
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=512, n_layers=2, learning_rate=1e-3, device="cpu"):
+    def __init__(self, temperature=1, n_epochs=10, hidden_size=512, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0):
         self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
         self.device = device
         self.n_layers = n_layers
+        self.dropout_rate = dropout_rate
     def fit(self, X, y):
         tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature, device=self.device).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
-        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size, n_layers=self.n_layers).fit(X, y_train_soft_probs)
+        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size, n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device)
+        self.mlp_.fit(X, y_train_soft_probs)
         return self
     def predict(self, X):
         return self.mlp_.predict(X)
