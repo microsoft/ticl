@@ -18,24 +18,21 @@ class NeuralNetwork(nn.Module):
         self.n_classes = n_classes
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
-        self.flatten = nn.Flatten()
-        layers = OrderedDict()
-        layers['input'] = nn.Linear(n_features, hidden_size)
-        for i in range(1, n_layers):
-            # optionally add dropout
-            layers[f"hidden_{i - 1}_activation"] = nn.ReLU()
+        # create a list of linear and activation layers
+        layers = [nn.Linear(n_features, hidden_size), nn.ReLU()]
+        # add more hidden layers with optional dropout
+        for _ in range(n_layers - 1):
             if dropout_rate > 0:
-                layers[f"dropout_{i}"] = nn.Dropout(dropout_rate)
-            layers[f"hidden_{i}"] = nn.Linear(hidden_size, hidden_size)
-        layers[f"hidden_{n_layers}_activation"] = nn.ReLU()
-        layers['output'] = nn.Linear(hidden_size, n_classes)
-        self.linear_relu_stack = nn.Sequential(layers)
+                layers.append(nn.Dropout(dropout_rate))
+            layers.extend([nn.Linear(hidden_size, hidden_size), nn.ReLU()])
+        # add the output layer
+        layers.append(nn.Linear(hidden_size, n_classes))
+        # create a sequential model
+        self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
+        # pass the input through the model
+        return self.model(x)
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3, n_layers=2, verbose=0, dropout_rate=0.0, device='cuda'):
@@ -57,11 +54,10 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
             self.classes_ = self.le_.classes_
         else:
             self.classes_ = torch.arange(y.shape[1])
-        if not isinstance(y, torch.Tensor):
-            y = torch.tensor(y)
 
-        train_dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)).to(self.device), y.to(self.device))
-        dataloader = DataLoader(train_dataset, batch_size=X.shape[0])
+        X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        y = torch.tensor(y, device=self.device)
+        dataloader = DataLoader(TensorDataset(X, y), batch_size=X.shape[0])
         model = NeuralNetwork(n_features=X.shape[1], n_classes=len(self.classes_), n_layers=self.n_layers, hidden_size=self.hidden_size, dropout_rate=self.dropout_rate)
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
@@ -85,11 +81,13 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         return self
         
     def predict(self, X):
-        pred = self.model_(torch.from_numpy(X.astype(np.float32)).to(self.device))
+        X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        pred = self.model_(X)
         return self.classes_[pred.argmax(1).detach().cpu().numpy()]
     
     def predict_proba(self, X):
-        pred = self.model_(torch.from_numpy(X.astype(np.float32)).to(self.device))
+        X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        pred = self.model_(X)
         return pred.softmax(dim=1).detach().cpu().numpy()
 
 
