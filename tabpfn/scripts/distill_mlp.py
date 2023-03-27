@@ -8,11 +8,12 @@ from collections import OrderedDict
 from torch import nn
 from torch.utils.data import DataLoader
 from sklearn.preprocessing import LabelEncoder
+import pandas as pd
 
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, n_features=784, n_classes=10, hidden_size=512, n_layers=2, dropout_rate=0.0, layernorm=False):
+    def __init__(self, n_features=784, n_classes=10, hidden_size=128, n_layers=2, dropout_rate=0.0, layernorm=False):
         super().__init__()
         self.n_features = n_features
         self.n_classes = n_classes
@@ -38,7 +39,7 @@ class NeuralNetwork(nn.Module):
         return self.model(x)
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, hidden_size=512, n_epochs=10, learning_rate=1e-3, n_layers=2,
+    def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
                  verbose=0, dropout_rate=0.0, device='cuda', layernorm=False):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
@@ -98,7 +99,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=512, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False):
+    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, upsample_rate=None, categorical_features=None):
         self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
@@ -107,8 +108,19 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.n_layers = n_layers
         self.dropout_rate = dropout_rate
         self.layernorm = layernorm
+        self.upsample_rate = upsample_rate
+        self.categorical_features = categorical_features
 
     def fit(self, X, y):
+        if self.upsample_rate is not None:
+            from imblearn.over_sampling import SMOTENC, SMOTE
+            new_counts = (pd.value_counts(y) * self.upsample_rate).to_dict()
+            if self.categorical_features is None:
+                smote = SMOTE(sampling_strategy=new_counts)
+            else:
+                smote = SMOTENC(sampling_strategy=new_counts, categorical_features=self.categorical_features)
+            X, y = smote.fit_resample(X, y)
+
         tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature, device=self.device).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
