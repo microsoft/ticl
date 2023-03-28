@@ -99,7 +99,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, upsample_rate=None, categorical_features=None):
+    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, upsample_rate=None, categorical_features=None, N_ensemble_configurations=32, **kwargs):
         self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
@@ -110,9 +110,15 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.layernorm = layernorm
         self.upsample_rate = upsample_rate
         self.categorical_features = categorical_features
+        self.N_ensemble_configurations = N_ensemble_configurations
+        self.kwargs = kwargs
 
     def fit(self, X, y):
         if self.upsample_rate is not None:
+            if isinstance(X, torch.Tensor):
+                X = X.detach().numpy()
+            if isinstance(y, torch.Tensor):
+                y = y.detach().numpy()
             from imblearn.over_sampling import SMOTENC, SMOTE
             new_counts = (pd.value_counts(y) * self.upsample_rate).to_dict()
             if self.categorical_features is None:
@@ -121,7 +127,7 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
                 smote = SMOTENC(sampling_strategy=new_counts, categorical_features=self.categorical_features)
             X, y = smote.fit_resample(X, y)
 
-        tbfn = TabPFNClassifier(N_ensemble_configurations=32, temperature=self.temperature, device=self.device).fit(X, y)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, **self.kwargs).fit(X, y, overwrite_warning=self.upsample_rate is not None)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm)
