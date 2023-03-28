@@ -114,6 +114,7 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.kwargs = kwargs
 
     def fit(self, X, y):
+        X_org, y_org = X, y
         if self.upsample_rate is not None:
             if isinstance(X, torch.Tensor):
                 X = X.detach().numpy()
@@ -127,7 +128,7 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
                 smote = SMOTENC(sampling_strategy=new_counts, categorical_features=self.categorical_features)
             X, y = smote.fit_resample(X, y)
 
-        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, **self.kwargs).fit(X, y, overwrite_warning=self.upsample_rate is not None)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, **self.kwargs).fit(X_org, y_org, overwrite_warning=self.upsample_rate is not None)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm)
