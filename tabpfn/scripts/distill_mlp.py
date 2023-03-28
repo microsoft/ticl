@@ -50,21 +50,8 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.device = device
         self.layernorm = layernorm
 
-    def fit(self, X, y):
-        self.le_ = LabelEncoder()
-        if isinstance(y, torch.Tensor):
-            y = y.detach().numpy()
-        if y.ndim == 1:
-            self.classes_ = np.unique(y)
-            y = self.le_.fit_transform(y)
-            self.classes_ = self.le_.classes_
-        else:
-            self.classes_ = torch.arange(y.shape[1])
-
-        X = torch.tensor(X, dtype=torch.float32, device=self.device)
-        y = torch.tensor(y, device=self.device)
-        dataloader = DataLoader(TensorDataset(X, y), batch_size=X.shape[0])
-        model = NeuralNetwork(n_features=X.shape[1], n_classes=len(self.classes_), n_layers=self.n_layers,
+    def fit_from_dataloader(self, dataloader, n_features):
+        model = NeuralNetwork(n_features=n_features, n_classes=len(self.classes_), n_layers=self.n_layers,
                               hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm)
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
@@ -85,6 +72,22 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
                     loss, current = loss.item(), (batch + 1) * len(X)
                     print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         self.model_ = model
+
+    def fit(self, X, y):
+        self.le_ = LabelEncoder()
+        if isinstance(y, torch.Tensor):
+            y = y.detach().numpy()
+        if y.ndim == 1:
+            self.classes_ = np.unique(y)
+            y = self.le_.fit_transform(y)
+            self.classes_ = self.le_.classes_
+        else:
+            self.classes_ = torch.arange(y.shape[1])
+
+        X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        y = torch.tensor(y, device=self.device)
+        dataloader = DataLoader(TensorDataset(X, y), batch_size=X.shape[0])
+        self.fit_from_dataloader(dataloader, n_features=X.shape[1])
         return self
         
     def predict(self, X):
