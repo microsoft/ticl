@@ -252,7 +252,6 @@ def evaluate_position(X, y, categorical_feats, model, bptt
     if save:
         path = os.path.join(base_path, f'results/tabular/{path_interfix}/results_{method}_{ds_name}_{eval_position}_{bptt}_{split_number}.npy')
         #log_path =
-
     ## Load results if on disk
     if not overwrite:
         result = check_file_exists(path)

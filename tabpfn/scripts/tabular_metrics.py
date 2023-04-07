@@ -36,23 +36,19 @@ Metrics calculation
 """
 def auc_metric(target, pred, multi_class='ovo', numpy=False):
     lib = np if numpy else torch
-    try:
+    if not numpy:
+        target = torch.tensor(target) if not torch.is_tensor(target) else target
+        pred = torch.tensor(pred) if not torch.is_tensor(pred) else pred
+    if len(lib.unique(target)) > 2:
         if not numpy:
-            target = torch.tensor(target) if not torch.is_tensor(target) else target
-            pred = torch.tensor(pred) if not torch.is_tensor(pred) else pred
-        if len(lib.unique(target)) > 2:
-            if not numpy:
-                return torch.tensor(roc_auc_score(target, pred, multi_class=multi_class))
-            return roc_auc_score(target, pred, multi_class=multi_class)
-        else:
-            if len(pred.shape) == 2:
-                pred = pred[:, 1]
-            if not numpy:
-                return torch.tensor(roc_auc_score(target, pred))
-            return roc_auc_score(target, pred)
-    except ValueError as e:
-        print(e)
-        return np.nan if numpy else torch.tensor(np.nan)
+            return torch.tensor(roc_auc_score(target, pred, multi_class=multi_class))
+        return roc_auc_score(target, pred, multi_class=multi_class)
+    else:
+        if len(pred.shape) == 2:
+            pred = pred[:, 1]
+        if not numpy:
+            return torch.tensor(roc_auc_score(target, pred))
+        return roc_auc_score(target, pred)
 
 def accuracy_metric(target, pred):
     target = torch.tensor(target) if not torch.is_tensor(target) else target
@@ -111,7 +107,7 @@ def neg_r2(target, pred):
     return -r2_score(pred.float(), target.float())
 
 def is_classification(metric_used):
-    if metric_used == auc_metric or metric_used == cross_entropy:
+    if metric_used.__name__ in ["auc_metric", "cross_entropy"]:
         return True
     return False
 
