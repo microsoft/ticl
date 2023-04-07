@@ -9,6 +9,7 @@ from contextlib import nullcontext
 
 import torch
 from torch import nn
+from torch import autograd
 
 import tabpfn.utils as utils
 from tabpfn.transformer import TransformerModel
@@ -72,8 +73,8 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
         model.load_state_dict(load_weights_from_this_state_dict)
     if initialize_with_model is not None:
         model.init_from_small_model(initialize_with_model)
-
-    print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
+    if verbose:
+        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
 
     try:
         for (k, v), (k2, v2) in zip(model.state_dict().items(), initialize_with_model.state_dict().items()):
@@ -123,7 +124,6 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
                     single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
                 else:
                     single_eval_pos = targets.shape[0] - bptt_extra_samples
-
                 with autocast(enabled=scaler is not None):
                     # If style is set to None, it should not be transferred to device
                     output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
@@ -168,7 +168,9 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
 
                 step_time = time.time() - before_forward
 
-                if not torch.isnan(loss):
+                if torch.isnan(loss):
+                    print("NAN loss encountered")
+                else:
                     total_loss += losses.mean().cpu().detach().item()
                     total_positional_losses += losses.mean(1).cpu().detach() if single_eval_pos is None else \
                         nn.functional.one_hot(torch.tensor(single_eval_pos), bptt)*\

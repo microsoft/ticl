@@ -68,7 +68,7 @@ def print_models(model_string):
 # In[13]:
 
 
-def train_function(config_sample, i, add_name=''):
+def train_function(config_sample, i, add_name='', state_dict=None):
     start_time = time.time()
     N_epochs_to_save = 100
     save_every = max(1, config_sample['epochs'] // N_epochs_to_save)
@@ -90,7 +90,7 @@ def train_function(config_sample, i, add_name=''):
                       , device
                       , should_train=True
                       , verbose=1
-                      , epoch_callback = save_callback)
+                      , epoch_callback = save_callback, state_dict=state_dict)
     
     return model
 
@@ -105,7 +105,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_defaults_k_aggregate_2_batch_128_lr00001'
+    model_string = '_feature_wise_experiments_nlayers12_deep_mlp'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -170,28 +170,32 @@ config['rotate_normalized_labels'] = True
 config["mix_activations"] = False # False heisst eig True
 
 #config['lr'] = 0.00005
-config['lr'] = 0.00001
+config['lr'] = 0.0001
 #config['nlayers'] = 18
-#config['nlayers'] = 12
+config['nlayers'] = 12
+# config['nlayers'] = 6
 config['emsize'] = 512
 #config['emsize'] = 1024
-config['nhead'] = config['emsize'] // 128
+# config['nhead'] = config['emsize'] // 128
+config['nhead'] = 4
 config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
-
+config['encoder'] = 'featurewise_mlp'
     
 #config['aggregate_k_gradients'] = 8
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 2
+config['aggregate_k_gradients'] = 16
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
-config['batch_size'] = 128
+config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
-config['num_steps'] = 1024//8
-config['epochs'] = 800
+config['num_steps'] = 1024//16//2
+config['epochs'] = 300
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
+
+config['weight_decay'] = 1e-5
 
 config_sample = evaluate_hypers(config)
 

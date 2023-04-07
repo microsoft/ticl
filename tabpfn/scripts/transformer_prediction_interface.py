@@ -42,7 +42,7 @@ class CustomUnpickler(pickle.Unpickler):
         else:
             return super().find_class(module, name)
 
-def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='', only_inference=True):
+def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='', only_inference=True, verbose=0):
     """
     Workflow for loading a model and setting appropriate parameters for diffable hparam tuning.
 
@@ -80,7 +80,8 @@ def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='
             else:
                 model_file = None
         else:
-            print(f"loading model from file {model_file}")
+            if verbose:
+                print(f"loading model from file {model_file}")
         return model_file, model_path, results_file
 
     model_file = None
@@ -101,7 +102,8 @@ def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='
 
     #print(f'Loading {model_file}')
     if only_inference:
-        print('Loading model that can be used for inference only')
+        if verbose:
+            print('Loading model that can be used for inference only')
         model, c = load_model_only_inference(base_path, model_file, device)
     else:
         #until now also only capable of inference
@@ -117,13 +119,14 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, verbose=0, temperature=1):
         # Model file specification (Model name, Epoch)
         i = 0
         self.epoch = epoch
         model_key = model_string+'|'+str(device)
         if model_string in self.models_in_memory:
-            print(f"using model {model_key}")
+            if verbose:
+                print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
             model, c, results_file = load_model_workflow(i, epoch, add_name=model_string, base_path=base_path, device=device,
@@ -133,11 +136,12 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                 print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
         #style, temperature = self.load_result_minimal(style_file, i, e)
 
+        self.verbose = verbose
         self.device = device
         self.model = model
         self.c = c
         self.style = None
-        self.temperature = None
+        self.temperature = temperature
         self.N_ensemble_configurations = N_ensemble_configurations
         self.base__path = base_path
         self.base_path = base_path
@@ -228,12 +232,12 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          preprocess_transform='none' if self.no_preprocess_mode else 'mix',
                                          normalize_with_test=normalize_with_test,
                                          N_ensemble_configurations=self.N_ensemble_configurations,
-                                         softmax_temperature=self.temperature,
+                                         softmax_temperature=np.log(self.temperature),
                                          combine_preprocessing=self.combine_preprocessing,
                                          multiclass_decoder=self.multiclass_decoder,
                                          feature_shift_decoder=self.feature_shift_decoder,
                                          differentiable_hps_as_style=self.differentiable_hps_as_style,
-                                         seed=self.seed,
+                                         seed=self.seed, verbose=self.verbose,
                                          **get_params_from_config(self.c))
         prediction_, y_ = prediction.squeeze(0), y_full.squeeze(1).long()[eval_pos:]
 

@@ -37,7 +37,7 @@ def get_gpu_memory():
     memory_free_info = sp.check_output(command.split()).decode('ascii')
     return memory_free_info
 
-def load_model_only_inference(path, filename, device):
+def load_model_only_inference(path, filename, device, verbose=False):
     """
     Loads a saved model from the specified position. This function only restores inference capabilities and
     cannot be used for further training.
@@ -71,10 +71,6 @@ def load_model_only_inference(path, filename, device):
         else:
             config_sample['y_encoder'] = 'linear'
 
-    if 'encoder' in config_sample and config_sample['encoder'] == 'featurewise_mlp':
-        encoder = encoders.FeaturewiseMLP
-
-
     if config_sample['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize'])
     elif config_sample['y_encoder'] == 'linear':
@@ -86,8 +82,8 @@ def load_model_only_inference(path, filename, device):
                              config_sample['nlayers'], y_encoder=y_encoder,
                              dropout=config_sample['dropout'],
                              efficient_eval_masking=config_sample['efficient_eval_masking'])
-
-    print(f"Using a Transformer with {sum(p.numel() for p in model.parameters()) / 1000 / 1000:.{2}f} M parameters")
+    if verbose:
+        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters()) / 1000 / 1000:.{2}f} M parameters")
 
     model.criterion = loss
     module_prefix = 'module.'
