@@ -13,6 +13,7 @@ from torch import autograd
 
 import tabpfn.utils as utils
 from tabpfn.transformer import TransformerModel
+from tabpfn.transformer_make_model import TransformerModelMaker
 from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr, StoreDictKeyPair, get_weighted_single_eval_pos_sampler, get_uniform_single_eval_pos_sampler
 import tabpfn.priors as priors
 import tabpfn.encoders as encoders
@@ -36,7 +37,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
           y_encoder=None, pos_encoder_generator=None, decoder=None, extra_prior_kwargs_dict={}, scheduler=get_cosine_schedule_with_warmup,
           load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, style_encoder_generator=None, epoch_callback=None,
-          initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, **model_extra_args
+          initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, model_maker=False, **model_extra_args
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     print(f'Using {device} device')
@@ -62,12 +63,18 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
         n_out = criterion.weight.shape[0]
     else:
         n_out = 1
-
-    model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
-                             y_encoder=y_encoder, input_normalization=input_normalization,
-                             pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
-                             decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
-                             )
+    if model_maker:
+        model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
+                                y_encoder=y_encoder, input_normalization=input_normalization,
+                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
+                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
+                                )
+    else:
+        model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
+                                y_encoder=y_encoder, input_normalization=input_normalization,
+                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
+                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
+                                )
     model.criterion = criterion
     if load_weights_from_this_state_dict is not None:
         model.load_state_dict(load_weights_from_this_state_dict)

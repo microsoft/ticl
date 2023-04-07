@@ -28,3 +28,16 @@ class FixedScaledDecoder(nn.Module):
     def forward(self, x):
         return self.mapper(x)/self.T.sum()
 
+class LinearModelDecoder(nn.Module):
+    def __init__(self, emsize=512, nout=10, hidden_size=1024):
+        super().__init__()
+        self.emsize = emsize
+        self.nout = nout
+        self.hidden_size = hidden_size
+
+        self.mlp = nn.Sequential(nn.Linear(emsize,  hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, (emsize + 1) * nout))
+
+    def forward(self, x):
+        return self.mlp(x.mean(0)).reshape(-1, self.emsize + 1, self.nout)

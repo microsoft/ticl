@@ -305,6 +305,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     config['bptt_extra_samples'] = config['bptt_extra_samples'] if 'bptt_extra_samples' in config else None
     config['eval_positions'] = [int(config['bptt'] * 0.95)] if config['bptt_extra_samples'] is None else [int(config['bptt'])]
 
+    model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
     #print('MODEL BUILDER', model_proto, extra_kwargs['get_batch'])
     if 'y_encoder' not in config:
@@ -353,6 +354,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
         }
                   , lr=config['lr']
                   , verbose=verbose_train,
+                  model_maker=model_maker,
                   weight_decay=config.get('weight_decay', 0.0))
 
     return model
