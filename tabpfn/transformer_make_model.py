@@ -114,11 +114,17 @@ class TransformerModelMaker(nn.Module):
             self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
         assert src_mask is None
 
-        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-        # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
-        output = self.transformer_encoder(train_x)
+        if single_eval_pos == 0:
+            linear_model_coefs = torch.zeros((x_src.shape[1], x_src.shape[2] + 1, self.n_out), device=x_src.device)
+        else:
+            train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+            # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
+            output = self.transformer_encoder(train_x)
 
-        linear_model_coefs = self.decoder(output)
+            linear_model_coefs = self.decoder(output)
         matmul = (x_src[single_eval_pos:].unsqueeze(-1) * linear_model_coefs[:, :-1].unsqueeze(0)).sum(2)
-        return matmul + linear_model_coefs[:, -1]
+        result = matmul + linear_model_coefs[:, -1]
+        if result.isnan().all():
+            import pdb; pdb.set_trace()
+        return result
         
