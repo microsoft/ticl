@@ -1,15 +1,20 @@
 import math
 from typing import Optional
 
+import numpy as np
+
 import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.nn import Module, TransformerEncoder
 
-from tabpfn.layer import TransformerEncoderLayer, _get_activation_fn
+from tabpfn.layer import TransformerEncoderLayer
 from tabpfn.utils import SeqBN, bool_mask_to_att_mask
+from tabpfn.utils import normalize_by_used_features_f, normalize_data
+
 from tabpfn.transformer import TransformerEncoderDiffInit
 from tabpfn.decoders import LinearModelDecoder
+from tabpfn import encoders
 
 
 
@@ -128,3 +133,88 @@ class TransformerModelMaker(nn.Module):
             import pdb; pdb.set_trace()
         return result
         
+
+def load_model_maker(path):
+    model_state, _, config  = torch.load(path)
+    encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
+    y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
+    loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
+    model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
+    model.criterion = loss
+    module_prefix = 'module.'
+    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+
+    model.load_state_dict(model_state)
+    return model
+
+
+def extract_linear_model(model, X_train, y_train):
+    max_features = 100
+    eval_position = X_train.shape[0]
+    n_classes = len(np.unique(y_train))
+    n_features = X_train.shape[1]
+
+    ys = torch.Tensor(y_train)
+    xs = torch.Tensor(X_train)
+
+    eval_xs_ = normalize_data(xs, eval_position)
+
+    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
+                                                   normalize_with_sqrt=False)
+    x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((X_train.shape[0], 100 - X_train.shape[1]))]))
+    
+    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
+    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+    train_x = x_src + y_src
+    # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
+    output = model.transformer_encoder(train_x)
+    linear_model_coefs = model.decoder(output)
+    encoder_weight = model.encoder.get_parameter("weight")
+    encoder_bias = model.encoder.get_parameter("bias")
+
+    total_weights = torch.matmul(encoder_weight[:, :n_features].T, linear_model_coefs[0, :-1, :n_classes])
+    total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
+    return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy()
+
+
+def predict_with_linear_model(X_train, X_test, weights, biases):
+    mean = X_train.mean(axis=0)
+    std = X_train.std(axis=0, ddof=1) + .000001
+    X_test_scaled = (X_test - mean) / std
+    X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
+    res2 = np.dot(X_test_scaled , weights) + biases
+    from scipy.special import softmax
+    return softmax(res2 / .8, axis=1)
+
+
+def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
+    max_features = 100
+    eval_position = X_train.shape[0]
+    n_classes = len(np.unique(y_train))
+    n_features = X_train.shape[1]
+
+    ys = torch.Tensor(y_train)
+    xs = torch.Tensor(np.vstack([X_train, X_test]))
+
+    eval_xs_ = normalize_data(xs, eval_position)
+
+    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
+                                                   normalize_with_sqrt=False)
+    x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((eval_xs.shape[0], 100 - eval_xs.shape[1]))]))
+    
+    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
+    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+    train_x = x_src + y_src
+    # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
+    output = model.transformer_encoder(train_x)
+    linear_model_coefs = model.decoder(output)
+    encoder_weight = model.encoder.get_parameter("weight")
+    encoder_bias = model.encoder.get_parameter("bias")
+
+    total_weights = torch.matmul(encoder_weight[:, :n_features].T, linear_model_coefs[0, :-1, :n_classes])
+    total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
+                      
+    pred_simple = torch.matmul(model.encoder(x_all_torch),  linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
+    probs =  torch.nn.functional.softmax(pred_simple/ 0.8, dim=1)
+    return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy(), probs[eval_position:]
+
