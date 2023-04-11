@@ -218,3 +218,25 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
     probs =  torch.nn.functional.softmax(pred_simple/ 0.8, dim=1)
     return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy(), probs[eval_position:]
 
+
+from sklearn.base import BaseEstimator, ClassifierMixin
+from tabpfn.transformer_make_model import TransformerModelMaker, load_model_maker, extract_linear_model, predict_with_linear_model
+
+
+class ForwardLinearModel(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None):
+        self.path = path or "models_diff/prior_diff_real_checkpoint_predict_linear_coefficients_nlayer_6_multiclass_04_11_2023_01_26_19_n_0_epoch_94.cpkt"
+        
+    def fit(self, X, y):
+        self.X_train_ = X
+        model = load_model_maker(self.path)
+        weights, biases = extract_linear_model(model, X, y)
+        self.weights_ = weights
+        self.biases_ = biases
+        return self
+        
+    def predict_proba(self, X):
+        return predict_with_linear_model(self.X_train_, X, self.weights_, self.biases_)
+    
+    def predict(self, X):
+        return self.predict_proba(X).argmax(axis=1)
