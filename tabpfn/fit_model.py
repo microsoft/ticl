@@ -105,7 +105,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_feature_wise_experiments_nlayers12_deep_mlp'
+    model_string = '_predict_linear_coefficients_nlayer_6'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -172,7 +172,7 @@ config["mix_activations"] = False # False heisst eig True
 #config['lr'] = 0.00005
 config['lr'] = 0.0001
 #config['nlayers'] = 18
-config['nlayers'] = 12
+config['nlayers'] = 6
 # config['nlayers'] = 6
 config['emsize'] = 512
 #config['emsize'] = 1024
@@ -180,11 +180,11 @@ config['emsize'] = 512
 config['nhead'] = 4
 config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
-config['encoder'] = 'featurewise_mlp'
+#config['encoder'] = 'featurewise_mlp'
     
 #config['aggregate_k_gradients'] = 8
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 16
+config['aggregate_k_gradients'] = 4
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
 config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
@@ -196,6 +196,9 @@ config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
+
+config['model_maker'] = True
+config['min_eval_pos'] = 2
 
 config_sample = evaluate_hypers(config)
 
