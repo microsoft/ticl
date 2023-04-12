@@ -13,7 +13,7 @@ from torch import autograd
 
 import tabpfn.utils as utils
 from tabpfn.transformer import TransformerModel
-from tabpfn.transformer_make_model import TransformerModelMaker
+from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
 from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr, StoreDictKeyPair, get_weighted_single_eval_pos_sampler, get_uniform_single_eval_pos_sampler
 import tabpfn.priors as priors
 import tabpfn.encoders as encoders
@@ -63,7 +63,13 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
         n_out = criterion.weight.shape[0]
     else:
         n_out = 1
-    if model_maker:
+    if model_maker == "mlp":
+        model = TransformerModelMakeMLP(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
+                                y_encoder=y_encoder, input_normalization=input_normalization,
+                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
+                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
+                                )
+    elif model_maker:
         model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,
                                 y_encoder=y_encoder, input_normalization=input_normalization,
                                 pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),

@@ -41,3 +41,27 @@ class LinearModelDecoder(nn.Module):
 
     def forward(self, x):
         return self.mlp(x.mean(0)).reshape(-1, self.emsize + 1, self.nout)
+
+
+class MLPModelDecoder(nn.Module):
+    def __init__(self, emsize=512, nout=10, hidden_size=1024):
+        super().__init__()
+        self.emsize = emsize
+        self.nout = nout
+        self.hidden_size = hidden_size
+
+        self.mlp = nn.Sequential(nn.Linear(emsize,  hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, (emsize + 1) * nout + emsize ** 2 + emsize))
+
+    def forward(self, x):
+        if x.shape[0] != 0:
+            res = self.mlp(x.mean(0))
+        else:
+            res = torch.zeros((self.emsize + 1) * self.nout + self.emsize ** 2 + self.emsize, device=x.device)
+        emsize = self.emsize
+        w2 = res[:, :self.nout * emsize].reshape(-1, emsize, self.nout)
+        b2 = res[:, self.nout * emsize: self.nout * (emsize + 1)].reshape(-1, self.nout)
+        w1 = res[:, self.nout * (emsize + 1): self.nout * (emsize + 1) + emsize ** 2].reshape(-1, emsize, emsize)
+        b1 = res[:, -emsize:].reshape(-1, emsize)
+        return b1, w1, b2, w2
