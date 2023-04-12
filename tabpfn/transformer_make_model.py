@@ -16,6 +16,7 @@ from tabpfn.transformer import TransformerEncoderDiffInit
 from tabpfn.decoders import LinearModelDecoder
 from tabpfn import encoders
 
+from sklearn.preprocessing import LabelEncoder
 
 
 class TransformerModelMaker(nn.Module):
@@ -148,20 +149,20 @@ def load_model_maker(path):
     return model
 
 
-def extract_linear_model(model, X_train, y_train):
+def extract_linear_model(model, X_train, y_train, device="cpu"):
     max_features = 100
     eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
 
-    ys = torch.Tensor(y_train)
-    xs = torch.Tensor(X_train)
+    ys = torch.Tensor(y_train).to(device)
+    xs = torch.Tensor(X_train).to(device)
 
     eval_xs_ = normalize_data(xs, eval_position)
 
     eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
                                                    normalize_with_sqrt=False)
-    x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((X_train.shape[0], 100 - X_train.shape[1]))]))
+    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
     
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
@@ -174,7 +175,7 @@ def extract_linear_model(model, X_train, y_train):
 
     total_weights = torch.matmul(encoder_weight[:, :n_features].T, linear_model_coefs[0, :-1, :n_classes])
     total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
-    return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy()
+    return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
 def predict_with_linear_model(X_train, X_test, weights, biases):
@@ -224,19 +225,24 @@ from tabpfn.transformer_make_model import TransformerModelMaker, load_model_make
 
 
 class ForwardLinearModel(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None):
+    def __init__(self, path=None, device="cpu"):
         self.path = path or "models_diff/prior_diff_real_checkpoint_predict_linear_coefficients_nlayer_6_multiclass_04_11_2023_01_26_19_n_0_epoch_94.cpkt"
+        self.device = device
         
     def fit(self, X, y):
         self.X_train_ = X
-        model = load_model_maker(self.path)
-        weights, biases = extract_linear_model(model, X, y)
+        le = LabelEncoder()
+        y = le.fit_transform(y)
+        model = load_model_maker(self.path).to(self.device)
+
+        weights, biases = extract_linear_model(model, X, y, device=self.device)
         self.weights_ = weights
         self.biases_ = biases
+        self.classes_ = le.classes_
         return self
         
     def predict_proba(self, X):
         return predict_with_linear_model(self.X_train_, X, self.weights_, self.biases_)
     
     def predict(self, X):
-        return self.predict_proba(X).argmax(axis=1)
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
