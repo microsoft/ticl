@@ -217,6 +217,36 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
+def extract_mlp_model(model, X_train, y_train, device="cpu"):
+    max_features = 100
+    eval_position = X_train.shape[0]
+    n_classes = len(np.unique(y_train))
+    n_features = X_train.shape[1]
+
+    ys = torch.Tensor(y_train).to(device)
+    xs = torch.Tensor(X_train).to(device)
+
+    eval_xs_ = normalize_data(xs, eval_position)
+
+    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
+                                                   normalize_with_sqrt=False)
+    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
+    
+    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
+    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+    train_x = x_src + y_src
+    # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
+    output = model.transformer_encoder(train_x)
+    b1, w1, b2, w2 = model.decoder(output)
+    encoder_weight = model.encoder.get_parameter("weight")
+    encoder_bias = model.encoder.get_parameter("bias")
+
+    total_weights = torch.matmul(encoder_weight[:, :n_features].T, w1)
+    total_biases = torch.matmul(encoder_bias, w1) + b1
+    return  (total_biases.squeeze().detach().cpu().numpy(),
+             total_weights.squeeze().detach().cpu().numpy() / (n_features / max_features),
+             b2.squeeze()[:n_classes].detach().cpu().numpy(), w2.squeeze()[:, :n_classes].detach().cpu().numpy())
+
 
 def predict_with_linear_model(X_train, X_test, weights, biases):
     mean = X_train.mean(axis=0)
@@ -226,6 +256,15 @@ def predict_with_linear_model(X_train, X_test, weights, biases):
     res2 = np.dot(X_test_scaled , weights) + biases
     from scipy.special import softmax
     return softmax(res2 / .8, axis=1)
+
+def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2):
+    mean = X_train.mean(axis=0)
+    std = X_train.std(axis=0, ddof=1) + .000001
+    X_test_scaled = (X_test - mean) / std
+    X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
+    res = np.dot(np.maximum(np.dot(X_test_scaled, w1) + b1, 0), w2) + b2
+    from scipy.special import softmax
+    return softmax(res / .8, axis=1)
 
 
 def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
