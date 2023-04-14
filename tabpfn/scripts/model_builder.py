@@ -336,6 +336,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , epochs=epochs
                   , warmup_epochs=20
                   , bptt=config['bptt']
+                  , output_attention=config['output_attention']
                   , gpu_device=device
                   , dropout=config['dropout']
                   , steps_per_epoch=config['num_steps']
