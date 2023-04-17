@@ -168,6 +168,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
 
         b1, w1, b2, w2 = self.decoder(output)
         h1 = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+        #h1 = torch.nn.functional.layer_norm(h1, (h1.shape[-1],))
         h1 = torch.relu(h1)
         result = (h1.unsqueeze(-1) * w2.unsqueeze(0)).sum(2) + b2
         if result.isnan().all():
@@ -375,13 +376,14 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model_state, _, config  = torch.load(path)
+        model_state, _, config  = torch.load(self.path)
         encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
         y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
         loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
         model_maker = config.get('model_maker', "")
+        output_attention = config.get('output_attention', "")
         if model_maker  == "mlp":
-            model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
+            model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder, output_attention=output_attention)
         elif  model_maker:
             model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
 
@@ -391,7 +393,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
 
         model.load_state_dict(model_state)
         model.to(self.device)
-        b1, w1, b2, w2 = extract_mlp_model(model, X_train, y_train, device=self.device)
+        b1, w1, b2, w2 = extract_mlp_model(model, X, y, device=self.device)
         self.parameters_  = (b1, w1, b2, w2)
         self.classes_ = le.classes_
         return self
