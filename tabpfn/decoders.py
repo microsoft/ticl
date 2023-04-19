@@ -44,35 +44,35 @@ class LinearModelDecoder(nn.Module):
 
 
 class MLPModelDecoder(nn.Module):
-    def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False):
+    def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None):
         super().__init__()
         self.emsize = emsize
         self.nout = nout
         self.hidden_size = hidden_size
         self.output_attention = output_attention
         self.special_token = special_token
+        self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
+        out_size = emsize
         if output_attention:
-            embed_dim  = 2048
             if special_token:
                 out_size = emsize
                 self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=4)
 
             else:
+                embed_dim  = 2048
+
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
                 out_size = embed_dim
                 self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=4, kdim=emsize, vdim=emsize)
             
-            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, (emsize + 1) * nout + emsize ** 2 + emsize))
+        self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
 
-        else:
-
-            self.mlp = nn.Sequential(nn.Linear(emsize,  hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, (emsize + 1) * nout + emsize ** 2 + emsize))
 
     def forward(self, x):
+        emsize = self.emsize
+        hidden_size = self.predicted_hidden_layer_size
         if x.shape[0] != 0:
             if self.output_attention:
                 if not self.special_token:
@@ -82,10 +82,11 @@ class MLPModelDecoder(nn.Module):
             else:
                 res = self.mlp(x.mean(0))
         else:
-            res = torch.zeros((self.emsize + 1) * self.nout + self.emsize ** 2 + self.emsize, device=x.device)
-        emsize = self.emsize
-        w2 = res[:, :self.nout * emsize].reshape(-1, emsize, self.nout)
-        b2 = res[:, self.nout * emsize: self.nout * (emsize + 1)].reshape(-1, self.nout)
-        w1 = res[:, self.nout * (emsize + 1): self.nout * (emsize + 1) + emsize ** 2].reshape(-1, emsize, emsize)
+            raise ValueError("Empty input")
+            res = torch.zeros((hidden_size + 1) * nout + (emsize + 1) * hidden_size, device=x.device)
+        assert res.shape[1] == (hidden_size + 1) * self.nout + (emsize + 1) * hidden_size
+        w2 = res[:, :self.nout * hidden_size].reshape(-1, hidden_size, self.nout)
+        b2 = res[:, self.nout * hidden_size: self.nout * (hidden_size + 1)].reshape(-1, self.nout)
+        w1 = res[:, self.nout * (emsize + 1): self.nout * (emsize + 1) + emsize ** 2].reshape(-1, emsize, hidden_size)
         b1 = res[:, -emsize:].reshape(-1, emsize)
         return b1, w1, b2, w2
