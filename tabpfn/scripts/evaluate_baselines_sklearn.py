@@ -43,25 +43,34 @@ def make_distilled_tabpfn(categorical_features):
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False, max_categories=10), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, DistilledTabPFNMLP(n_epochs=100))
 
-def evaluate():
+def make_lgbm(categorical_features):
+    from lightgbm import LGBMClassifier
+
+    return LGBMClassifier(categorical_features=categorical_features)
+
+def evaluate(previous_results=None, models=None):
     from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True)
+    if models is None:
+        models = {'mlp': make_mlp,
+                'distilled_tabpfn': make_distilled_tabpfn,
+                'logreg': make_logreg,
+                    'knn': make_knn,
+                    'hgb': make_hgb,
+                    'rf': make_rf,
+                    'tabpfn': make_tabpfn}
 
-    models = {'mlp': make_mlp,
-            'distilled_tabpfn': make_distilled_tabpfn,
-            'logreg': make_logreg,
-                'knn': make_knn,
-                'hgb': make_hgb,
-                'rf': make_rf,
-                'tabpfn': make_tabpfn}
-
-
-    from collections import defaultdict
-    all_scores = defaultdict(dict)
+    if previous_results is None:
+        from collections import defaultdict
+        all_scores = defaultdict(dict)
     for ds_name, X, y, categorical_features, _, _ in cc_valid_datasets_multiclass:
         print(ds_name)
         for model_name, model_creator in models.items():
+            print(model_name)
+            if previous_results and not np.isnan(previous_results.loc[ds_name, model_name]):
+                continue
+
             clf = model_creator(categorical_features)
             if X.shape[1] > 100:
                 X = X[:, :100]
@@ -70,4 +79,10 @@ def evaluate():
                 score = scores['test_score'].mean()
             except:
                 score = np.NaN
-            all_scores[ds_name][model_name] = score
+            if previous_results is None:
+                all_scores[ds_name][model_name] = score
+            else:
+                previous_results.loc[ds_name, model_name] = score
+    if previous_results is None:
+        return pd.DataFrame(all_scores).T
+    return previous_results
