@@ -179,20 +179,6 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         if result.isnan().all():
             import pdb; pdb.set_trace()
         return result
-    
-
-def load_model_maker(path):
-    model_state, _, config  = torch.load(path)
-    encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
-    y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
-    loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
-    model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
-    model.criterion = loss
-    module_prefix = 'module.'
-    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-
-    model.load_state_dict(model_state)
-    return model
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -306,7 +292,6 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
 
 
 from sklearn.base import BaseEstimator, ClassifierMixin
-from tabpfn.transformer_make_model import TransformerModelMaker, load_model_maker, extract_linear_model, predict_with_linear_model
 
 
 class ForwardLinearModel(ClassifierMixin, BaseEstimator):
@@ -371,6 +356,27 @@ def extract_mlp_model(model, X_train, y_train, device="cpu"):
     total_biases = torch.matmul(encoder_bias, w1) + b1
     return  total_biases.squeeze().detach().cpu().numpy(), total_weights.squeeze().detach().cpu().numpy() / (n_features / max_features), b2.squeeze()[:n_classes].detach().cpu().numpy(), w2.squeeze()[:, :n_classes].detach().cpu().numpy()
 
+def load_model_maker(path):
+    model_state, _, config  = torch.load(path)
+    encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
+    y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
+    loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
+    model_maker = config.get('model_maker', "")
+    output_attention = config.get('output_attention', "")
+    special_token = config.get('special_token', False)
+    if model_maker  == "mlp":
+        model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'],
+                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token)
+    elif  model_maker:
+        model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
+
+    model.criterion = loss
+    module_prefix = 'module.'
+    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+
+    model.load_state_dict(model_state)
+    return model
+
 
 class ForwardMLPModel(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu"):
@@ -381,22 +387,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model_state, _, config  = torch.load(self.path)
-        encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
-        y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
-        loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
-        model_maker = config.get('model_maker', "")
-        output_attention = config.get('output_attention', "")
-        if model_maker  == "mlp":
-            model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder, output_attention=output_attention)
-        elif  model_maker:
-            model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
-
-        model.criterion = loss
-        module_prefix = 'module.'
-        model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-
-        model.load_state_dict(model_state)
+        model = load_model_maker(self.path)
         model.to(self.device)
         b1, w1, b2, w2 = extract_mlp_model(model, X, y, device=self.device)
         self.parameters_  = (b1, w1, b2, w2)

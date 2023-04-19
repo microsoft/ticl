@@ -73,14 +73,12 @@ class MLPModelDecoder(nn.Module):
                                     nn.Linear(hidden_size, (emsize + 1) * nout + emsize ** 2 + emsize))
 
     def forward(self, x):
-        print("output_attention", self.output_attention)
-        print("special_token", self.special_token)
         if x.shape[0] != 0:
             if self.output_attention:
                 if not self.special_token:
-                    res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze()
+                    res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
                 else:
-                    res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze()
+                    res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze(0)
             else:
                 res = self.mlp(x.mean(0))
         else:
