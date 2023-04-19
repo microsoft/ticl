@@ -17,6 +17,7 @@ from tabpfn.decoders import LinearModelDecoder, MLPModelDecoder
 from tabpfn import encoders
 
 from sklearn.preprocessing import LabelEncoder
+from functools import cache
 
 
 class TransformerModelMaker(nn.Module):
@@ -140,14 +141,15 @@ class TransformerModelMakeMLP(TransformerModelMaker):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False):
+                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None):
         super().__init__(encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
                  pos_encoder=pos_encoder, decoder=decoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
                  activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
                  all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
         self.output_attention = output_attention
         self.special_token = special_token
-        self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=nhid, nout=n_out, output_attention=self.output_attention, special_token=special_token)
+        self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=nhid, nout=n_out, output_attention=self.output_attention,
+                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 
@@ -319,11 +321,14 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
 
 
 def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2):
-    mean = X_train.mean(axis=0)
-    std = X_train.std(axis=0, ddof=1) + .000001
+    mean = np.nanmean(X_train, axis=0)
+    std = np.nanstd(X_train, axis=0, ddof=1) + .000001
+    std[np.isnan(std)] = 1
     X_test_scaled = (X_test - mean) / std
     X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
     res = np.dot(np.maximum(np.dot(X_test_scaled, w1) + b1, 0), w2) + b2
+    if np.isnan(res).any():
+        print("NAN")
     from scipy.special import softmax
     return softmax(res / .8, axis=1)
 
@@ -356,6 +361,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu"):
     total_biases = torch.matmul(encoder_bias, w1) + b1
     return  total_biases.squeeze().detach().cpu().numpy(), total_weights.squeeze().detach().cpu().numpy() / (n_features / max_features), b2.squeeze()[:n_classes].detach().cpu().numpy(), w2.squeeze()[:, :n_classes].detach().cpu().numpy()
 
+@cache
 def load_model_maker(path):
     model_state, _, config  = torch.load(path)
     encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
@@ -375,6 +381,7 @@ def load_model_maker(path):
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
 
     model.load_state_dict(model_state)
+    model.eval()
     return model
 
 
