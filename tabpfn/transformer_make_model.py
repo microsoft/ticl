@@ -419,7 +419,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-class PermutationMeta(ClassifierMixin, BaseEstimator):
+class PermutationsMeta(ClassifierMixin, BaseEstimator):
     def __init__(self, base_estimator):
         self.base_estimator = base_estimator
     
