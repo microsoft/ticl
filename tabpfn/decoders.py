@@ -84,9 +84,14 @@ class MLPModelDecoder(nn.Module):
         else:
             raise ValueError("Empty input")
             res = torch.zeros((hidden_size + 1) * nout + (emsize + 1) * hidden_size, device=x.device)
-        assert res.shape[1] == (hidden_size + 1) * self.nout + (emsize + 1) * hidden_size
-        w2 = res[:, :self.nout * hidden_size].reshape(-1, hidden_size, self.nout)
-        b2 = res[:, self.nout * hidden_size: self.nout * (hidden_size + 1)].reshape(-1, self.nout)
-        w1 = res[:, self.nout * (emsize + 1): self.nout * (emsize + 1) + emsize ** 2].reshape(-1, emsize, hidden_size)
-        b1 = res[:, -emsize:].reshape(-1, emsize)
+        w2_size = self.nout * hidden_size
+        b2_size = self.nout
+        w1_size = emsize * hidden_size
+        b1_size = hidden_size
+        assert res.shape[1] == w2_size + b2_size + w1_size + b1_size
+        # let's confuse ourselves by storing them in the opposite order!
+        w2 = res[:, :w2_size].reshape(-1, hidden_size, self.nout)
+        b2 = res[:, w2_size: w2_size + b2_size].reshape(-1, self.nout)
+        w1 = res[:, w2_size + b2_size: w2_size + b2_size + w1_size].reshape(-1, emsize, hidden_size)
+        b1 = res[:, -b1_size:].reshape(-1, hidden_size)
         return b1, w1, b2, w2

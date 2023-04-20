@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
@@ -48,7 +50,8 @@ def make_lgbm(categorical_features):
 
     return LGBMClassifier(categorical_features=categorical_features)
 
-def evaluate(previous_results=None, models=None):
+def evaluate(previous_results=None, models=None, verbose=0):
+    from tqdm import tqdm
     from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True)
@@ -64,11 +67,17 @@ def evaluate(previous_results=None, models=None):
     if previous_results is None:
         from collections import defaultdict
         all_scores = defaultdict(dict)
-    for ds_name, X, y, categorical_features, _, _ in cc_valid_datasets_multiclass:
-        print(ds_name)
+    else:
+        for model in models:
+            if model not in previous_results.columns:
+                previous_results[model] = np.NaN
+    for ds_name, X, y, categorical_features, _, _ in tqdm(cc_valid_datasets_multiclass):
+        if verbose > 0:
+            print(ds_name)
         for model_name, model_creator in models.items():
-            print(model_name)
-            if previous_results and not np.isnan(previous_results.loc[ds_name, model_name]):
+            if verbose > 1:
+                print(model_name)
+            if previous_results is not None and not np.isnan(previous_results.loc[ds_name, model_name]):
                 continue
 
             clf = model_creator(categorical_features)
@@ -77,7 +86,7 @@ def evaluate(previous_results=None, models=None):
             try:
                 scores = cross_validate(clf, X, y, scoring="roc_auc_ovo")
                 score = scores['test_score'].mean()
-            except:
+            except ValueError:
                 score = np.NaN
             if previous_results is None:
                 all_scores[ds_name][model_name] = score

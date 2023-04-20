@@ -17,7 +17,11 @@ from tabpfn.decoders import LinearModelDecoder, MLPModelDecoder
 from tabpfn import encoders
 
 from sklearn.preprocessing import LabelEncoder
-from functools import cache
+try:
+    from functools import cache
+except ImportError:
+    from functools import lru_cache
+    cache = lru_cache(maxsize=None)
 
 
 class TransformerModelMaker(nn.Module):

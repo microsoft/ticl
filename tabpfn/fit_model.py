@@ -51,22 +51,6 @@ base_path = '.'
 max_features = 100
 
 
-# In[12]:
-
-
-def print_models(model_string):
-    print(model_string)
-
-    for i in range(80):
-        for e in range(50):
-            exists = Path(os.path.join(base_path, f'models_diff/prior_diff_real_checkpoint{model_string}_n_{i}_epoch_{e}.cpkt')).is_file()
-            if exists:
-                print(os.path.join(base_path, f'models_diff/prior_diff_real_checkpoint{model_string}_n_{i}_epoch_{e}.cpkt'))
-        print()
-
-
-# In[13]:
-
 
 def train_function(config_sample, i, add_name='', state_dict=None):
     start_time = time.time()
@@ -105,7 +89,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_predict_linear_coefficients_nlayer_6'
+    model_string = '_predict_mlp_hidden_128'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -121,9 +105,6 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     return config, model_string
 
 
-# ## Visualize Prior samples
-
-# In[15]:
 
 
 config, model_string = reload_config(longer=1)
@@ -184,7 +165,7 @@ config['y_encoder'] = "one_hot"
     
 #config['aggregate_k_gradients'] = 8
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 4
+config['aggregate_k_gradients'] = 32
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
 config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
@@ -197,40 +178,17 @@ config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
 
-config['model_maker'] = True
+config['model_maker'] = 'mlp'
+config['output_attention'] = True
+config['special_token'] = True
 config['min_eval_pos'] = 2
+config['predicted_hidden_layer_size'] = 64
 
 config_sample = evaluate_hypers(config)
 
 
-# In[16]:
-
-
-# config_sample['batch_size'] = 4
-# model = get_model(config_sample, device, should_train=False, verbose=2) # , state_dict=model[2].state_dict()
-# (hp_embedding, data, _), targets, single_eval_pos = next(iter(model[3]))
-
-#from utils import normalize_data
-#fig = plt.figure(figsize=(8, 8))
-#N = 100
-#plot_features(data[0:N, 0, 0:4], targets[0:N, 0], fig=fig)
-
-#d = np.concatenate([data[:, 0, :].T, np.expand_dims(targets[:, 0], -1).T])
-#d[np.isnan(d)] = 0
-#c = np.corrcoef(d)
-#plt.matshow(np.abs(c), vmin=0, vmax=1)
-#plt.show()
-
-
-# In[ ]:
-
-
-
-
-
 # ## Training
 
-# In[19]:
 
 
 # model = get_model(config_sample, device, should_train=True, verbose=1)
