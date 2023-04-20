@@ -84,10 +84,10 @@ def evaluate(previous_results=None, models=None, verbose=0):
             if X.shape[1] > 100:
                 X = X[:, :100]
             try:
-                scores = cross_validate(clf, X, y, scoring="roc_auc_ovo")
+                scores = cross_validate(clf, X, y, scoring="roc_auc_ovo", error_score="raise")
                 score = scores['test_score'].mean()
-            except ValueError as e:
-                print("ValueError: ",str(e))
+            except (ValueError, RuntimeError) as e:
+                print("Error: ", str(e))
                 score = np.NaN
             if previous_results is None:
                 all_scores[ds_name][model_name] = score

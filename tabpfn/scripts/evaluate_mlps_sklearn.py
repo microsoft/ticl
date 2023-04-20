@@ -12,7 +12,23 @@ from sklearn.model_selection import cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
-from tabpfn.transformer_make_model import ForwardLinearModel
+from tabpfn.transformer_make_model import ForwardLinearModel, PermutationsMeta, ForwardMLPModel
+
+
+def add_forward_mlp_model(model_name, model_path, current_models=None, permutations=False):
+    def make_forward_mlp_model(categorical_features):
+        cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
+        preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
+        if permutations:
+            return make_pipeline(preprocess, PermutationsMeta(ForwardMLPModel(path=model_path)))
+        else:
+            return make_pipeline(preprocess, ForwardMLPModel(path=model_path))
+    
+    if current_models:
+        current_models[model_name] = make_forward_mlp_model
+        return current_models
+    return {model_name: make_forward_mlp_model}
+
 
 
 def make_mlp(categorical_features):
