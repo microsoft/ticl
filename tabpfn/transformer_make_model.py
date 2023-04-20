@@ -17,6 +17,10 @@ from tabpfn.decoders import LinearModelDecoder, MLPModelDecoder
 from tabpfn import encoders
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.base import clone
+from sklearn.ensemble import VotingClassifier
+
+
 try:
     from functools import cache
 except ImportError:
@@ -390,9 +394,10 @@ def load_model_maker(path):
 
 
 class ForwardMLPModel(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu"):
+    def __init__(self, path=None, device="cpu", label_offset=0):
         self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
         self.device = device
+        self.label_offset = label_offset
         
     def fit(self, X, y):
         self.X_train_ = X
@@ -400,8 +405,10 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         y = le.fit_transform(y)
         model = load_model_maker(self.path)
         model.to(self.device)
-        b1, w1, b2, w2 = extract_mlp_model(model, X, y, device=self.device)
-        self.parameters_  = (b1, w1, b2, w2)
+        n_classes = len(le.classes_)
+        indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
+        b1, w1, b2, w2 = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device)
+        self.parameters_  = (b1, w1, b2[indices], w2[:, indices])
         self.classes_ = le.classes_
         return self
         
@@ -410,3 +417,27 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
     
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
+
+
+class PermutationMeta(ClassifierMixin, BaseEstimator):
+    def __init__(self, base_estimator):
+        self.base_estimator = base_estimator
+    
+    def fit(self, X, y):
+        estimators = []
+        for i in range(len(np.unique(y))):
+            estimator = clone(self.base_estimator).set_params(label_offset=i)
+            estimators.append((str(i), estimator))
+        self.vc_ = VotingClassifier(estimators, voting='soft')
+        self.vc_.fit(X, y)
+        return self
+
+    def predict_proba(self, X):
+        return self.vc_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.vc_.predict(X)
+
+    @property
+    def classes_(self):
+        return self.vc_.classes_

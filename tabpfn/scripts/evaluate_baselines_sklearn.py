@@ -86,7 +86,8 @@ def evaluate(previous_results=None, models=None, verbose=0):
             try:
                 scores = cross_validate(clf, X, y, scoring="roc_auc_ovo")
                 score = scores['test_score'].mean()
-            except ValueError:
+            except ValueError as e:
+                print("ValueError: ",str(e))
                 score = np.NaN
             if previous_results is None:
                 all_scores[ds_name][model_name] = score
