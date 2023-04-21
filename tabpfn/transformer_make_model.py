@@ -149,7 +149,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None):
+                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048):
         super().__init__(encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
                  pos_encoder=pos_encoder, decoder=decoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
                  activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
@@ -157,7 +157,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         self.output_attention = output_attention
         self.special_token = special_token
         self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=nhid, nout=n_out, output_attention=self.output_attention,
-                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size)
+                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 

@@ -13,7 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
 from tabpfn.transformer_make_model import ForwardLinearModel, PermutationsMeta, ForwardMLPModel
-
+from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
 
 def add_forward_mlp_model(model_name, model_path, current_models=None, permutations=False):
     def make_forward_mlp_model(categorical_features):

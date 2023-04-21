@@ -38,7 +38,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
           load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, style_encoder_generator=None, epoch_callback=None,
           initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, model_maker=False, output_attention=False,
-          special_token=False, predicted_hidden_layer_size=None, **model_extra_args
+          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, **model_extra_args
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     print(f'Using {device} device')
@@ -69,7 +69,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
                                 y_encoder=y_encoder, input_normalization=input_normalization,
                                 pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
                                 decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
-                                predicted_hidden_layer_size=predicted_hidden_layer_size, **model_extra_args
+                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim, **model_extra_args
                                 )
     elif model_maker:
         model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout, style_encoder=style_encoder,

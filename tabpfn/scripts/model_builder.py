@@ -348,6 +348,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , recompute_attn=config['recompute_attn']
                   , epoch_callback=epoch_callback
                   , bptt_extra_samples = config['bptt_extra_samples']
+                  , decoder_embed_dim = config['decoder_embed_dim']
                   , extra_prior_kwargs_dict={
             'num_features': config['num_features']
             , 'hyperparameters': prior_hyperparameters
