@@ -378,9 +378,11 @@ def load_model_maker(path):
     model_maker = config.get('model_maker', "")
     output_attention = config.get('output_attention', "")
     special_token = config.get('special_token', False)
+    decoder_embed_dim = config.get("decoder_embed_dim", 2048)
+    predicted_hidden_layer_size = config.get("predicted_hidden_layer_size", 128)
     if model_maker  == "mlp":
         model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'],
-                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token)
+                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token, decoder_embed_dim=decoder_embed_dim, predicted_hidden_layer_size=predicted_hidden_layer_size)
     elif  model_maker:
         model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
 

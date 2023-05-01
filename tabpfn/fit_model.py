@@ -89,7 +89,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_predict_mlp_hidden_128'
+    model_string = '_no_token_hidden_128_embed_dim_1024_decoder_nhid_4096_two_layers'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -170,7 +170,7 @@ config['aggregate_k_gradients'] = 32
 config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024//16//2
-config['epochs'] = 300
+config['epochs'] = 600
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
 config['train_mixed_precision'] = True
@@ -180,9 +180,12 @@ config['weight_decay'] = 1e-5
 
 config['model_maker'] = 'mlp'
 config['output_attention'] = True
-config['special_token'] = True
+config['special_token'] = False
+config['decoder_embed_dim'] = 1024
+config['decoder_hidden_size'] = 4096
+config['decoder_two_hidden_layers'] = True
 config['min_eval_pos'] = 2
-config['predicted_hidden_layer_size'] = 64
+config['predicted_hidden_layer_size'] = 128
 
 config_sample = evaluate_hypers(config)
 

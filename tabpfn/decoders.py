@@ -44,7 +44,8 @@ class LinearModelDecoder(nn.Module):
 
 
 class MLPModelDecoder(nn.Module):
-    def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048):
+    def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
+                 decoder_two_hidden_layers=False):
         super().__init__()
         print("predicted hidden layer size ", predicted_hidden_layer_size)
         self.emsize = emsize
@@ -64,10 +65,16 @@ class MLPModelDecoder(nn.Module):
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
                 out_size = embed_dim
                 self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=4, kdim=emsize, vdim=emsize)
-            
-        self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                                 nn.ReLU(),
-                                 nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
+        if decoder_two_hidden_layers:
+            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
+                            nn.ReLU(),
+                            nn.Linear(hidden_size, hidden_size),
+                            nn.ReLU(),
+                            nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
+        else:
+            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
+                                    nn.ReLU(),
+                                    nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
         print("decoder output layer size ", (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size)
 
 

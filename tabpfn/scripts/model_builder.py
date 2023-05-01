@@ -340,6 +340,8 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , special_token=config.get('special_token', False)
                   , gpu_device=device
                   , predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None)
+                  , decoder_hidden_size=config.get('decoder_hidden_size', config['emsize'] * config['nhid_factor'])
+                  , decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False)
                   , dropout=config['dropout']
                   , steps_per_epoch=config['num_steps']
                   , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
