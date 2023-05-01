@@ -89,25 +89,37 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y):
         y, classes = _encode_y(y)
-        X = torch.tensor(X, dtype=torch.float32, device=self.device)
-        y = torch.tensor(y, device=self.device)
+        if torch.is_tensor(X):
+            X = X.clone().detach().to(self.device).float()
+        else:
+            X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        if torch.is_tensor(y):
+            y = y.clone().detach().to(self.device)
+        else:
+            y = torch.tensor(y, device=self.device)
+        X = X.nan_to_num()
         dataloader = DataLoader(TensorDataset(X, y), batch_size=X.shape[0])
         self.fit_from_dataloader(dataloader, n_features=X.shape[1], classes=classes)
         return self
+
+    def _predict(self, X):
+        if torch.is_tensor(X):
+            X = X.clone().detach().to(self.device).float()
+        else:
+            X = torch.tensor(X, dtype=torch.float32, device=self.device)
+        return self.model_(X.nan_to_num())
         
     def predict(self, X):
-        X = torch.tensor(X, dtype=torch.float32, device=self.device)
-        pred = self.model_(X)
+        pred = self._predict(X)
         return self.classes_[pred.argmax(1).detach().cpu().numpy()]
     
     def predict_proba(self, X):
-        X = torch.tensor(X, dtype=torch.float32, device=self.device)
-        pred = self.model_(X)
+        pred = self._predict(X)
         return pred.softmax(dim=1).detach().cpu().numpy()
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, categorical_features=None, N_ensemble_configurations=32, **kwargs):
+    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, categorical_features=None, N_ensemble_configurations=32, verbose=0, **kwargs):
         self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
@@ -119,12 +131,14 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.categorical_features = categorical_features
         self.N_ensemble_configurations = N_ensemble_configurations
         self.kwargs = kwargs
+        self.verbose=verbose
 
     def fit(self, X, y):
-        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, **self.kwargs).fit(X, y)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, verbose=self.verbose, **self.kwargs).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
-                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm)
+                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
+	
         self.mlp_.fit(X, y_train_soft_probs)
         return self
     def predict(self, X):
