@@ -373,8 +373,10 @@ def extract_mlp_model(model, X_train, y_train, device="cpu"):
     return  total_biases.squeeze().detach().cpu().numpy(), total_weights.squeeze().detach().cpu().numpy() / (n_features / max_features), b2.squeeze()[:n_classes].detach().cpu().numpy(), w2.squeeze()[:, :n_classes].detach().cpu().numpy()
 
 @cache
-def load_model_maker(path):
+def load_model_maker(path, **kwargs):
+    # kwargs allow overwriting parameters that were introduced later
     model_state, _, config  = torch.load(path)
+    config.update(kwargs)
     encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
     y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
     loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
@@ -382,10 +384,13 @@ def load_model_maker(path):
     output_attention = config.get('output_attention', "")
     special_token = config.get('special_token', False)
     decoder_embed_dim = config.get("decoder_embed_dim", 2048)
+    decoder_hidden_size = config.get("decoder_hidden_size", config['emsize'] * config['nhid_factor'])
+    decoder_two_hidden_layers = config.get("decoder_two_hidden_layers", False)
     predicted_hidden_layer_size = config.get("predicted_hidden_layer_size", 128)
     if model_maker  == "mlp":
         model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'],
-                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token, decoder_embed_dim=decoder_embed_dim, predicted_hidden_layer_size=predicted_hidden_layer_size)
+                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token, decoder_embed_dim=decoder_embed_dim,
+                                        predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size)
     elif  model_maker:
         model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
 
