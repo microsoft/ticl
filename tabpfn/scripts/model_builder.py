@@ -208,7 +208,7 @@ def get_meta_gp_prior_hyperparameters(config):
     return config
 
 
-def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None):
+def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
     import tabpfn.priors as priors
     from tabpfn.train import train, Losses
     extra_kwargs = {}
