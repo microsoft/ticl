@@ -52,7 +52,7 @@ max_features = 100
 
 
 
-def train_function(config_sample, i, add_name='', state_dict=None):
+def train_function(config_sample, i, add_name='', state_dict=None, load_model_strict=True):
     start_time = time.time()
     N_epochs_to_save = 100
     save_every = max(1, config_sample['epochs'] // N_epochs_to_save)
@@ -74,7 +74,7 @@ def train_function(config_sample, i, add_name='', state_dict=None):
                       , device
                       , should_train=True
                       , verbose=1
-                      , epoch_callback = save_callback, state_dict=state_dict)
+                      , epoch_callback = save_callback, state_dict=state_dict, load_model_strict=load_model_strict)
     
     return model
 
@@ -89,7 +89,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_no_token_hidden_128_embed_dim_1024_decoder_nhid_4096_two_layers'
+    model_string = '_embed_dim_1024_warm_start_from_tabpfn_lr0003'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -151,9 +151,9 @@ config['rotate_normalized_labels'] = True
 config["mix_activations"] = False # False heisst eig True
 
 #config['lr'] = 0.00005
-config['lr'] = 0.0001
+config['lr'] = 0.0003
 #config['nlayers'] = 18
-config['nlayers'] = 6
+config['nlayers'] = 12
 # config['nlayers'] = 6
 config['emsize'] = 512
 #config['emsize'] = 1024
@@ -170,7 +170,7 @@ config['aggregate_k_gradients'] = 32
 config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024//16//2
-config['epochs'] = 600
+config['epochs'] = 1000
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
 config['train_mixed_precision'] = True
@@ -182,8 +182,8 @@ config['model_maker'] = 'mlp'
 config['output_attention'] = True
 config['special_token'] = False
 config['decoder_embed_dim'] = 1024
-config['decoder_hidden_size'] = 4096
-config['decoder_two_hidden_layers'] = True
+config['decoder_hidden_size'] = 2048
+config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
 
@@ -191,12 +191,19 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
+warm_start_weights = "models_diff/prior_diff_real_checkpoint_defaults_k_aggregate_2_batch_128_onehot_classes_multiclass_02_10_2023_23_55_16_n_0_epoch_59.cpkt"
+model_dict = None
 
+if warm_start_weights is not None:
+    model_state, optimizer_state, _ = torch.load(
+        warm_start_weights, map_location='cpu')
+    module_prefix = 'module.'
+    model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
 
 
 # model = get_model(config_sample, device, should_train=True, verbose=1)
 
-model = train_function(config_sample, i=0, add_name=model_string)
+model = train_function(config_sample, i=0, add_name=model_string, state_dict=model_dict, load_model_strict=warm_start_weights is None)
 # import pickle
 # with open(f"all_{model_string}.pickle", "wb") as f:
 #    pickle.dump(model[:3], f, protocol=-1)

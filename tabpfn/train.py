@@ -38,7 +38,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
           load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, style_encoder_generator=None, epoch_callback=None,
           initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, model_maker=False, output_attention=False,
-          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, decoder_hidden_size=1024, decoder_two_hidden_layers=False, **model_extra_args
+          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, decoder_hidden_size=1024, decoder_two_hidden_layers=False, load_model_strict=True, **model_extra_args
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     print(f'Using {device} device')
@@ -86,7 +86,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
                                 )
     model.criterion = criterion
     if load_weights_from_this_state_dict is not None:
-        model.load_state_dict(load_weights_from_this_state_dict)
+        model.load_state_dict(load_weights_from_this_state_dict, strict=load_model_strict)
     if initialize_with_model is not None:
         model.init_from_small_model(initialize_with_model)
     if verbose:
@@ -222,7 +222,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
             if verbose:
                 print('-' * 89)
                 print(
-                    f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.2f} | ')
+                    f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.4f} | ')
                 if verbose > 2:
                     print(f"pos losses {','.join([f'{l:5.2f}' for l in total_positional_losses])},")
                 print(
