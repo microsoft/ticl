@@ -45,16 +45,18 @@ class LinearModelDecoder(nn.Module):
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False):
+                 decoder_two_hidden_layers=False, no_double_embedding=False):
         super().__init__()
         print("predicted hidden layer size ", predicted_hidden_layer_size)
         self.emsize = emsize
         self.embed_dim = embed_dim
+        self.no_double_embedding = no_double_embedding
         self.nout = nout
         self.hidden_size = hidden_size
         self.output_attention = output_attention
         self.special_token = special_token
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
+        self.in_size = 100 if no_double_embedding else emsize
         out_size = emsize
         if output_attention:
             if special_token:
@@ -70,12 +72,12 @@ class MLPModelDecoder(nn.Module):
                             nn.ReLU(),
                             nn.Linear(hidden_size, hidden_size),
                             nn.ReLU(),
-                            nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
+                            nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size))
         else:
             self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
                                     nn.ReLU(),
-                                    nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size))
-        print("decoder output layer size ", (self.predicted_hidden_layer_size + 1) * nout + (emsize + 1) * self.predicted_hidden_layer_size)
+                                    nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size))
+        print("decoder output layer size ", (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size)
 
 
     def forward(self, x):
@@ -91,15 +93,15 @@ class MLPModelDecoder(nn.Module):
                 res = self.mlp(x.mean(0))
         else:
             raise ValueError("Empty input")
-            res = torch.zeros((hidden_size + 1) * nout + (emsize + 1) * hidden_size, device=x.device)
+            res = torch.zeros((hidden_size + 1) * nout + (self.in_size + 1) * hidden_size, device=x.device)
         w2_size = self.nout * hidden_size
         b2_size = self.nout
-        w1_size = emsize * hidden_size
+        w1_size = self.in_size * hidden_size
         b1_size = hidden_size
         assert res.shape[1] == w2_size + b2_size + w1_size + b1_size
         # let's confuse ourselves by storing them in the opposite order!
         w2 = res[:, :w2_size].reshape(-1, hidden_size, self.nout)
         b2 = res[:, w2_size: w2_size + b2_size].reshape(-1, self.nout)
-        w1 = res[:, w2_size + b2_size: w2_size + b2_size + w1_size].reshape(-1, emsize, hidden_size)
+        w1 = res[:, w2_size + b2_size: w2_size + b2_size + w1_size].reshape(-1, self.in_size, hidden_size)
         b1 = res[:, -b1_size:].reshape(-1, hidden_size)
         return b1, w1, b2, w2

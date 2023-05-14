@@ -38,7 +38,8 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
           load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, style_encoder_generator=None, epoch_callback=None,
           initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, model_maker=False, output_attention=False,
-          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, decoder_hidden_size=1024, decoder_two_hidden_layers=False, load_model_strict=True, **model_extra_args
+          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, decoder_hidden_size=1024, decoder_two_hidden_layers=False, load_model_strict=True,
+          no_double_embedding=False, **model_extra_args
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     print(f'Using {device} device')
@@ -70,6 +71,7 @@ def train(priordataloader_class, criterion, encoder_generator, emsize=200, nhid=
                                 pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
                                 decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
                                 predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim, decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
+                                no_double_embedding=no_double_embedding,
                                 **model_extra_args
                                 )
     elif model_maker:

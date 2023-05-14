@@ -342,6 +342,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None)
                   , decoder_hidden_size=config.get('decoder_hidden_size', config['emsize'] * config['nhid_factor'])
                   , decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False)
+                  , no_double_embedding=config.get('no_double_embedding', False)
                   , dropout=config['dropout']
                   , steps_per_epoch=config['num_steps']
                   , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
@@ -361,6 +362,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , lr=config['lr']
                   , verbose=verbose_train,
                   model_maker=model_maker,
+                  load_model_strict=load_model_strict,
                   weight_decay=config.get('weight_decay', 0.0))
 
     return model

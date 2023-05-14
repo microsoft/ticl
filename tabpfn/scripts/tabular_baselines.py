@@ -3,7 +3,7 @@ tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
 
 import pandas
-from catboost import CatBoostClassifier, Pool
+# from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import KFold
 from sklearn.model_selection import ParameterGrid
@@ -172,7 +172,7 @@ def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_t
           fn=lambda params: eval_f(params, clf_, x, y, metric_used),
           space=param_grid_hyperopt[key],
           algo=rand.suggest,
-          rstate=np.random.RandomState(int(y[:].sum()) % 10000),
+          rstate=np.random.default_rng(int(y[:].sum()) % 10000),
           early_stop_fn=stop,
           trials=trials,
           catch_eval_exceptions=True,
@@ -972,7 +972,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
         fn=lambda params: eval_f(params, clf_, x, y, metric_used, start_time, max_time),
         space=param_grid_hyperopt['ridge'],
         algo=rand.suggest,
-        rstate=np.random.RandomState(int(y[:].sum()) % 10000),
+        rstate=np.random.default_rng(int(y[:].sum()) % 10000),
         early_stop_fn=stop,
         # The seed is deterministic but varies for each dataset and each split of it
         max_evals=10000)
@@ -1207,7 +1207,7 @@ def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300)
         fn=lambda params: tabnet_eval_f(params, clf_, x, y, metric_used, start_time, max_time),
         space=param_grid_hyperopt['tabnet'],
         algo=rand.suggest,
-        rstate=np.random.RandomState(int(y[:].sum()) % 10000),
+        rstate=np.random.default_rng(int(y[:].sum()) % 10000),
         early_stop_fn=stop,
         max_evals=1000)
     best = space_eval(param_grid_hyperopt['tabnet'], best)
