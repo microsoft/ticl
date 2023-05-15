@@ -45,7 +45,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 
 CV = 5
-MULTITHREAD = -1 # Number of threads baselines are able to use at most
+# MULTITHREAD = -1 # Number of threads baselines are able to use at most
+MULTITHREAD = 4 # Number of threads baselines are able to use at most
 param_grid, param_grid_hyperopt = {}, {}
 
 def get_scoring_direction(metric_used):
@@ -1060,7 +1061,7 @@ def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
                                              , cat_features=cat_features)
 
     def clf_(**params):
-        return LogisticRegression(solver='saga', tol=1e-4, n_jobs=MULTITHREAD, **params)
+        return LogisticRegression(solver='saga', tol=1e-4, n_jobs=1, **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'logistic', clf_, metric_used, max_time, no_tune)
 
@@ -1125,8 +1126,8 @@ def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
 
     def clf_(**params):
         if is_classification(metric_used):
-            return neighbors.KNeighborsClassifier(n_jobs=MULTITHREAD, **params)
-        return neighbors.KNeighborsRegressor(n_jobs=MULTITHREAD, **params)
+            return neighbors.KNeighborsClassifier(n_jobs=1, **params, algorithm="brute")
+        return neighbors.KNeighborsRegressor(n_jobs=1, **params, algorithm="brute")
 
     return eval_complete_f(x, y, test_x, test_y, 'knn', clf_, metric_used, max_time, no_tune)
 
