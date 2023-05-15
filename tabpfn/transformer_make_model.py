@@ -266,15 +266,6 @@ def predict_with_linear_model(X_train, X_test, weights, biases):
     from scipy.special import softmax
     return softmax(res2 / .8, axis=1)
 
-def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2):
-    mean = X_train.mean(axis=0)
-    std = X_train.std(axis=0, ddof=1) + .000001
-    X_test_scaled = (X_test - mean) / std
-    X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
-    res = np.dot(np.maximum(np.dot(X_test_scaled, w1) + b1, 0), w2) + b2
-    from scipy.special import softmax
-    return softmax(res / .8, axis=1)
-
 
 def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
     max_features = 100
@@ -336,14 +327,19 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
 
 
 def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2):
+
     mean = np.nanmean(X_train, axis=0)
     std = np.nanstd(X_train, axis=0, ddof=1) + .000001
+    # FIXME replacing nan with 0 as in TabPFN
+    X_train = np.nan_to_num(X_train, 0)
+    X_test = np.nan_to_num(X_test, 0)
     std[np.isnan(std)] = 1
     X_test_scaled = (X_test - mean) / std
     X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
     res = np.dot(np.maximum(np.dot(X_test_scaled, w1) + b1, 0), w2) + b2
     if np.isnan(res).any():
         print("NAN")
+        import pdb; pdb.set_trace()
     from scipy.special import softmax
     return softmax(res / .8, axis=1)
 
