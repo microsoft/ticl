@@ -4,7 +4,6 @@ from pathlib import Path
 from contextlib import nullcontext
 
 import torch
-from tqdm import tqdm
 import random
 import numpy as np
 
@@ -16,6 +15,9 @@ from tabpfn.scripts.tabular_baselines import get_scoring_string
 from tabpfn.scripts import tabular_metrics
 from tabpfn.scripts.transformer_prediction_interface import *
 from tabpfn.scripts.baseline_prediction_interface import *
+from tqdm import tqdm
+from joblib import Parallel, delayed
+
 """
 ===============================
 PUBLIC FUNCTIONS FOR EVALUATION
@@ -176,34 +178,55 @@ INTERNAL HELPER FUNCTIONS
 ===============================
 """
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_time, metric_used, split_number, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False):
-    
-    results = []
-    for ds in datasets:
+def _eval_single_dataset_wrapper(**kwargs):
+    max_time = kwargs['max_time']
+    metric_used = kwargs['metric_used']
+    time_string = '_time_'+str(max_time) if max_time else ''
+    metric_used_string = '_'+get_scoring_string(metric_used, usage='') if kwargs['append_metric'] else ''
+    result = evaluate(method=kwargs['model_name']+time_string+metric_used_string, **kwargs)
+    result['model'] = kwargs['model_name']
+    result['dataset'] = kwargs['datasets'][0][0]
+    result['split'] = kwargs['split_number']
+    result['max_time'] = kwargs['max_time']
+    return result
 
-        time_string = '_time_'+str(max_time) if max_time else ''
-        metric_used_string = '_'+get_scoring_string(metric_used, usage='') if append_metric else ''
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False):
+    if device == "cuda":
+        results = []
+        for (ds, max_time, split_number) in tqdm(itertools.product(datasets, max_times, split_numbers)):
+            result = _eval_single_dataset_wrapper(datasets=[ds]
+                                                , model=model
+                                                , model_name=model_name
+                                                , bptt=bptt, base_path=base_path
+                                                , eval_positions=eval_positions
+                                                , device=device, max_splits=1
+                                                , overwrite=overwrite
+                                                , save=True
+                                                , metric_used=metric_used
+                                                , path_interfix=task_type
+                                                , fetch_only=fetch_only
+                                                , split_number=split_number
+                                                , verbose=verbose
+                                                , max_time=max_time
+                                                , append_metric=append_metric)
 
-        result = evaluate(datasets=[ds]
-                          , model=model
-                          , method=model_name+time_string+metric_used_string
-                          , bptt=bptt, base_path=base_path
-                          , eval_positions=eval_positions
-                          , device=device, max_splits=1
-                          , overwrite=overwrite
-                          , save=True
-                          , metric_used=metric_used
-                          , path_interfix=task_type
-                          , fetch_only=fetch_only
-                          , split_number=split_number
-                          , verbose=verbose
-                          , max_time=max_time)
-        result['model'] = model_name
-        result['dataset'] = ds[0]
-        result['split'] = split_number
-        result['max_time'] = max_time
-        results.append(result)
-    
+            results.append(result)
+    else:
+        results = Parallel(n_jobs=-1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
+                                                , model=model
+                                                , model_name=model_name
+                                                , bptt=bptt, base_path=base_path
+                                                , eval_positions=eval_positions
+                                                , device=device, max_splits=1
+                                                , overwrite=overwrite
+                                                , save=True
+                                                , metric_used=metric_used
+                                                , path_interfix=task_type
+                                                , fetch_only=fetch_only
+                                                , split_number=split_number
+                                                , verbose=verbose
+                                                , max_time=max_time
+                                                , append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
     return results
 
 
