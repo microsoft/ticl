@@ -176,7 +176,7 @@ def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_t
           early_stop_fn=stop,
           trials=trials,
           catch_eval_exceptions=True,
-          verbose=True,
+          verbose=False,
           # The seed is deterministic but varies for each dataset and each split of it
           max_evals=1000)
       best_score = np.min([t['result']['loss'] for t in trials.trials])

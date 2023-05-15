@@ -176,6 +176,38 @@ INTERNAL HELPER FUNCTIONS
 ===============================
 """
 
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_time, metric_used, split_number, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False):
+    
+    results = []
+    for ds in datasets:
+
+        time_string = '_time_'+str(max_time) if max_time else ''
+        metric_used_string = '_'+get_scoring_string(metric_used, usage='') if append_metric else ''
+
+        result = evaluate(datasets=[ds]
+                          , model=model
+                          , method=model_name+time_string+metric_used_string
+                          , bptt=bptt, base_path=base_path
+                          , eval_positions=eval_positions
+                          , device=device, max_splits=1
+                          , overwrite=overwrite
+                          , save=True
+                          , metric_used=metric_used
+                          , path_interfix=task_type
+                          , fetch_only=fetch_only
+                          , split_number=split_number
+                          , verbose=verbose
+                          , max_time=max_time)
+        result['model'] = model_name
+        result['dataset'] = ds[0]
+        result['split'] = split_number
+        result['max_time'] = max_time
+        results.append(result)
+    
+    return results
+
+
+
 def check_file_exists(path):
     """Checks if a pickle file exists. Returns None if not, else returns the unpickled file."""
     if (os.path.isfile(path)):
