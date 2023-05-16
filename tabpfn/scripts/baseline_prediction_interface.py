@@ -19,8 +19,6 @@ def baseline_predict(metric_function, eval_xs, eval_ys, categorical_feats, metri
     outputs = []
     best_configs = []
     eval_splits = list(zip(eval_xs.transpose(0, 1), eval_ys.transpose(0, 1)))
-    if len(eval_splits) > 1:
-        import pdb; pdb.set_trace()
     (eval_x, eval_y), = eval_splits
 
     metric, output, best_config = metric_function(eval_x[:eval_pos],
