@@ -14,7 +14,7 @@ import networkx
 
 # inspired from orange3 https://docs.orange.biolab.si/3/data-mining-library/reference/evaluation.cd.html
 def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, highv=None,
-                width=6, textspace=1, reverse=False, filename=None, labels=False, **kwargs):
+                width=6, textspace=1, reverse=False, filename=None, labels=False, verbose=0, **kwargs):
     """
     Draws a CD graph, which is used to display  the differences in methods'
     performance. See Janez Demsar, Statistical Comparisons of Classifiers over
@@ -213,7 +213,8 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
                   (rankpos(ssums[r]) + side, start)],
                  linewidth=linewidth_sign)
             start += height
-            print('drawing: ', l, r)
+            if verbose:
+                print('drawing: ', l, r)
 
     # draw_lines(lines)
     start = cline + 0.2
@@ -225,11 +226,13 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
     cliques = form_cliques(p_values, nnames)
     i = 1
     achieved_half = False
-    print(nnames)
+    if verbose:
+        print(nnames)
     for clq in cliques:
         if len(clq) == 1:
             continue
-        print(clq)
+        if verbose:
+            print(clq)
         min_idx = np.array(clq).min()
         max_idx = np.array(clq).max()
         if min_idx >= len(nnames) / 2 and achieved_half == False:
@@ -261,17 +264,17 @@ def form_cliques(p_values, nnames):
     return networkx.find_cliques(g)
 
 
-def draw_cd_diagram(df_perf=None, alpha=0.05, title=None, labels=False):
+def draw_cd_diagram(df_perf=None, alpha=0.05, title=None, labels=False, verbose=0):
     """
     Draws the critical difference diagram given the list of pairwise classifiers that are
     significant or not
     """
-    p_values, average_ranks, _ = wilcoxon_holm(df_perf=df_perf, alpha=alpha)
+    p_values, average_ranks, _ = wilcoxon_holm(df_perf=df_perf, alpha=alpha, verbose=verbose)
+    if verbose > 0:
+        print(average_ranks)
 
-    print(average_ranks)
-
-    for p in p_values:
-        print(p)
+        for p in p_values:
+            print(p)
 
 
     return graph_ranks(average_ranks.values, average_ranks.keys(), p_values,
@@ -287,12 +290,13 @@ def draw_cd_diagram(df_perf=None, alpha=0.05, title=None, labels=False):
     #plt.savefig('cd-diagram.png',bbox_inches='tight')
     plt.show()
 
-def wilcoxon_holm(alpha=0.05, df_perf=None):
+def wilcoxon_holm(alpha=0.05, df_perf=None, verbose=0):
     """
     Applies the wilcoxon signed rank test between each pair of algorithm and then use Holm
     to reject the null's hypothesis
     """
-    print(pd.unique(df_perf['classifier_name']))
+    if verbose:
+        print(pd.unique(df_perf['classifier_name']))
     # count the number of tested datasets per classifier
     df_counts = pd.DataFrame({'count': df_perf.groupby(
         ['classifier_name']).size()}).reset_index()
@@ -307,8 +311,8 @@ def wilcoxon_holm(alpha=0.05, df_perf=None):
         for c in classifiers))[1]
     if friedman_p_value >= alpha:
         # then the null hypothesis over the entire classifiers cannot be rejected
-        print('the null hypothesis over the entire classifiers cannot be rejected')
-        exit()
+        raise RuntimeError('the null hypothesis over the entire classifiers cannot be rejected')
+    
     # get the number of classifiers
     m = len(classifiers)
     # init array that contains the p-values calculated by the Wilcoxon signed rank test
@@ -358,7 +362,8 @@ def wilcoxon_holm(alpha=0.05, df_perf=None):
 
     # number of wins
     dfff = df_ranks.rank(ascending=False)
-    print(dfff[dfff == 1.0].sum(axis=1))
+    if verbose:
+        print(dfff[dfff == 1.0].sum(axis=1))
 
     # average the ranks
     average_ranks = df_ranks.rank(ascending=False).mean(axis=1).sort_values(ascending=False)
