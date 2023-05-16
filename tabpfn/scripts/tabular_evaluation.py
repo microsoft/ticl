@@ -17,6 +17,7 @@ from tabpfn.scripts.transformer_prediction_interface import *
 from tabpfn.scripts.baseline_prediction_interface import *
 from tqdm import tqdm
 from joblib import Parallel, delayed
+import itertools
 
 """
 ===============================
@@ -191,9 +192,10 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False):
+    print("model_name ", model_name)
     if device == "cuda":
         results = []
-        for (ds, max_time, split_number) in tqdm(itertools.product(datasets, max_times, split_numbers)):
+        for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
             result = _eval_single_dataset_wrapper(datasets=[ds]
                                                 , model=model
                                                 , model_name=model_name
@@ -212,7 +214,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
 
             results.append(result)
     else:
-        results = Parallel(n_jobs=-1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
+        results = Parallel(n_jobs=1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
                                                 , model=model
                                                 , model_name=model_name
                                                 , bptt=bptt, base_path=base_path
@@ -360,7 +362,7 @@ def evaluate_position(X, y, categorical_feats, model, bptt
 
     if save:
         with open(path, 'wb') as f:
-            np.save(f, ds_result)
+            np.save(f, np.asarray(ds_result, dtype=object))
             print(f'saved results to {path}')
 
     return ds_result
