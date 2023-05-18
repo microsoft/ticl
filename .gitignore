@@ -163,3 +163,8 @@ tabpfn/models_diff/
 *.csv
 
 tabpfn/results
+*.pdf
+*.png
+*.pickle
+tabpfn/joblib_cache
+tabpfn/catboost_info
