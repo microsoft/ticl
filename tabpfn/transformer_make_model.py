@@ -187,7 +187,8 @@ class TransformerModelMakeMLP(TransformerModelMaker):
 
         b1, w1, b2, w2 = self.decoder(output)
         if self.no_double_embedding:
-            h1 = (x_src_org[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+            x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
+            h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
         else:
             h1 = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
         #h1 = torch.nn.functional.layer_norm(h1, (h1.shape[-1],))
