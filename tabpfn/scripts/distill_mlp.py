@@ -53,7 +53,7 @@ def _encode_y(y):
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False):
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
@@ -62,13 +62,14 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.dropout_rate = dropout_rate
         self.device = device
         self.layernorm = layernorm
+        self.weight_decay = weight_decay
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
         model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
                               hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm)
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         for epoch in range(self.n_epochs):
             size = len(dataloader.dataset)
             for batch, (X, y) in enumerate(dataloader):

@@ -26,7 +26,6 @@ from sklearn import neighbors
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 import numpy as np
-np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning) 
 
 import torch
 import itertools
@@ -246,13 +245,17 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     if classifier is None:
       classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
+    tick = time.time()      
     classifier.fit(x, y)
-    print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
     pred = classifier.predict_proba(test_x)
-
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
     metric = metric_used(test_y, pred)
 
-    return metric, pred, None
+    return metric, pred, times
 
 ## Auto Gluon
 # WARNING: Crashes for some predictors for regression
@@ -1070,9 +1073,9 @@ def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
 # Search space from
 # https://www.kaggle.com/code/emanueleamcappella/random-forest-hyperparameters-tuning/notebook
 param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators', 20, 200),
-               'max_features': hp.choice('max_features', ['auto', 'sqrt']),
+               'max_features': hp.choice('max_features', [None, 'sqrt', 'log2']),
                'max_depth': hp.randint('max_depth', 1, 45),
-               'min_samples_split': hp.choice('min_samples_split', [5, 10])}
+               'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
 def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     from sklearn.ensemble import RandomForestClassifier
 
@@ -1115,6 +1118,25 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
         return sklearn.svm.SVR(**params)
 
     return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time, no_tune)
+
+
+## MLP
+param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256, 512]), 'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
+                              'n_epochs': hp.choice('n_epochs', [10, 100, 1000]), 'dropout_rate': hp.choice('dropout_rate', [0, 0.1, 0.3]), 'n_layers': hp.choice('n_layers', [1, 2, 3]),
+                              'weight_decay': hp.loguniform('weight_decay', math.log(0.00001), math.log(0.01))
+                              }
+def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
+                                             one_hot=True, impute=True, standardize=True,
+                                             cat_features=cat_features)
+    from tabpfn.scripts.distill_mlp import TorchMLP
+
+    def clf_(**params):
+        if is_classification(metric_used):
+            return TorchMLP(**params, device="cpu")
+
+    return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time, no_tune)
+
 
 ## KNN
 param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1,16)

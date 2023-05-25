@@ -214,7 +214,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
 
             results.append(result)
     else:
-        results = Parallel(n_jobs=1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
+        results = Parallel(n_jobs=-1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
                                                 , model=model
                                                 , model_name=model_name
                                                 , bptt=bptt, base_path=base_path
@@ -284,7 +284,7 @@ def generate_valid_split(X, y, bptt, eval_position, is_classification, split_num
 def evaluate_position(X, y, categorical_feats, model, bptt
                       , eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False
                       , max_time=300, split_number=1, metric_used=None, device='cpu'
-                      , per_step_normalization=False, **kwargs):
+                      , per_step_normalization=False, verbose=0, **kwargs):
     """
     Evaluates a dataset with a 'bptt' number of training samples.
 
@@ -313,7 +313,7 @@ def evaluate_position(X, y, categorical_feats, model, bptt
     if not overwrite:
         result = check_file_exists(path)
         if result is not None:
-            if not fetch_only:
+            if (not fetch_only) and verbose > 0:
                 print(f'Loaded saved result for {path}')
             return result
         elif fetch_only:
@@ -363,6 +363,7 @@ def evaluate_position(X, y, categorical_feats, model, bptt
     if save:
         with open(path, 'wb') as f:
             np.save(f, np.asarray(ds_result, dtype=object))
-            print(f'saved results to {path}')
+            if verbose > 0:
+                print(f'saved results to {path}')
 
     return ds_result
