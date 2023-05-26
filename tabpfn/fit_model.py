@@ -1,36 +1,14 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Setup
-
-# In[2]:
-
-
-import random
 import time
-import warnings
 from datetime import datetime
 
 import torch
 
-import numpy as np
-
-import matplotlib.pyplot as plt
-from scripts.differentiable_pfn_evaluation import eval_model_range
-from scripts.model_builder import get_model, get_default_spec, save_model, load_model
-from scripts.transformer_prediction_interface import transformer_predict, get_params_from_config, load_model_workflow
+from scripts.model_builder import get_model, save_model
 
 from scripts.model_configs import *
 
-from datasets import load_openml_list, open_cc_dids, open_cc_valid_dids
-from priors.utils import plot_prior, plot_features
 from priors.utils import uniform_int_sampler_f
 
-from scripts.tabular_metrics import calculate_score_per_method, calculate_score
-from scripts.tabular_evaluation import evaluate
-
-from priors.differentiable_prior import DifferentiableHyperparameterList, draw_random_style, merge_style_with_info
-from scripts import tabular_metrics
 from notebook_utils import *
 
 
@@ -78,10 +56,6 @@ def train_function(config_sample, i, add_name='', state_dict=None, load_model_st
     
     return model
 
-
-# ## Define prior settings
-
-# In[14]:
 
 
 def reload_config(config_type='causal', task_type='multiclass', longer=0):
@@ -205,12 +179,8 @@ if warm_start_weights is not None:
     model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
 
 
-# model = get_model(config_sample, device, should_train=True, verbose=1)
-
 model = train_function(config_sample, i=0, add_name=model_string, state_dict=model_dict, load_model_strict=warm_start_weights is None)
-# import pickle
-# with open(f"all_{model_string}.pickle", "wb") as f:
-#    pickle.dump(model[:3], f, protocol=-1)
+
 rank = 0
 if 'LOCAL_RANK' in os.environ:
     # launched with torch.distributed.launch
@@ -221,5 +191,3 @@ if rank == 0:
     i = 0
     save_model(model[2], base_path, f'models_diff/prior_diff_real_checkpoint{model_string}_n_{i}_epoch_on_exit.cpkt',
                    config_sample)
-
-# In[ ]:
