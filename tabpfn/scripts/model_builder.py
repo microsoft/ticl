@@ -126,7 +126,6 @@ def load_model(path, filename, device, eval_positions, verbose):
     config_sample['bptt_extra_samples_in_training'] = config_sample['bptt_extra_samples']
     config_sample['bptt_extra_samples'] = None
 
-    #print('Memory', str(get_gpu_memory()))
     if 'y_encoder' not in config_sample:
         if 'onehot' in filename:
             config_sample['y_encoder'] = 'one_hot'
@@ -144,22 +143,7 @@ def load_model(path, filename, device, eval_positions, verbose):
     return model, config_sample
 
 
-def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
-    import tabpfn.priors as priors
-    from tabpfn.train import train, Losses
-    verbose_train, verbose_prior = verbose >= 1, verbose >= 2
-    config['verbose'] = verbose_prior
-
-    if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
-        config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
-
-    config['num_steps'] = math.ceil(config['num_steps'] * config['aggregate_k_gradients'])
-    config['batch_size'] = math.ceil(config['batch_size'] / config['aggregate_k_gradients'])
-    config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
-
-
-    
-
+def get_encoder(config):
     if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
         ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
         ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
@@ -169,6 +153,32 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
     if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
         encoder = encoders.FeaturewiseMLP
+    return encoder
+
+
+def get_y_encoder(config):
+    if 'y_encoder' not in config:
+        config['y_encoder'] = 'one_hot'
+    if config['y_encoder'] == 'one_hot':
+        y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
+    elif config['y_encoder'] == 'linear':
+        y_encoder = encoders.Linear(1, emsize=config['emsize'])
+    else:
+        raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
+    return y_encoder
+
+
+def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
+    from tabpfn.train import train, Losses
+    verbose_train, verbose_prior = verbose >= 1, verbose >= 2
+    config['verbose'] = verbose_prior
+
+    if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
+        config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
+
+    config['num_steps'] = math.ceil(config['num_steps'] * config['aggregate_k_gradients'])
+    config['batch_size'] = math.ceil(config['batch_size'] / config['aggregate_k_gradients'])
+
 
     if config['max_num_classes'] == 2:
         loss = Losses.bce
@@ -177,24 +187,16 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     else:
         raise ValueError(f"Invalid number of classes: {config['max_num_classes']}")
 
-    aggregate_k_gradients = 1 if 'aggregate_k_gradients' not in config else config['aggregate_k_gradients']
+    # DEFAULTS
     config['multiclass_type'] = config['multiclass_type'] if 'multiclass_type' in config else 'rank'
     config['mix_activations'] = config['mix_activations'] if 'mix_activations' in config else False
+    config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
 
     config['bptt_extra_samples'] = config['bptt_extra_samples'] if 'bptt_extra_samples' in config else None
     config['eval_positions'] = [int(config['bptt'] * 0.95)] if config['bptt_extra_samples'] is None else [int(config['bptt'])]
 
     model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
-    if 'y_encoder' not in config:
-        config['y_encoder'] = 'one_hot'
-
-    if config['y_encoder'] == 'one_hot':
-        y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
-    elif config['y_encoder'] == 'linear':
-        y_encoder = encoders.Linear(1, emsize=config['emsize'])
-    else:
-        raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
 
 
     dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'],
@@ -203,10 +205,13 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                                                                                      min_len=config.get('min_eval_pos', 0)))
     dl = get_dataloader(config['prior_type'], config['flexible'], config['differentiable'], config,
                         **dataloader_config)
+    y_encoder = get_y_encoder(config)
 
+    encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=loss)
+                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=loss,
+                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict)
     model = train(dl,
                   model,
                   criterion=loss
@@ -216,7 +221,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , gpu_device=device
                   , steps_per_epoch=config['num_steps']
                   , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
-                  , aggregate_k_gradients=aggregate_k_gradients
+                  , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
                   , bptt_extra_samples = config['bptt_extra_samples']
                   , lr=config['lr']
