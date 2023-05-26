@@ -30,7 +30,7 @@ class Losses():
     bce = nn.BCEWithLogitsLoss(reduction='none')
 
 
-def train(dl, model, 
+def train(dl, model, criterion,
           epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
           validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
@@ -40,6 +40,8 @@ def train(dl, model,
     using_dist, rank, device = init_dist(device)
 
     model.to(device)
+    criterion.to(device)
+    n_out = model.n_out
     if using_dist:
         print("Distributed training")
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
@@ -90,19 +92,19 @@ def train(dl, model,
 
                     if single_eval_pos is not None:
                         targets = targets[single_eval_pos:]
-                    if isinstance(model.criterion, nn.GaussianNLLLoss):
+                    if isinstance(criterion, nn.GaussianNLLLoss):
                         assert output.shape[-1] == 2, \
                             'need to write a little bit of code to handle multiple regression targets at once'
 
                         mean_pred = output[..., 0]
                         var_pred = output[..., 1].abs()
-                        losses = model.criterion(mean_pred.flatten(), targets.to(device).flatten(), var=var_pred.flatten())
-                    elif isinstance(model.criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
-                        losses = model.criterion(output.flatten(), targets.to(device).flatten())
-                    elif isinstance(model.criterion, nn.CrossEntropyLoss):
-                        losses = model.criterion(output.reshape(-1, model.n_out), targets.to(device).long().flatten())
+                        losses = criterion(mean_pred.flatten(), targets.to(device).flatten(), var=var_pred.flatten())
+                    elif isinstance(criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
+                        losses = criterion(output.flatten(), targets.to(device).flatten())
+                    elif isinstance(criterion, nn.CrossEntropyLoss):
+                        losses = criterion(output.reshape(-1, n_out), targets.to(device).long().flatten())
                     else:
-                        losses = model.criterion(output, targets)
+                        losses = criterion(output, targets)
                     losses = losses.view(*output.shape[0:2])
                     loss, nan_share = utils.torch_nanmean(losses.mean(0), return_nanshare=True)
                     loss = loss / aggregate_k_gradients

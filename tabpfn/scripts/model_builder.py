@@ -343,7 +343,8 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=loss)
     model = train(dl,
-                  model
+                  model,
+                  criterion=loss
                   , epochs=epochs
                   , warmup_epochs=20
                   , bptt=config['bptt']

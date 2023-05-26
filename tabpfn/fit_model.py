@@ -89,7 +89,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = '_embed_dim_1024_warm_start_from_tabpfn_lr0003'
+    model_string = 'fit_vanilla_lr0003'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -170,7 +170,7 @@ config['aggregate_k_gradients'] = 32
 config['batch_size'] = 512
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024//16//2
-config['epochs'] = 1000
+config['epochs'] = 300
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
 config['train_mixed_precision'] = True
@@ -178,20 +178,24 @@ config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
 
-config['model_maker'] = 'mlp'
+#config['model_maker'] = 'mlp'
+config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
-config['decoder_embed_dim'] = 1024
-config['decoder_hidden_size'] = 2048
+config['decoder_embed_dim'] = 640
+config['decoder_hidden_size'] = 1024
 config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
+config['no_double_embedding'] = True
+
 
 config_sample = evaluate_hypers(config)
 
 
 # ## Training
-warm_start_weights = "models_diff/prior_diff_real_checkpoint_defaults_k_aggregate_2_batch_128_onehot_classes_multiclass_02_10_2023_23_55_16_n_0_epoch_59.cpkt"
+#warm_start_weights = "models_diff/prior_diff_real_checkpoint_embed_dim_1024_warm_start_from_tabpfn_lr0003_multiclass_05_24_2023_00_09_21_n_0_epoch_29.cpkt"
+warm_start_weights = None
 model_dict = None
 
 if warm_start_weights is not None:

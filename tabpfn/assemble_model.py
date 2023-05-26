@@ -37,7 +37,6 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 y_encoder=y_encoder, input_normalization=input_normalization,
                                 efficient_eval_masking=efficient_eval_masking, **model_extra_args
                                 )
-    model.criterion = criterion
     if load_weights_from_this_state_dict is not None:
         model.load_state_dict(load_weights_from_this_state_dict, strict=load_model_strict)
 
