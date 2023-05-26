@@ -4,8 +4,11 @@ import tabpfn.encoders as encoders
 from tabpfn.transformer import TransformerModel
 from tabpfn.utils import get_uniform_single_eval_pos_sampler
 from tabpfn.dataloader import get_dataloader
+from tabpfn.assemble_model import assemble_model
 
 import torch
+from torch import nn
+
 import math
 
 def save_model(model, path, filename, config_sample):
@@ -38,6 +41,7 @@ def get_gpu_memory():
     command = "nvidia-smi"
     memory_free_info = sp.check_output(command.split()).decode('ascii')
     return memory_free_info
+
 
 def load_model_only_inference(path, filename, device, verbose=False):
     """
@@ -333,45 +337,27 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], bptt_extra_samples=config['bptt_extra_samples'], device=device,
                              single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0)),
                              **extra_prior_kwargs_dict)
-    dataloader = get_dataloader(model_proto.DataLoader, **dataloader_config)
+    dl = get_dataloader(model_proto.DataLoader, **dataloader_config)
+
+    model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
+                           nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
+                           input_normalization=config.get('input_normalization', False), pos_encoder_generator=None, model_maker=None, criterion=None, dl=None)
 
 
-    model = train(dataloader
+    model = train(dl,
+                  model
                   , loss
-                  , encoder
-                  , style_encoder_generator = encoders.StyleEncoder if use_style else None
-                  , emsize=config['emsize']
-                  , nhead=config['nhead']
-                  # For unsupervised learning change to NanHandlingEncoder
-                  , y_encoder=y_encoder # encoders.Linear(1, config['emsize'])
-                  , pos_encoder_generator=None
-                  , batch_size=config['batch_size']
-                  , nlayers=config['nlayers']
-                  , nhid=config['emsize'] * config['nhid_factor']
                   , epochs=epochs
                   , warmup_epochs=20
                   , bptt=config['bptt']
-                  , output_attention=config.get('output_attention', False)
-                  , special_token=config.get('special_token', False)
                   , gpu_device=device
-                  , predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None)
-                  , decoder_hidden_size=config.get('decoder_hidden_size', config['emsize'] * config['nhid_factor'])
-                  , decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False)
-                  , no_double_embedding=config.get('no_double_embedding', False)
-                  , dropout=config['dropout']
                   , steps_per_epoch=config['num_steps']
                   , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
-                  , load_weights_from_this_state_dict=state_dict
                   , aggregate_k_gradients=aggregate_k_gradients
-                  , recompute_attn=config['recompute_attn']
                   , epoch_callback=epoch_callback
                   , bptt_extra_samples = config['bptt_extra_samples']
-                  , decoder_embed_dim = config['decoder_embed_dim']
-                  , extra_prior_kwargs_dict=extra_prior_kwargs_dict
                   , lr=config['lr']
                   , verbose=verbose_train,
-                  model_maker=model_maker,
-                  load_model_strict=load_model_strict,
                   weight_decay=config.get('weight_decay', 0.0))
 
     return model

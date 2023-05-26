@@ -12,8 +12,7 @@ from torch import nn
 from torch import autograd
 
 import tabpfn.utils as utils
-from tabpfn.transformer import TransformerModel
-from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
+
 from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr, StoreDictKeyPair, get_weighted_single_eval_pos_sampler, get_uniform_single_eval_pos_sampler
 import tabpfn.priors as priors
 import tabpfn.encoders as encoders
@@ -31,66 +30,14 @@ class Losses():
     bce = nn.BCEWithLogitsLoss(reduction='none')
 
 
-
-def train(dataloader, criterion, encoder_generator, emsize=200, nhid=200, nlayers=6, nhead=2, dropout=0.0,
-          epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, input_normalization=False,
-          y_encoder=None, pos_encoder_generator=None, decoder=None, scheduler=get_cosine_schedule_with_warmup,
-          load_weights_from_this_state_dict=None, validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
-          aggregate_k_gradients=1, verbose=True, epoch_callback=None,
-          initializer=None, initialize_with_model=None, train_mixed_precision=False, efficient_eval_masking=True, model_maker=False, output_attention=False,
-          special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048, decoder_hidden_size=1024, decoder_two_hidden_layers=False, load_model_strict=True,
-          no_double_embedding=False, **model_extra_args
+def train(dl, model, criterion, 
+          epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
+          validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
+          aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     print(f'Using {device} device')
     using_dist, rank, device = init_dist(device)
-
-    dl = dataloader 
-
-    encoder = encoder_generator(dl.num_features, emsize)
-    #style_def = dl.get_test_batch()[0][0] # the style in batch of the form ((style, x, y), target, single_eval_pos)
-    style_def = None
-    #print(f'Style definition of first 3 examples: {style_def[:3] if style_def is not None else None}')
-    if isinstance(criterion, nn.GaussianNLLLoss):
-        n_out = 2
-    elif isinstance(criterion, nn.CrossEntropyLoss):
-        n_out = criterion.weight.shape[0]
-    else:
-        n_out = 1
-    if model_maker == "mlp":
-        model = TransformerModelMakeMLP(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
-                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim, decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
-                                no_double_embedding=no_double_embedding,
-                                **model_extra_args
-                                )
-    elif model_maker:
-        model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
-                                )
-    else:
-        model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                pos_encoder=(pos_encoder_generator or positional_encodings.NoPositionalEncoding)(emsize, bptt*2),
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
-                                )
-    model.criterion = criterion
-    if load_weights_from_this_state_dict is not None:
-        model.load_state_dict(load_weights_from_this_state_dict, strict=load_model_strict)
-    if initialize_with_model is not None:
-        model.init_from_small_model(initialize_with_model)
-    if verbose:
-        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
-
-    try:
-        for (k, v), (k2, v2) in zip(model.state_dict().items(), initialize_with_model.state_dict().items()):
-            print(k, ((v - v2) / v).abs().mean(), v.shape)
-    except Exception:
-        pass
 
     model.to(device)
     if using_dist:

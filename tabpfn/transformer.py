@@ -141,58 +141,7 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
         return output[single_eval_pos+len(style_src)+(self.global_att_embeddings.num_embeddings if self.global_att_embeddings else 0):]
-
-    @torch.no_grad()
-    def init_from_small_model(self, small_model):
-        assert isinstance(self.decoder, nn.Linear) and isinstance(self.encoder, (nn.Linear, nn.Sequential)) \
-               and isinstance(self.y_encoder, (nn.Linear, nn.Sequential))
-
-        def set_encoder_weights(my_encoder, small_model_encoder):
-            my_encoder_linear, small_encoder_linear = (my_encoder, small_model_encoder) \
-                if isinstance(my_encoder, nn.Linear) else (my_encoder[-1], small_model_encoder[-1])
-            small_in_dim = small_encoder_linear.out_features
-            my_encoder_linear.weight.zero_()
-            my_encoder_linear.bias.zero_()
-            my_encoder_linear.weight[:small_in_dim] = small_encoder_linear.weight
-            my_encoder_linear.bias[:small_in_dim] = small_encoder_linear.bias
-
-        set_encoder_weights(self.encoder, small_model.encoder)
-        set_encoder_weights(self.y_encoder, small_model.y_encoder)
-
-        small_in_dim = small_model.decoder.in_features
-
-        self.decoder.weight[:, :small_in_dim] = small_model.decoder.weight
-        self.decoder.bias = small_model.decoder.bias
-
-        for my_layer, small_layer in zip(self.transformer_encoder.layers, small_model.transformer_encoder.layers):
-            small_hid_dim = small_layer.linear1.out_features
-            my_in_dim = my_layer.linear1.in_features
-
-            # packed along q,k,v order in first dim
-            my_in_proj_w = my_layer.self_attn.in_proj_weight
-            small_in_proj_w = small_layer.self_attn.in_proj_weight
-
-            my_in_proj_w.view(3, my_in_dim, my_in_dim)[:, :small_in_dim, :small_in_dim] = small_in_proj_w.view(3,
-                                                                                                               small_in_dim,
-                                                                                                               small_in_dim)
-            my_layer.self_attn.in_proj_bias.view(3, my_in_dim)[:,
-            :small_in_dim] = small_layer.self_attn.in_proj_bias.view(3, small_in_dim)
-
-            my_layer.self_attn.out_proj.weight[:small_in_dim, :small_in_dim] = small_layer.self_attn.out_proj.weight
-            my_layer.self_attn.out_proj.bias[:small_in_dim] = small_layer.self_attn.out_proj.bias
-
-            my_layer.linear1.weight[:small_hid_dim, :small_in_dim] = small_layer.linear1.weight
-            my_layer.linear1.bias[:small_hid_dim] = small_layer.linear1.bias
-
-            my_layer.linear2.weight[:small_in_dim, :small_hid_dim] = small_layer.linear2.weight
-            my_layer.linear2.bias[:small_in_dim] = small_layer.linear2.bias
-
-            my_layer.norm1.weight[:small_in_dim] = math.sqrt(small_in_dim / my_in_dim) * small_layer.norm1.weight
-            my_layer.norm2.weight[:small_in_dim] = math.sqrt(small_in_dim / my_in_dim) * small_layer.norm2.weight
-
-            my_layer.norm1.bias[:small_in_dim] = small_layer.norm1.bias
-            my_layer.norm2.bias[:small_in_dim] = small_layer.norm2.bias
-
+    
 
 class TransformerEncoderDiffInit(Module):
     r"""TransformerEncoder is a stack of N encoder layers
