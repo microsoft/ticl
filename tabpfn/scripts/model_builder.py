@@ -3,6 +3,8 @@ import tabpfn.encoders as encoders
 
 from tabpfn.transformer import TransformerModel
 from tabpfn.utils import get_uniform_single_eval_pos_sampler
+from tabpfn.dataloader import get_dataloader
+
 import torch
 import math
 
@@ -296,6 +298,8 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
         loss = Losses.bce
     elif config['max_num_classes'] > 2:
         loss = Losses.ce(config['max_num_classes'])
+    else:
+        raise ValueError(f"Invalid number of classes: {config['max_num_classes']}")
 
     aggregate_k_gradients = 1 if 'aggregate_k_gradients' not in config else config['aggregate_k_gradients']
     check_is_compatible = False if 'multiclass_loss_type' not in config else (config['multiclass_loss_type'] == 'compatible')
@@ -309,10 +313,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     epochs = 0 if not should_train else config['epochs']
     #print('MODEL BUILDER', model_proto, extra_kwargs['get_batch'])
     if 'y_encoder' not in config:
-        if True:
-            config['y_encoder'] = 'one_hot'
-        else:
-            config['y_encoder'] = 'linear'
+        config['y_encoder'] = 'one_hot'
 
     if config['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
@@ -321,7 +322,21 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     else:
         raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
 
-    model = train(model_proto.DataLoader
+    extra_prior_kwargs_dict={
+                'num_features': config['num_features']
+                , 'hyperparameters': prior_hyperparameters
+                #, 'dynamic_batch_size': 1 if ('num_global_att_tokens' in config and config['num_global_att_tokens']) else 2
+                , 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None)
+                , **extra_kwargs
+            }
+
+    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], bptt_extra_samples=config['bptt_extra_samples'], device=device,
+                             single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0)),
+                             **extra_prior_kwargs_dict)
+    dataloader = get_dataloader(model_proto.DataLoader, **dataloader_config)
+
+
+    model = train(dataloader
                   , loss
                   , encoder
                   , style_encoder_generator = encoders.StyleEncoder if use_style else None
@@ -352,13 +367,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , epoch_callback=epoch_callback
                   , bptt_extra_samples = config['bptt_extra_samples']
                   , decoder_embed_dim = config['decoder_embed_dim']
-                  , extra_prior_kwargs_dict={
-            'num_features': config['num_features']
-            , 'hyperparameters': prior_hyperparameters
-            #, 'dynamic_batch_size': 1 if ('num_global_att_tokens' in config and config['num_global_att_tokens']) else 2
-            , 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None)
-            , **extra_kwargs
-        }
+                  , extra_prior_kwargs_dict=extra_prior_kwargs_dict
                   , lr=config['lr']
                   , verbose=verbose_train,
                   model_maker=model_maker,
