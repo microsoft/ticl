@@ -4,7 +4,7 @@ from tabpfn.transformer_make_model import TransformerModelMaker, TransformerMode
 
 
 def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
-                   model_maker, criterion, decoder, initializer, efficient_eval_masking=False,
+                   model_maker, criterion, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
                    load_weights_from_this_state_dict=None, load_model_strict=True, verbose=False, **model_extra_args):
@@ -21,20 +21,21 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     if model_maker == "mlp":
         model = TransformerModelMakeMLP(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
                                 y_encoder=y_encoder, input_normalization=input_normalization,
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
-                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim, decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
+                                efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
+                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
+                                decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
                                 no_double_embedding=no_double_embedding,
                                 **model_extra_args
                                 )
     elif model_maker:
         model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
                                 y_encoder=y_encoder, input_normalization=input_normalization,
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
+                                efficient_eval_masking=efficient_eval_masking, **model_extra_args
                                 )
     else:
         model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
                                 y_encoder=y_encoder, input_normalization=input_normalization,
-                                decoder=decoder, init_method=initializer, efficient_eval_masking=efficient_eval_masking, **model_extra_args
+                                efficient_eval_masking=efficient_eval_masking, **model_extra_args
                                 )
     model.criterion = criterion
     if load_weights_from_this_state_dict is not None:

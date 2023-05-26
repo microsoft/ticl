@@ -341,7 +341,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False), pos_encoder_generator=None, model_maker=None, criterion=None, dl=None)
+                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=None, dl=None)
 
 
     model = train(dl,
