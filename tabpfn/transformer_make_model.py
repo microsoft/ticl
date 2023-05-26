@@ -161,7 +161,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         self.special_token = special_token
         self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, nout=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding)
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 

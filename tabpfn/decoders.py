@@ -45,7 +45,7 @@ class LinearModelDecoder(nn.Module):
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False):
+                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4):
         super().__init__()
         print("predicted hidden layer size ", predicted_hidden_layer_size)
         self.emsize = emsize
@@ -58,10 +58,11 @@ class MLPModelDecoder(nn.Module):
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
         self.in_size = 100 if no_double_embedding else emsize
         out_size = emsize
+        self.nhead = nhead
         if output_attention:
             if special_token:
                 out_size = emsize
-                self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=4)
+                self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=self.nhead)
 
             else:
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
