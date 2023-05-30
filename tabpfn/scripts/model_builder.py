@@ -15,24 +15,8 @@ import math
 def save_model(model, path, filename, config_sample):
     config_sample = {**config_sample}
 
-    def make_serializable(config_sample):
-        if isinstance(config_sample, dict):
-            config_sample = {k: make_serializable(config_sample[k]) for k in config_sample}
-        if isinstance(config_sample, list):
-            config_sample = [make_serializable(v) for v in config_sample]
-        if callable(config_sample):
-            config_sample = str(config_sample)
-        return config_sample
-
-    #if 'num_features_used' in config_sample:
-    #    del config_sample['num_features_used']
-
-    #config_sample['num_classes_as_str'] = str(config_sample['num_classes'])
-    #del config_sample['num_classes']
-
-    config_sample = make_serializable(config_sample)
-
-    torch.save((model.state_dict(), None, config_sample), os.path.join(path, filename))
+    import cloudpickle
+    torch.save((model.state_dict(), None, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
 
 
 
@@ -99,11 +83,11 @@ def load_model_only_inference(path, filename, device, verbose=False):
 
     return (float('inf'), float('inf'), model), config_sample # no loss measured
 
-def load_model(path, filename, device, eval_positions, verbose):
+def load_model(path, filename, device, verbose=False):
     # TODO: This function only restores evaluation functionality but training canät be continued. It is also not flexible.
     # print('Loading....')
     print('!! Warning: GPyTorch must be installed !!')
-    model_state, optimizer_state, config_sample = torch.load(
+    model_state, _, config_sample = torch.load(
         os.path.join(path, filename), map_location='cpu')
     if ('differentiable_hyperparameters' in config_sample
             and 'prior_mlp_activations' in config_sample['differentiable_hyperparameters']):
@@ -117,19 +101,12 @@ def load_model(path, filename, device, eval_positions, verbose):
     config_sample['categorical_features_sampler'] = lambda: lambda x: ([], [], [])
     config_sample['num_features_used_in_training'] = config_sample['num_features_used']
     config_sample['num_features_used'] = lambda: config_sample['num_features']
-    config_sample['num_classes_in_training'] = config_sample['num_classes']
-    config_sample['num_classes'] = 2
-    config_sample['batch_size_in_training'] = config_sample['batch_size']
-    config_sample['batch_size'] = 1
-    config_sample['bptt_in_training'] = config_sample['bptt']
-    config_sample['bptt'] = 10
-
-    if 'y_encoder' not in config_sample:
-        if 'onehot' in filename:
-            config_sample['y_encoder'] = 'one_hot'
-        else:
-            config_sample['y_encoder'] = 'linear'
-
+    # config_sample['num_classes_in_training'] = config_sample['num_classes']
+    # config_sample['num_classes'] = 2
+    # config_sample['batch_size_in_training'] = config_sample['batch_size']
+    # config_sample['batch_size'] = 1
+    # config_sample['bptt_in_training'] = config_sample['bptt']
+    # config_sample['bptt'] = 10
 
     model = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
@@ -173,9 +150,6 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
     if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
         config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
-
-    config['num_steps'] = math.ceil(config['num_steps'] * config['aggregate_k_gradients'])
-    config['batch_size'] = math.ceil(config['batch_size'] / config['aggregate_k_gradients'])
 
 
     if config['max_num_classes'] == 2:

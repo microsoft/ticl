@@ -63,7 +63,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = 'fit_vanilla_lr0003'
+    model_string = 'fit_vanilla_lr0001_warm_start'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -123,7 +123,7 @@ config['rotate_normalized_labels'] = True
 config["mix_activations"] = False # False heisst eig True
 
 #config['lr'] = 0.00005
-config['lr'] = 0.0003
+config['lr'] = 0.0001
 #config['nlayers'] = 18
 config['nlayers'] = 12
 # config['nlayers'] = 6
@@ -139,9 +139,9 @@ config['y_encoder'] = "one_hot"
 # config['aggregate_k_gradients'] = 8
 config['aggregate_k_gradients'] = 32
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
-config['batch_size'] = 512
+config['batch_size'] = 512 // 32
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
-config['num_steps'] = 1024//16//2
+config['num_steps'] = 1024
 config['epochs'] = 300
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
@@ -166,8 +166,8 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-#warm_start_weights = "models_diff/prior_diff_real_checkpoint_embed_dim_1024_warm_start_from_tabpfn_lr0003_multiclass_05_24_2023_00_09_21_n_0_epoch_29.cpkt"
-warm_start_weights = None
+warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0003_multiclass_05_26_2023_20_55_24_n_0_epoch_23.cpkt"
+# warm_start_weights = None
 model_dict = None
 
 if warm_start_weights is not None:
