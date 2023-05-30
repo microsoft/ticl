@@ -67,7 +67,7 @@ class MLPModelDecoder(nn.Module):
             else:
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
                 out_size = embed_dim
-                self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=4, kdim=emsize, vdim=emsize)
+                self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
         if decoder_two_hidden_layers:
             self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
                             nn.ReLU(),
