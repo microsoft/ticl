@@ -83,8 +83,6 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
 
 config, model_string = reload_config(longer=1)
 
-config['bptt_extra_samples'] = None
-
 # diff
 config['output_multiclass_ordered_p'] = 0.
 del config['differentiable_hyperparameters']['output_multiclass_ordered_p']

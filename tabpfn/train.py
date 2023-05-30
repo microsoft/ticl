@@ -32,7 +32,7 @@ class Losses():
 
 def train(dl, model, criterion,
           epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
-          validation_period=10, single_eval_pos_gen=None, bptt_extra_samples=None, gpu_device='cuda:0',
+          validation_period=10, single_eval_pos_gen=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
@@ -79,10 +79,8 @@ def train(dl, model, criterion,
             with cm:
                 time_to_get_batch = time.time() - before_get_batch
                 before_forward = time.time()
-                if bptt_extra_samples is None:
-                    single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
-                else:
-                    single_eval_pos = targets.shape[0] - bptt_extra_samples
+                single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
+
                 with autocast(enabled=scaler is not None):
                     # If style is set to None, it should not be transferred to device
                     output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)

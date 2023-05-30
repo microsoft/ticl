@@ -123,8 +123,6 @@ def load_model(path, filename, device, eval_positions, verbose):
     config_sample['batch_size'] = 1
     config_sample['bptt_in_training'] = config_sample['bptt']
     config_sample['bptt'] = 10
-    config_sample['bptt_extra_samples_in_training'] = config_sample['bptt_extra_samples']
-    config_sample['bptt_extra_samples'] = None
 
     if 'y_encoder' not in config_sample:
         if 'onehot' in filename:
@@ -192,15 +190,12 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     config['mix_activations'] = config['mix_activations'] if 'mix_activations' in config else False
     config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
 
-    config['bptt_extra_samples'] = config['bptt_extra_samples'] if 'bptt_extra_samples' in config else None
-    config['eval_positions'] = [int(config['bptt'] * 0.95)] if config['bptt_extra_samples'] is None else [int(config['bptt'])]
-
+    config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
 
 
-    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'],
-                             bptt_extra_samples=config['bptt_extra_samples'], device=device,
+    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], device=device,
                              single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']),
                                                                                      min_len=config.get('min_eval_pos', 0)))
     dl = get_dataloader(config['prior_type'], config['flexible'], config['differentiable'], config,
@@ -224,7 +219,6 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
                   , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
-                  , bptt_extra_samples = config['bptt_extra_samples']
                   , lr=config['lr']
                   , verbose=verbose_train,
                   weight_decay=config.get('weight_decay', 0.0))
