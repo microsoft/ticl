@@ -110,9 +110,9 @@ def load_model(path, filename, device, verbose=False):
     model = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-    model[2].load_state_dict(model_state)
-    model[2].to(device)
-    model[2].eval()
+    model[1].load_state_dict(model_state)
+    model[1].to(device)
+    model[1].eval()
 
     return model, config_sample
 

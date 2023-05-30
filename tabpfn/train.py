@@ -30,6 +30,24 @@ class Losses():
     bce = nn.BCEWithLogitsLoss(reduction='none')
 
 
+def eval_criterion(criterion, targets, output, device, n_out):
+    if isinstance(criterion, nn.GaussianNLLLoss):
+        assert output.shape[-1] == 2, \
+                        'need to write a little bit of code to handle multiple regression targets at once'
+
+        mean_pred = output[..., 0]
+        var_pred = output[..., 1].abs()
+        losses = criterion(mean_pred.flatten(), targets.to(device).flatten(), var=var_pred.flatten())
+    elif isinstance(criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
+        losses = criterion(output.flatten(), targets.to(device).flatten())
+    elif isinstance(criterion, nn.CrossEntropyLoss):
+        losses = criterion(output.reshape(-1, n_out), targets.to(device).long().flatten())
+    else:
+        losses = criterion(output, targets)
+    losses = losses.view(*output.shape[0:2])
+    return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
+
+
 def train(dl, model, criterion,
           epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
           validation_period=10, single_eval_pos_gen=None, gpu_device='cuda:0',
@@ -65,8 +83,6 @@ def train(dl, model, criterion,
     def train_epoch():
         model.train()  # Turn on the train mode
         total_loss = 0.
-        total_positional_losses = 0.
-        total_positional_losses_recorded = 0
         nan_steps = 0
         ignore_steps = 0
         before_get_batch = time.time()
@@ -82,7 +98,6 @@ def train(dl, model, criterion,
                 single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
 
                 with autocast(enabled=scaler is not None):
-                    # If style is set to None, it should not be transferred to device
                     output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
                                    , single_eval_pos=single_eval_pos)
 
@@ -90,21 +105,7 @@ def train(dl, model, criterion,
 
                     if single_eval_pos is not None:
                         targets = targets[single_eval_pos:]
-                    if isinstance(criterion, nn.GaussianNLLLoss):
-                        assert output.shape[-1] == 2, \
-                            'need to write a little bit of code to handle multiple regression targets at once'
-
-                        mean_pred = output[..., 0]
-                        var_pred = output[..., 1].abs()
-                        losses = criterion(mean_pred.flatten(), targets.to(device).flatten(), var=var_pred.flatten())
-                    elif isinstance(criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
-                        losses = criterion(output.flatten(), targets.to(device).flatten())
-                    elif isinstance(criterion, nn.CrossEntropyLoss):
-                        losses = criterion(output.reshape(-1, n_out), targets.to(device).long().flatten())
-                    else:
-                        losses = criterion(output, targets)
-                    losses = losses.view(*output.shape[0:2])
-                    loss, nan_share = utils.torch_nanmean(losses.mean(0), return_nanshare=True)
+                    loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
                     loss = loss / aggregate_k_gradients
 
                 if scaler: loss = scaler.scale(loss)
@@ -128,31 +129,24 @@ def train(dl, model, criterion,
                 if torch.isnan(loss):
                     print("NAN loss encountered")
                 else:
-                    total_loss += losses.mean().cpu().detach().item()
-                    total_positional_losses += losses.mean(1).cpu().detach() if single_eval_pos is None else \
-                        nn.functional.one_hot(torch.tensor(single_eval_pos), bptt)*\
-                        losses[:bptt-single_eval_pos].mean().cpu().detach()
-
-                    total_positional_losses_recorded += torch.ones(bptt) if single_eval_pos is None else \
-                        nn.functional.one_hot(torch.tensor(single_eval_pos), bptt)
+                    total_loss += loss.cpu().detach().item()
                 nan_steps += nan_share
                 ignore_steps += (targets == -100).float().mean()
 
-
             before_get_batch = time.time()
-        return total_loss / steps_per_epoch, (total_positional_losses / total_positional_losses_recorded).tolist(),\
-               time_to_get_batch, forward_time, step_time, nan_steps.cpu().item()/(batch+1),\
-               ignore_steps.cpu().item()/(batch+1)
+        return (total_loss / steps_per_epoch,
+                time_to_get_batch, forward_time, step_time, nan_steps.cpu().item()/(batch+1),
+                ignore_steps.cpu().item()/(batch+1))
+
 
     total_loss = float('inf')
-    total_positional_losses = float('inf')
     try:
         for epoch in (range(1, epochs + 1) if epochs is not None else itertools.count(1)):
             if verbose:
                 print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
-            total_loss, total_positional_losses, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
+            total_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
                 train_epoch()
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
                 with torch.no_grad():
@@ -164,8 +158,7 @@ def train(dl, model, criterion,
                 print('-' * 89)
                 print(
                     f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.4f} | ')
-                if verbose > 2:
-                    print(f"pos losses {','.join([f'{l:5.2f}' for l in total_positional_losses])},")
+
                 print(
                     f' lr {scheduler.get_last_lr()[0]} data time {time_to_get_batch:5.2f} step time {step_time:5.2f}'
                     f' forward time {forward_time:5.2f}' 
@@ -184,4 +177,4 @@ def train(dl, model, criterion,
         if isinstance(model, torch.nn.parallel.DistributedDataParallel):
             model = model.module
             dl = None
-        return total_loss, total_positional_losses, model.to('cpu'), dl
+        return total_loss, model.to('cpu'), dl
