@@ -21,13 +21,15 @@ from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch import nn
 
-class Losses():
-    gaussian = nn.GaussianNLLLoss(full=True, reduction='none')
-    mse = nn.MSELoss(reduction='none')
-    def ce(num_classes):
-        num_classes = num_classes.shape[0] if torch.is_tensor(num_classes) else num_classes
-        return nn.CrossEntropyLoss(reduction='none', weight=torch.ones(num_classes))
-    bce = nn.BCEWithLogitsLoss(reduction='none')
+
+def get_criterion(max_num_classes):
+    if max_num_classes == 2:
+        loss = nn.BCEWthLogitsLoss(reduction='none')
+    elif max_num_classes > 2:
+        loss = nn.CrossEntropyLoss(reduction='none', weight=torch.ones(max_num_classes))
+    else:
+        raise ValueError(f"Invalid number of classes: {max_num_classes}")
+    return loss
 
 
 def eval_criterion(criterion, targets, output, device, n_out):
@@ -49,7 +51,7 @@ def eval_criterion(criterion, targets, output, device, n_out):
 
 
 def train(dl, model, criterion,
-          epochs=10, steps_per_epoch=100, bptt=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
+          epochs=10, steps_per_epoch=100, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
           validation_period=10, single_eval_pos_gen=None, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
@@ -95,8 +97,6 @@ def train(dl, model, criterion,
             with cm:
                 time_to_get_batch = time.time() - before_get_batch
                 before_forward = time.time()
-                single_eval_pos = single_eval_pos_gen() if callable(single_eval_pos_gen) else single_eval_pos_gen
-
                 with autocast(enabled=scaler is not None):
                     output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
                                    , single_eval_pos=single_eval_pos)
@@ -129,7 +129,7 @@ def train(dl, model, criterion,
                 if torch.isnan(loss):
                     print("NAN loss encountered")
                 else:
-                    total_loss += loss.cpu().detach().item()
+                    total_loss += loss.mean().cpu().detach().item()
                 nan_steps += nan_share
                 ignore_steps += (targets == -100).float().mean()
 

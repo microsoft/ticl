@@ -5,6 +5,7 @@ from tabpfn.transformer import TransformerModel
 from tabpfn.utils import get_uniform_single_eval_pos_sampler
 from tabpfn.dataloader import get_dataloader
 from tabpfn.assemble_model import assemble_model
+from tabpfn.train import train, get_criterion
 
 import torch
 
@@ -143,25 +144,19 @@ def get_y_encoder(config):
 
 
 def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
-    from tabpfn.train import train, Losses
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
     if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
         config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
 
-
-    if config['max_num_classes'] == 2:
-        loss = Losses.bce
-    elif config['max_num_classes'] > 2:
-        loss = Losses.ce(config['max_num_classes'])
-    else:
-        raise ValueError(f"Invalid number of classes: {config['max_num_classes']}")
+    criterion = get_criterion(config['max_num_classes'])
 
     # DEFAULTS
     config['multiclass_type'] = config['multiclass_type'] if 'multiclass_type' in config else 'rank'
     config['mix_activations'] = config['mix_activations'] if 'mix_activations' in config else False
     config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
+    config['weight_decay'] = config['weight_decay'] if 'weight_decay' in config else 0.0
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -178,22 +173,20 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=loss,
+                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
                            load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict)
     model = train(dl,
                   model,
-                  criterion=loss
+                  criterion=criterion
                   , epochs=epochs
                   , warmup_epochs=20
-                  , bptt=config['bptt']
                   , gpu_device=device
                   , steps_per_epoch=config['num_steps']
-                  , single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']), min_len=config.get('min_eval_pos', 0))
                   , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
                   , verbose=verbose_train,
-                  weight_decay=config.get('weight_decay', 0.0))
+                  weight_decay=config['weight_decay'])
 
     return model
