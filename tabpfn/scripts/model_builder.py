@@ -86,7 +86,6 @@ def load_model_only_inference(path, filename, device, verbose=False):
 def load_model(path, filename, device, verbose=False):
     # TODO: This function only restores evaluation functionality but training canät be continued. It is also not flexible.
     # print('Loading....')
-    print('!! Warning: GPyTorch must be installed !!')
     model_state, _, config_sample = torch.load(
         os.path.join(path, filename), map_location='cpu')
     if ('differentiable_hyperparameters' in config_sample
