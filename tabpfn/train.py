@@ -45,12 +45,13 @@ def eval_criterion(criterion, targets, output, device, n_out):
     losses = losses.view(*output.shape[0:2])
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
 
-def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, steps_per_epoch):
+def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out):
         model.train()  # Turn on the train mode
         total_loss = 0.
         nan_steps = 0
         ignore_steps = 0
         before_get_batch = time.time()
+        steps_per_epoch = len(dl)
         assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
         for batch, (data, targets, single_eval_pos) in enumerate(dl):
             if using_dist and not (batch % aggregate_k_gradients == aggregate_k_gradients - 1):
@@ -97,13 +98,13 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 ignore_steps += (targets == -100).float().mean()
 
             before_get_batch = time.time()
-        return (total_loss / steps_per_epoch,
-                time_to_get_batch, forward_time, step_time, nan_steps.cpu().item()/(batch+1),
-                ignore_steps.cpu().item()/(batch+1))
+        return (total_loss / steps_per_epoch * aggregate_k_gradients,
+                time_to_get_batch, forward_time, step_time, nan_steps.cpu().item() / steps_per_epoch,
+                ignore_steps.cpu().item()/steps_per_epoch)
 
 
 def train(dl, model, criterion,
-          epochs=10, steps_per_epoch=100, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
+          epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
@@ -124,7 +125,7 @@ def train(dl, model, criterion,
     # learning rate
     if rank == 0:
         print(f"learning rate:{lr}")
-        print(f"steps_per_epoch:{steps_per_epoch}")
+        print(f"steps_per_epoch:{len(dl)}")
     if lr is None:
         lr = get_openai_lr(model)
         if rank == 0:
@@ -145,7 +146,7 @@ def train(dl, model, criterion,
 
             epoch_start_time = time.time()
             total_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
-                train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, steps_per_epoch)
+                train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
                 with torch.no_grad():
                     val_score = dl.validate(model)

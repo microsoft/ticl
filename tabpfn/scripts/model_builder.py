@@ -182,7 +182,6 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                   , epochs=epochs
                   , warmup_epochs=20
                   , gpu_device=device
-                  , steps_per_epoch=config['num_steps']
                   , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
