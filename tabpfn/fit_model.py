@@ -30,58 +30,25 @@ max_features = 100
 
 
 
-def train_function(config_sample, i, add_name='', state_dict=None, load_model_strict=True):
-    start_time = time.time()
-    N_epochs_to_save = 100
-    save_every = max(1, config_sample['epochs'] // N_epochs_to_save)
-    
-    def save_callback(model, epoch):
-        if not hasattr(model, 'last_saved_epoch'):
-            model.last_saved_epoch = 0
-        # if ((time.time() - start_time) / (maximum_runtime * 60 / N_epochs_to_save)) > model.last_saved_epoch:
-        print(f"epoch: {epoch* config_sample['epochs']} save_every: {save_every}")
-        if (epoch * config_sample['epochs']) % save_every == 0 or model.last_saved_epoch <10:
-            file_name = f'models_diff/prior_diff_real_checkpoint{add_name}_n_{i}_epoch_{model.last_saved_epoch}.cpkt'
-            print(f'Saving model to {file_name}')
-            config_sample['epoch_in_training'] = epoch
-            save_model(model, base_path, file_name,
-                           config_sample)
-            model.last_saved_epoch = model.last_saved_epoch + 1 # TODO: Rename to checkpoint
-    
-    model = get_model(config_sample
-                      , device
-                      , should_train=True
-                      , verbose=1
-                      , epoch_callback = save_callback, state_dict=state_dict, load_model_strict=load_model_strict)
-    
+def train_function(config_sample, add_name='', state_dict=None, load_model_strict=True):
+
     return model
 
 
 
-def reload_config(config_type='causal', task_type='multiclass', longer=0):
+def reload_config(config_type='causal'):
     config = get_prior_config(config_type=config_type)
-    
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
-    
-    model_string = 'fit_vanilla_lr0001_warm_start_debugging_blabla'
-    
-    config['epochs'] = 12000
-#    config['epochs'] = 1
     config['recompute_attn'] = True
-
     config['max_num_classes'] = 10
     config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
     config['balanced'] = False
-    model_string = model_string + '_multiclass'
-    
-    model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-    
-    return config, model_string
+    return config
 
 
 
 
-config, model_string = reload_config(longer=1)
+config = reload_config()
 
 # diff
 config['output_multiclass_ordered_p'] = 0.
@@ -136,13 +103,12 @@ config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
     
 #config['aggregate_k_gradients'] = 8
-# config['aggregate_k_gradients'] = 8
 config['aggregate_k_gradients'] = 32
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
-config['batch_size'] = 512 // 32
+config['batch_size'] = 16
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
-# config['num_steps'] = 1024
-config['num_steps'] = 32
+config['num_steps'] = 1024
+# config['num_steps'] = 32
 config['epochs'] = 300
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
@@ -167,18 +133,42 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0003_multiclass_05_26_2023_20_55_24_n_0_epoch_23.cpkt"
-# warm_start_weights = None
-model_dict = None
+# warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0001_warm_start_debugging_blabla_multiclass_05_31_2023_19_26_33_n_0_epoch_12.cpkt"
+warm_start_weights = None
 
+model_string = 'fit_vanilla_lr0001_warm_start_debugging2'
+model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+    
+model_dict = None
 if warm_start_weights is not None:
     model_state, optimizer_state, _ = torch.load(
         warm_start_weights, map_location='cpu')
     module_prefix = 'module.'
     model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
 
+save_every = 10
 
-model = train_function(config_sample, i=0, add_name=model_string, state_dict=model_dict, load_model_strict=warm_start_weights is None)
+def save_callback(model, epoch):
+    if not hasattr(model, 'last_saved_epoch'):
+        model.last_saved_epoch = 0
+    log_file = f'log/{model_string}.log'
+    with open(log_file, 'a') as f:
+        f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
+    if (epoch == "on_exit") or epoch % save_every == 0:
+        file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
+        with open(log_file, 'a') as f:
+            f.write(f'Saving model to {file_name}\n')
+        print(f'Saving model to {file_name}')
+        config_sample['epoch_in_training'] = epoch
+        config_sample['learning_rates'] = model.learning_rates
+        config_sample['losses'] = model.losses
+        save_model(model, base_path, file_name, config_sample)
+
+model = get_model(config_sample
+                    , device
+                    , should_train=True
+                    , verbose=1
+                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=warm_start_weights is None)    
 
 rank = 0
 if 'LOCAL_RANK' in os.environ:
@@ -187,6 +177,4 @@ if 'LOCAL_RANK' in os.environ:
     print('torch.distributed.launch and my rank is', rank)
 
 if rank == 0:
-    i = 0
-    save_model(model[2], base_path, f'models_diff/prior_diff_real_checkpoint{model_string}_n_{i}_epoch_on_exit.cpkt',
-                   config_sample)
+    save_callback(model[1], "on_exit")

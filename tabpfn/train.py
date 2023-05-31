@@ -113,14 +113,18 @@ def train(dl, model, criterion,
     if rank == 0:
         print(f'Using {device} device')
 
-
     model.to(device)
     criterion.to(device)
+
     n_out = model.n_out
     if using_dist:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
         if rank == 0:
             print("Distributed training")
+
+    if rank == 0:
+        model.learning_rates = []
+        model.losses = []
 
     dl.model = model
 
@@ -169,7 +173,9 @@ def train(dl, model, criterion,
 
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
-                epoch_callback(model, epoch / epochs)
+                model.learning_rates.append(scheduler.get_last_lr()[0])
+                model.losses.append(total_loss)
+                epoch_callback(model, epoch)
             scheduler.step()
     except KeyboardInterrupt:
         pass
