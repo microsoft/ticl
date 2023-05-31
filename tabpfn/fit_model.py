@@ -63,7 +63,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = 'fit_vanilla_lr0001_warm_start'
+    model_string = 'fit_vanilla_lr0001_warm_start_debugging_blabla'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -141,7 +141,8 @@ config['aggregate_k_gradients'] = 32
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
 config['batch_size'] = 512 // 32
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
-config['num_steps'] = 1024
+# config['num_steps'] = 1024
+config['num_steps'] = 32
 config['epochs'] = 300
 config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 

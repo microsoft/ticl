@@ -9,14 +9,10 @@ from contextlib import nullcontext
 
 import torch
 from torch import nn
-from torch import autograd
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr, StoreDictKeyPair, get_weighted_single_eval_pos_sampler, get_uniform_single_eval_pos_sampler
-import tabpfn.priors as priors
-import tabpfn.encoders as encoders
-import tabpfn.positional_encodings as positional_encodings
+from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch import nn
@@ -49,40 +45,7 @@ def eval_criterion(criterion, targets, output, device, n_out):
     losses = losses.view(*output.shape[0:2])
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
 
-
-def train(dl, model, criterion,
-          epochs=10, steps_per_epoch=100, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
-          validation_period=10, single_eval_pos_gen=None, gpu_device='cuda:0',
-          aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
-          ):
-    device = gpu_device if torch.cuda.is_available() else 'cpu:0'
-    print(f'Using {device} device')
-    using_dist, rank, device = init_dist(device)
-
-    model.to(device)
-    criterion.to(device)
-    n_out = model.n_out
-    if using_dist:
-        print("Distributed training")
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
-    dl.model = model
-
-
-    # learning rate
-    print(f"learning rate:{lr}")
-    print(f"steps_per_epoch:{steps_per_epoch}")
-    if lr is None:
-        lr = get_openai_lr(model)
-        print(f"Using OpenAI max lr of {lr}.")
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = scheduler(optimizer, warmup_epochs, epochs if epochs is not None else 100) # when training for fixed time lr schedule takes 100 steps
-
-    scaler = GradScaler() if train_mixed_precision else None
-
-    # check that everything uses up-to-date APIs
-    utils.check_compatibility(dl)
-
-    def train_epoch():
+def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, steps_per_epoch):
         model.train()  # Turn on the train mode
         total_loss = 0.
         nan_steps = 0
@@ -139,6 +102,41 @@ def train(dl, model, criterion,
                 ignore_steps.cpu().item()/(batch+1))
 
 
+def train(dl, model, criterion,
+          epochs=10, steps_per_epoch=100, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
+          validation_period=10, gpu_device='cuda:0',
+          aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
+          ):
+    device = gpu_device if torch.cuda.is_available() else 'cpu:0'
+    print(f'Using {device} device')
+    using_dist, rank, device = init_dist(device)
+
+    model.to(device)
+    criterion.to(device)
+    n_out = model.n_out
+    if using_dist:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
+        if rank == 0:
+            print("Distributed training")
+
+    dl.model = model
+
+    # learning rate
+    if rank == 0:
+        print(f"learning rate:{lr}")
+        print(f"steps_per_epoch:{steps_per_epoch}")
+    if lr is None:
+        lr = get_openai_lr(model)
+        if rank == 0:
+            print(f"Using OpenAI max lr of {lr}.")
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = scheduler(optimizer, warmup_epochs, epochs if epochs is not None else 100) # when training for fixed time lr schedule takes 100 steps
+
+    scaler = GradScaler() if train_mixed_precision else None
+
+    # check that everything uses up-to-date APIs
+    utils.check_compatibility(dl)
+
     total_loss = float('inf')
     try:
         for epoch in (range(1, epochs + 1) if epochs is not None else itertools.count(1)):
@@ -147,7 +145,7 @@ def train(dl, model, criterion,
 
             epoch_start_time = time.time()
             total_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
-                train_epoch()
+                train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, steps_per_epoch)
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
                 with torch.no_grad():
                     val_score = dl.validate(model)
