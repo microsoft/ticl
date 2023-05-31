@@ -109,8 +109,10 @@ def train(dl, model, criterion,
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
-    print(f'Using {device} device')
     using_dist, rank, device = init_dist(device)
+    if rank == 0:
+        print(f'Using {device} device')
+
 
     model.to(device)
     criterion.to(device)
