@@ -143,7 +143,6 @@ def get_y_encoder(config):
 
 
 def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
-    from tabpfn.train import train, Losses
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
@@ -151,12 +150,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
         config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
 
 
-    if config['max_num_classes'] == 2:
-        loss = Losses.bce
-    elif config['max_num_classes'] > 2:
-        loss = Losses.ce(config['max_num_classes'])
-    else:
-        raise ValueError(f"Invalid number of classes: {config['max_num_classes']}")
+    criterion = get_criterion(config)
 
     # DEFAULTS
     config['multiclass_type'] = config['multiclass_type'] if 'multiclass_type' in config else 'rank'
@@ -178,7 +172,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=loss,
+                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, criterion=criterion,
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
                            load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict)
     model = train(dl,

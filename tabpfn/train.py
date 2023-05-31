@@ -54,21 +54,24 @@ def train(dl, model, criterion,
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
-    print(f'Using {device} device')
     using_dist, rank, device = init_dist(device)
+    if rank == 0:
+        print(f'Using {device} device')
 
     model.to(device)
     criterion.to(device)
     n_out = model.n_out
     if using_dist:
-        print("Distributed training")
+        if rank == 0: 
+            print("Distributed training")
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
     dl.model = model
 
 
     # learning rate
-    print(f"learning rate:{lr}")
-    print(f"steps_per_epoch:{steps_per_epoch}")
+    if rank == 0: 
+        print(f"learning rate:{lr}")
+        print(f"steps_per_epoch:{steps_per_epoch}")
     if lr is None:
         lr = get_openai_lr(model)
         print(f"Using OpenAI max lr of {lr}.")

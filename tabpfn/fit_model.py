@@ -63,7 +63,7 @@ def reload_config(config_type='causal', task_type='multiclass', longer=0):
     
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     
-    model_string = 'fit_vanilla_lr0001_warm_start'
+    model_string = 'warm_start_depth_18_model_maker_lr0003'
     
     config['epochs'] = 12000
 #    config['epochs'] = 1
@@ -122,15 +122,16 @@ config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
-#config['lr'] = 0.00005
-config['lr'] = 0.0001
-#config['nlayers'] = 18
-config['nlayers'] = 12
+config['lr'] = 0.0003
+#config['lr'] = 0.0001
+config['nlayers'] = 18
+# config['nlayers'] = 12
 # config['nlayers'] = 6
-config['emsize'] = 512
-#config['emsize'] = 1024
-# config['nhead'] = config['emsize'] // 128
-config['nhead'] = 4
+config['emsize'] = 2048
+# config['emsize'] = 1024
+config['nhead'] = config['emsize'] // 128
+# config['nhead'] = 16
+# config['nhead'] = 4
 config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
@@ -139,7 +140,7 @@ config['y_encoder'] = "one_hot"
 # config['aggregate_k_gradients'] = 8
 config['aggregate_k_gradients'] = 32
 # config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
-config['batch_size'] = 512 // 32
+config['batch_size'] = 2
 #config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024
 config['epochs'] = 300
@@ -150,24 +151,23 @@ config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
 
-#config['model_maker'] = 'mlp'
-config['model_maker'] = False
+config['model_maker'] = 'mlp'
+# config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
-config['decoder_embed_dim'] = 640
-config['decoder_hidden_size'] = 1024
+config['decoder_embed_dim'] = 2048
+config['decoder_hidden_size'] = 2048
 config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
 config['no_double_embedding'] = True
 
-
 config_sample = evaluate_hypers(config)
 
 
 # ## Training
-warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0003_multiclass_05_26_2023_20_55_24_n_0_epoch_23.cpkt"
-# warm_start_weights = None
+# warm_start_weights = "models_diff/prior_diff_real_checkpoint_more_heads_decoder_model_maker_depth_18_multiclass_05_30_2023_17_48_24_n_0_epoch_16.cpkt"
+warm_start_weights = None
 model_dict = None
 
 if warm_start_weights is not None:

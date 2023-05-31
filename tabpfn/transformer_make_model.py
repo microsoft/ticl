@@ -1,12 +1,9 @@
-import math
-from typing import Optional
-
 import numpy as np
 
 import torch
 import torch.nn as nn
-from torch import Tensor
-from torch.nn import Module, TransformerEncoder
+import cloudpickle
+from torch.nn import TransformerEncoder
 
 from tabpfn.layer import TransformerEncoderLayer
 from tabpfn.utils import SeqBN, bool_mask_to_att_mask
@@ -371,7 +368,7 @@ def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2, inference_device="cp
 @cache
 def load_model_maker(path, **kwargs):
     # kwargs allow overwriting parameters that were introduced later
-    model_state, _, config  = torch.load(path)
+    model_state, _, config  = torch.load(path, pickle_module=cloudpickle)
     config.update(kwargs)
     encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
     y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])

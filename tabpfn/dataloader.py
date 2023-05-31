@@ -1,4 +1,3 @@
-import tabpfn.priors as priors
 
 def get_mlp_prior_hyperparameters(config):
     from tabpfn.priors.utils import gamma_sampler_f
@@ -46,7 +45,7 @@ def make_get_batch(model_proto, **extra_kwargs):
 
 def get_dataloader(prior_type, flexible, differentiable, config, steps_per_epoch, batch_size,
                    single_eval_pos_gen, bptt, device):
-
+    import tabpfn.priors as priors
 
     extra_kwargs = {}
 
@@ -86,15 +85,10 @@ def get_dataloader(prior_type, flexible, differentiable, config, steps_per_epoch
     prior_hyperparameters['prior_mlp_scale_weights_sqrt'] = config['prior_mlp_scale_weights_sqrt'] if 'prior_mlp_scale_weights_sqrt' in prior_hyperparameters else None
     prior_hyperparameters['rotate_normalized_labels'] = config['rotate_normalized_labels'] if 'rotate_normalized_labels' in prior_hyperparameters else True
 
-    use_style = False
-
     if differentiable:
         get_batch_base = make_get_batch(model_proto, **extra_kwargs)
         extra_kwargs = {'get_batch': get_batch_base, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
         model_proto = priors.differentiable_prior
-        use_style = True
-    print(f"Using style prior: {use_style}")
-
 
     extra_prior_kwargs_dict={
                 'num_features': config['num_features']
