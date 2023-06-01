@@ -37,12 +37,11 @@ def get_batch_to_dataloader(get_batch_method_):
             return self.num_steps
 
         def get_test_batch(self): # does not increase epoch_count
-            return self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count, model=self.model if hasattr(self, 'model') else None)
+            return self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count)
 
         def __iter__(self):
-            assert hasattr(self, 'model'), "Please assign model with `dl.model = ...` before training."
             self.epoch_count += 1
-            return iter(self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count - 1, model=self.model) for _ in range(self.num_steps))
+            return iter(self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
     return DL
 

@@ -90,6 +90,7 @@ def get_dataloader(prior_type, flexible, differentiable, config, steps_per_epoch
         extra_kwargs = {'get_batch': get_batch_base, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
         model_proto = priors.differentiable_prior
 
+
     extra_prior_kwargs_dict={
                 'num_features': config['num_features']
                 , 'hyperparameters': prior_hyperparameters
