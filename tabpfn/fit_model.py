@@ -5,14 +5,12 @@ import torch
 
 from scripts.model_builder import get_model, save_model
 
-from scripts.model_configs import *
+from scripts.model_configs import get_prior_config, evaluate_hypers
 
 from priors.utils import uniform_int_sampler_f
 
-from notebook_utils import *
+# from notebook_utils import *
 
-
-# In[3]:
 
 
 large_datasets = True
@@ -21,20 +19,10 @@ bptt = 10000 if large_datasets else 3000
 suite='cc'
 
 
-# In[11]:
-
 
 device = 'cuda'
 base_path = '.'
 max_features = 100
-
-
-
-def train_function(config_sample, add_name='', state_dict=None, load_model_strict=True):
-
-    return model
-
-
 
 def reload_config(config_type='causal'):
     config = get_prior_config(config_type=config_type)
@@ -44,8 +32,6 @@ def reload_config(config_type='causal'):
     config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
     config['balanced'] = False
     return config
-
-
 
 
 config = reload_config()
@@ -104,13 +90,10 @@ config['y_encoder'] = "one_hot"
     
 #config['aggregate_k_gradients'] = 8
 config['aggregate_k_gradients'] = 32
-# config['batch_size'] = 16 * config['aggregate_k_gradients']  # DEFAULT
 config['batch_size'] = 16
-#config['num_steps'] = 1024//config['aggregate_k_gradients']
 config['num_steps'] = 1024
 # config['num_steps'] = 32
 config['epochs'] = 300
-config['total_available_time_in_s'] = None #60*60*22 # 22 hours for some safety...
 
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
@@ -136,7 +119,7 @@ config_sample = evaluate_hypers(config)
 # warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0001_warm_start_debugging_blabla_multiclass_05_31_2023_19_26_33_n_0_epoch_12.cpkt"
 warm_start_weights = None
 
-model_string = 'fit_vanilla_lr0001_warm_start_debugging2'
+model_string = 'vanilla_lr0001_new'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None

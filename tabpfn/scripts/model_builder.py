@@ -33,7 +33,7 @@ def load_model_only_inference(path, filename, device, verbose=False):
     cannot be used for further training.
     """
 
-    model_state, optimizer_state, config_sample = torch.load(os.path.join(path, filename), map_location='cpu')
+    model_state, _, config_sample = torch.load(os.path.join(path, filename), map_location='cpu')
 
     if (('nan_prob_no_reason' in config_sample and config_sample['nan_prob_no_reason'] > 0.0) or
         ('nan_prob_a_reason' in config_sample and config_sample['nan_prob_a_reason'] > 0.0) or
@@ -51,9 +51,6 @@ def load_model_only_inference(path, filename, device, verbose=False):
     encoder = encoder(config_sample['num_features'], config_sample['emsize'])
 
     nhid = config_sample['emsize'] * config_sample['nhid_factor']
-
-    assert config_sample['max_num_classes'] > 2
-    loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config_sample['max_num_classes'])))
 
     if 'y_encoder' not in config_sample:
         if 'onehot' in filename:
@@ -75,7 +72,6 @@ def load_model_only_inference(path, filename, device, verbose=False):
     if verbose:
         print(f"Using a Transformer with {sum(p.numel() for p in model.parameters()) / 1000 / 1000:.{2}f} M parameters")
 
-    model.criterion = loss
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model.load_state_dict(model_state)

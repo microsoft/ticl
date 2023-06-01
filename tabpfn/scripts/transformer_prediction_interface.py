@@ -42,11 +42,10 @@ class CustomUnpickler(pickle.Unpickler):
         else:
             return super().find_class(module, name)
 
-def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='', only_inference=True, verbose=0):
+def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', only_inference=True, verbose=0):
     """
     Workflow for loading a model and setting appropriate parameters for diffable hparam tuning.
 
-    :param i:
     :param e:
     :param eval_positions_valid:
     :param add_name:
@@ -59,11 +58,11 @@ def load_model_workflow(i, e, add_name, base_path, device='cpu', eval_addition='
         """
         Returns the different paths of model_file, model_path and results_file
         """
-        model_file = f'models_diff/prior_diff_real_checkpoint_{add_name}_n_{i}_epoch_{e}.cpkt'
+        model_file = f'models_diff/{add_name}_epoch_{e}.cpkt'
         model_path = os.path.join(base_path, model_file)
         # print('Evaluate ', model_path)
         results_file = os.path.join(base_path,
-                                    f'models_diff/prior_diff_real_results_{add_name}_n_{i}_epoch_{e}_{eval_addition}.pkl')
+                                    f'models_diff/prior_diff_real_results_{add_name}_n_0_epoch_{e}_{eval_addition}.pkl')
         return model_file, model_path, results_file
 
     def check_file(e):
@@ -119,9 +118,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, verbose=0, temperature=1):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, verbose=0, temperature=1, model=None):
         # Model file specification (Model name, Epoch)
-        i = 0
         self.epoch = epoch
         model_key = model_string+'|'+str(device)
         if model_string in self.models_in_memory:
@@ -129,7 +127,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                 print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
-            model, c, results_file = load_model_workflow(i, epoch, add_name=model_string, base_path=base_path, device=device,
+            model, c, results_file = load_model_workflow(epoch, add_name=model_string, base_path=base_path, device=device,
                                                          eval_addition='', only_inference=only_inference)
             self.models_in_memory[model_key] = (model, c, results_file)
             if len(self.models_in_memory) == 2:
@@ -145,7 +143,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.N_ensemble_configurations = N_ensemble_configurations
         self.base__path = base_path
         self.base_path = base_path
-        self.i = i
         self.model_string = model_string
 
         self.max_num_features = self.c['num_features']
