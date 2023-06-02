@@ -74,6 +74,7 @@ def load_model_only_inference(path, filename, device, verbose=False):
 
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+    model_state.pop("criterion.weight", None)
     model.load_state_dict(model_state)
     model.to(device)
     model.eval()
