@@ -77,11 +77,12 @@ config["mix_activations"] = False # False heisst eig True
 
 config['lr'] = 0.0003
 #config['lr'] = 0.0001
-config['nlayers'] = 18
-# config['nlayers'] = 12
+#config['nlayers'] = 18
+config['nlayers'] = 12
 # config['nlayers'] = 6
-config['emsize'] = 2048
+# config['emsize'] = 2048
 # config['emsize'] = 1024
+config['emsize'] = 512
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
 # config['nhead'] = 4
@@ -93,8 +94,9 @@ config['y_encoder'] = "one_hot"
 config['aggregate_k_gradients'] = 32
 config['batch_size'] = 16
 config['num_steps'] = 1024
-# config['num_steps'] = 32
+#config['num_steps'] = 32
 config['epochs'] = 300
+#config['epochs'] = 1
 
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
@@ -102,7 +104,7 @@ config['efficient_eval_masking'] = True
 config['weight_decay'] = 1e-5
 
 config['model_maker'] = 'mlp'
-# config['model_maker'] = False
+config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
 config['decoder_embed_dim'] = 2048
@@ -119,7 +121,7 @@ config_sample = evaluate_hypers(config)
 # warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0001_warm_start_debugging_blabla_multiclass_05_31_2023_19_26_33_n_0_epoch_12.cpkt"
 warm_start_weights = None
 
-model_string = 'vanilla_lr0001_new'
+model_string = 'debugging'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None

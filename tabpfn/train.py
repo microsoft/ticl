@@ -181,7 +181,4 @@ def train(dl, model, criterion,
         pass
 
     if rank == 0: # trivially true for non-parallel training
-        if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-            model = model.module
-            dl = None
         return total_loss, model.to('cpu'), dl
