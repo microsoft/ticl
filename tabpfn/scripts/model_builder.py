@@ -173,6 +173,10 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
                            load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict, verbose=True)
+    if 'losses' in config:
+        # for continuing training
+        model.losses = config['losses']
+        model.learning_rates = config['learning_rates']
     model = train(dl,
                   model,
                   criterion=criterion

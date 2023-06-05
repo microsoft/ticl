@@ -75,8 +75,8 @@ config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
-config['lr'] = 0.0003
-#config['lr'] = 0.0001
+#config['lr'] = 0.0003
+config['lr'] = 0.0001
 #config['nlayers'] = 18
 config['nlayers'] = 12
 # config['nlayers'] = 6
@@ -91,9 +91,9 @@ config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
     
 #config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 32
-config['batch_size'] = 16
-config['num_steps'] = 1024
+config['aggregate_k_gradients'] = 2
+config['batch_size'] = 64
+config['num_steps'] = 256
 #config['num_steps'] = 32
 config['epochs'] = 300
 #config['epochs'] = 1
@@ -103,7 +103,7 @@ config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
 
-config['model_maker'] = 'mlp'
+# config['model_maker'] = 'mlp'
 config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
@@ -118,18 +118,22 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-# warm_start_weights = "models_diff/prior_diff_real_checkpointfit_vanilla_lr0001_warm_start_debugging_blabla_multiclass_05_31_2023_19_26_33_n_0_epoch_12.cpkt"
-warm_start_weights = None
+warm_start_weights = "models_diff/reproduce_reference_config_06_02_2023_17_08_59_epoch_on_exit.cpkt"
+# warm_start_weights = None
+continue_old_config = True
 
-model_string = 'debugging'
+model_string = 'reproduce_reference_config_continue'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None
 if warm_start_weights is not None:
-    model_state, optimizer_state, _ = torch.load(
+    model_state, optimizer_state, old_config = torch.load(
         warm_start_weights, map_location='cpu')
     module_prefix = 'module.'
     model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+    if continue_old_config:
+        config_sample = old_config
+
 
 save_every = 10
 
@@ -153,7 +157,7 @@ model = get_model(config_sample
                     , device
                     , should_train=True
                     , verbose=1
-                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=warm_start_weights is None)    
+                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=not continue_old_config)    
 
 rank = 0
 if 'LOCAL_RANK' in os.environ:
