@@ -95,7 +95,7 @@ config['aggregate_k_gradients'] = 2
 config['batch_size'] = 64
 config['num_steps'] = 256
 #config['num_steps'] = 32
-config['epochs'] = 300
+config['epochs'] = 800
 #config['epochs'] = 1
 
 config['train_mixed_precision'] = True
@@ -118,11 +118,11 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-warm_start_weights = "models_diff/reproduce_reference_config_06_02_2023_17_08_59_epoch_on_exit.cpkt"
-# warm_start_weights = None
-continue_old_config = True
+# warm_start_weights = "models_diff/reproduce_reference_config_06_02_2023_17_08_59_epoch_on_exit.cpkt"
+warm_start_weights = None
+continue_old_config = False
 
-model_string = 'reproduce_reference_config_continue'
+model_string = 'reproduce_reference_config_try_again_800_epochs'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None
