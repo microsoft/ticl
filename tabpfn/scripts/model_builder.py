@@ -150,10 +150,11 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     criterion = get_criterion(config['max_num_classes'])
 
     # DEFAULTS
-    config['multiclass_type'] = config['multiclass_type'] if 'multiclass_type' in config else 'rank'
-    config['mix_activations'] = config['mix_activations'] if 'mix_activations' in config else False
-    config['recompute_attn'] = config['recompute_attn'] if 'recompute_attn' in config else False
-    config['weight_decay'] = config['weight_decay'] if 'weight_decay' in config else 0.0
+    config['multiclass_type'] = config.get('multiclass_type', 'rank')
+    config['mix_activations'] = config.get('mix_activations', False)
+    config['recompute_attn'] = config.get('recompute_attn', False)
+    config['weight_decay'] = config.get('weight_decay', 0.0)
+    config['pre_norm'] = config.get('pre_norm', False)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -172,7 +173,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
-                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict, verbose=True)
+                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict, pre_norm=config['pre_norm'], verbose=True)
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
