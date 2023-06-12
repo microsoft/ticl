@@ -149,7 +149,6 @@ class TransformerModelMakeMLP(TransformerModelMaker):
                  pos_encoder=pos_encoder, decoder=decoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
                  activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
                  all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
-        decoder_hidden_size = decoder_hidden_size or nhid
         self.no_double_embedding = no_double_embedding
         self.output_attention = output_attention
         self.special_token = special_token
