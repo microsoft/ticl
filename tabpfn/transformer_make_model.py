@@ -27,7 +27,7 @@ except ImportError:
 
 class TransformerModelMaker(nn.Module):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
-                 pos_encoder=None, decoder=None, input_normalization=False, init_method=None, pre_norm=False,
+                 pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True):
         super().__init__()
@@ -111,7 +111,7 @@ class TransformerModelMaker(nn.Module):
                 nn.init.zeros_(attn.out_proj.weight)
                 nn.init.zeros_(attn.out_proj.bias)
 
-    def forward(self, src, src_mask=None, single_eval_pos=None):
+    def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         if len(src) == 2: # (x,y) and no style
@@ -122,9 +122,6 @@ class TransformerModelMaker(nn.Module):
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         style_src = self.style_encoder(style_src).unsqueeze(0) if self.style_encoder else \
             torch.tensor([], device=x_src.device)
-        global_src = torch.tensor([], device=x_src.device) if self.global_att_embeddings is None else \
-            self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
-        assert src_mask is None
 
         if single_eval_pos == 0:
             linear_model_coefs = torch.zeros((x_src.shape[1], x_src.shape[2] + 1, self.n_out), device=x_src.device)
@@ -162,7 +159,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 
-    def forward(self, src, src_mask=None, single_eval_pos=None):
+    def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         if len(src) == 2: # (x,y) and no style
@@ -171,12 +168,6 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         style_src, x_src_org, y_src = src
         x_src = self.encoder(x_src_org)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        style_src = self.style_encoder(style_src).unsqueeze(0) if self.style_encoder else \
-            torch.tensor([], device=x_src.device)
-        global_src = torch.tensor([], device=x_src.device) if self.global_att_embeddings is None else \
-            self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
-        assert src_mask is None
-        emsize = x_src.shape[2]
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         if self.special_token:
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
