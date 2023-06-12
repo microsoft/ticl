@@ -270,8 +270,8 @@ class TabPerceiver(nn.Module):
         self,
         *,
         depth,
-        input_channels = 100,
-        input_axis = 2,
+        input_dim = 512,
+        input_axis = 1,
         num_latents = 512,
         latent_dim = 512,
         cross_heads = 1,
@@ -285,7 +285,12 @@ class TabPerceiver(nn.Module):
         self_per_cross_attn = 1,
         decoder_hidden_size = 512,
         predicted_hidden_layer_size=128,
-        decoder_embed_dim=512
+        output_attention=True,
+        decoder_embed_dim=512,
+        special_token=False,
+        decoder_two_hidden_layers=False, no_double_embedding=False,
+        y_encoder=None,
+        encoder=None,
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)
@@ -310,8 +315,13 @@ class TabPerceiver(nn.Module):
           final_classifier_head: mean pool and project embeddings to number of classes (num_classes) at the end
         """
         super().__init__()
+        self.y_encoder = y_encoder
+        self.encoder = encoder
         self.input_axis = input_axis
-        input_dim = input_channels
+        # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
+        self.input_dim = input_dim
+        self.n_out = n_out
+        self.no_double_embedding = no_double_embedding
 
         self.latents = nn.Parameter(torch.randn(num_latents, latent_dim))
 
@@ -340,9 +350,9 @@ class TabPerceiver(nn.Module):
                 get_cross_ff(**cache_args),
                 self_attns
             ]))
-        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, nout=n_out, output_attention=True,
-                                       special_token=False, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=False, no_double_embedding=True, nhead=latent_heads)
+        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, nout=n_out, output_attention=output_attention,
+                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads)
 
 
     def forward(
@@ -351,25 +361,25 @@ class TabPerceiver(nn.Module):
         single_eval_pos=None,
     ):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y)'
-        x_src_org, y_src = src
+        _, x_src_org, y_src = src
         x_src = self.encoder(x_src_org)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         data = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
 
-        b, *axis, _, device, dtype = *data.shape, data.device, data.dtype
-        assert len(axis) == self.input_axis, 'input data must have the right number of axis'
-
-        import pdb;
-        pdb.set_trace()
+        #b, *axis, _, device, dtype = *data.shape, data.device, data.dtype
+        # assert len(axis) == self.input_axis, 'input data must have the right number of axis'
+        assert len(data.shape) == self.input_axis + 2, 'input data must have the right number of axis'
+        b = data.shape[1]
         # concat to channels of data and flatten axis
-
-        data = rearrange(data, 'b ... d -> b (...) d')
+        # data = rearrange(data, 'b ... d -> b (...) d')
 
         x = repeat(self.latents, 'n d -> b n d', b = b)
 
-        # layers
+        # attention is implemented with batch in first dimension
+        data = rearrange(data, 'n b d -> b n d')
 
+        # layers
         for cross_attn, cross_ff, self_attns in self.layers:
             x = cross_attn(x, context = data) + x
             x = cross_ff(x) + x
@@ -378,9 +388,13 @@ class TabPerceiver(nn.Module):
                 x = self_attn(x) + x
                 x = self_ff(x) + x
 
+        x = rearrange(x, 'b n d -> n b d')
         b1, w1, b2, w2 = self.decoder(x)
-        x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-        h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+        if self.no_double_embedding:
+            x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
+            h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+        else:
+            h1 = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
         h1 = torch.relu(h1)
         result = (h1.unsqueeze(-1) * w2.unsqueeze(0)).sum(2) + b2
         if result.isnan().all():
