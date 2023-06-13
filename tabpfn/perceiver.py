@@ -323,7 +323,8 @@ class TabPerceiver(nn.Module):
         self.n_out = n_out
         self.no_double_embedding = no_double_embedding
 
-        self.latents = nn.Parameter(torch.randn(num_latents, latent_dim))
+        self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
+
 
         get_cross_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim)
         get_cross_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
