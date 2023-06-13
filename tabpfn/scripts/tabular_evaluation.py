@@ -128,7 +128,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     result['max_time'] = kwargs['max_time']
     return result
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
     print("model_name ", model_name)
     if device == "cuda":
         results = []
@@ -151,7 +151,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
 
             results.append(result)
     else:
-        results = Parallel(n_jobs=-1, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
+        results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
                                                 , model=model
                                                 , model_name=model_name
                                                 , bptt=bptt, base_path=base_path
