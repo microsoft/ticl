@@ -13,8 +13,8 @@ class TestLoadModuleOnlyInference(unittest.TestCase):
                                                                          num_feats=100,
                                                                          return_capped=True)
 
-        classifier_with_only_inference = TabPFNClassifier(device='cpu', only_inference=True)
-        classifier_normal = TabPFNClassifier(device='cpu', only_inference=False)
+        classifier_with_only_inference = TabPFNClassifier(device='cpu')
+        classifier_normal = TabPFNClassifier(device='cpu')
 
         for dataset in test_datasets:
             xs, ys = dataset[1].clone(), dataset[2].clone()
