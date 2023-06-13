@@ -19,69 +19,6 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 import itertools
 
-"""
-===============================
-PUBLIC FUNCTIONS FOR EVALUATION
-===============================
-"""
-
-
-def eval_model(i, e, valid_datasets, test_datasets, eval_positions, bptt, add_name, base_path, device='cpu', eval_addition='', **kwargs):
-    metrics_test, config_sample, model_path = eval_model_on_ds(i, e, test_datasets, eval_positions, bptt, add_name, base_path, device=device, eval_addition=eval_addition, **kwargs)
-    metrics_valid, _, _ = eval_model_on_ds(i, e, valid_datasets, eval_positions, bptt, add_name, base_path, device=device, eval_addition=eval_addition, **kwargs)
-    return {'mean_auc_test': metrics_test['mean_roc_at_1000'], 'mean_auc_valid': metrics_valid['mean_roc_at_1000'], 'mean_ce_test': metrics_test['mean_ce_at_1000'], 'mean_ce_valid': metrics_valid['mean_ce_at_1000'], 'config_sample': config_sample, 'model_path': model_path}
-
-def eval_model_on_ds(i, e, valid_datasets, eval_positions, bptt, add_name, base_path, device='cpu', eval_addition='', **kwargs):
-
-    # How to use: evaluate_without_fitting(i,0,valid_datasets, [1024], 100000, add_name=model_string, base_path=base_path,)
-    def check_file(e):
-        model_file = f'models_diff/prior_diff_real_checkpoint{add_name}_n_{i}_epoch_{e}.cpkt'
-        model_path = os.path.join(base_path, model_file)
-        # print('Evaluate ', model_path)
-        results_file = os.path.join(base_path,
-                                    f'models_diff/prior_diff_real_results{add_name}_n_{i}_epoch_{e}_{eval_addition}.pkl')
-        if not Path(model_path).is_file():  # or Path(results_file).is_file():
-            # print('checkpoint exists: ', Path(model_file).is_file(), ', results are written:', Path(results_file).is_file())
-            return None, None, None
-        return model_file, model_path, results_file
-
-    if e == -1: # use last checkpoint, if e == -1
-        for e_ in range(100, -1, -1):
-            model_file_, model_path_, results_file_ = check_file(e_)
-            if model_file_ is not None:
-                e = e_
-                model_file, model_path, results_file = model_file_, model_path_, results_file_
-                break
-    else:
-        model_file, model_path, results_file = check_file(e)
-
-    model, config_sample = load_model(base_path, model_file, device, None, verbose=False)
-
-    params = {'max_features': config_sample['num_features']
-        , 'rescale_features': config_sample["normalize_by_used_features"]
-        , 'normalize_to_ranking': config_sample["normalize_to_ranking"]
-        , 'normalize_with_sqrt': config_sample.get("normalize_with_sqrt", False)
-              }
-    metrics_valid = evaluate(datasets=valid_datasets, model=model[2], method='transformer', device=device, overwrite=True,
-                             extend_features=True
-                             # just removed the style keyword but transformer is trained with style, just empty
-                             , save=False
-                             , metric_used=tabular_metrics.cross_entropy
-                             , return_tensor=True
-                             , verbose=False
-                             , eval_positions=eval_positions
-                             , bptt=bptt
-                             , base_path=None
-                             , inference_mode=True
-                             , **params
-                             , **kwargs)
-
-    tabular_metrics.calculate_score_per_method(tabular_metrics.auc_metric, 'roc', metrics_valid, valid_datasets, eval_positions)
-    tabular_metrics.calculate_score_per_method(tabular_metrics.cross_entropy, 'ce', metrics_valid, valid_datasets, eval_positions)
-
-    return metrics_valid, config_sample, model_path
-
-
 def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
              , verbose=False
              , return_tensor=False
