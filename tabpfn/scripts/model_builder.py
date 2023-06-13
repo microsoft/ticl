@@ -82,32 +82,14 @@ def load_model_only_inference(path, filename, device, verbose=False):
     return (float('inf'), float('inf'), model), config_sample # no loss measured
 
 def load_model(path, filename, device, verbose=False):
-    # TODO: This function only restores evaluation functionality but training canät be continued. It is also not flexible.
-    # print('Loading....')
     model_state, _, config_sample = torch.load(
         os.path.join(path, filename), map_location='cpu')
-    if ('differentiable_hyperparameters' in config_sample
-            and 'prior_mlp_activations' in config_sample['differentiable_hyperparameters']):
-        config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values_used'] = config_sample[
-                                                                                                         'differentiable_hyperparameters'][
-                                                                                                         'prior_mlp_activations'][
-                                                                                                         'choice_values']
-        config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values'] = [
-            torch.nn.Tanh for k in config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values']]
-
-    config_sample['categorical_features_sampler'] = lambda: lambda x: ([], [], [])
-    config_sample['num_features_used_in_training'] = config_sample['num_features_used']
-    config_sample['num_features_used'] = lambda: config_sample['num_features']
-    # config_sample['num_classes_in_training'] = config_sample['num_classes']
-    # config_sample['num_classes'] = 2
-    # config_sample['batch_size_in_training'] = config_sample['batch_size']
-    # config_sample['batch_size'] = 1
-    # config_sample['bptt_in_training'] = config_sample['bptt']
-    # config_sample['bptt'] = 10
 
     model = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+    model_state.pop("criterion.weight", None)
+
     model[1].load_state_dict(model_state)
     model[1].to(device)
     model[1].eval()

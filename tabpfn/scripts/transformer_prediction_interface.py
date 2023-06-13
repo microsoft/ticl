@@ -106,7 +106,7 @@ def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', 
         model, c = load_model_only_inference(base_path, model_file, device)
     else:
         #until now also only capable of inference
-        model, c = load_model(base_path, model_file, device, eval_positions=[], verbose=False)
+        model, c = load_model(base_path, model_file, device, verbose=False)
     #model, c = load_model(base_path, model_file, device, eval_positions=[], verbose=False)
 
     return model, c, results_file
