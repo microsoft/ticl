@@ -75,10 +75,10 @@ config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
-#config['lr'] = 0.0003
-config['lr'] = 0.0001
-#config['nlayers'] = 18
-config['nlayers'] = 12
+config['lr'] = 0.00003
+#config['lr'] = 0.0001
+config['nlayers'] = 18
+# config['nlayers'] = 12
 # config['nlayers'] = 6
 # config['emsize'] = 2048
 # config['emsize'] = 1024
@@ -116,6 +116,7 @@ config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 64
 
 config['no_double_embedding'] = True
+config['prenorm'] = True
 
 config_sample = evaluate_hypers(config)
 
