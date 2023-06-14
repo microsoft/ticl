@@ -113,7 +113,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         # Model file specification (Model name, Epoch)
         self.epoch = epoch
         model_key = model_string+'|'+str(device)
-        if model_string in self.models_in_memory:
+        if model_key in self.models_in_memory:
             if verbose:
                 print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
