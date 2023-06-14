@@ -27,9 +27,8 @@ def get_gpu_memory():
     return memory_free_info
 
 
-def load_model(path, filename, device, verbose=False):
-    model_state, _, config_sample = torch.load(
-        os.path.join(path, filename), map_location='cpu')
+def load_model(path, device, verbose=False):
+    model_state, _, config_sample = torch.load(path, map_location='cpu')
 
     _, model, _ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
@@ -83,6 +82,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
     config['recompute_attn'] = config.get('recompute_attn', False)
     config['weight_decay'] = config.get('weight_decay', 0.0)
     config['pre_norm'] = config.get('pre_norm', False)
+    config['decoder_embed_dim'] = config.get('decoder_embed_dim', 2048)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -103,8 +103,10 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
                            load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict,
+                           decoder_embed_dim=config['decoder_embed_dim'],
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
-                           verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False))
+                           verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
+                           output_attention=config.get('output_attention', False))
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']

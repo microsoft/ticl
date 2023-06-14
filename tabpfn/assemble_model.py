@@ -1,6 +1,4 @@
-from tabpfn.transformer import TransformerModel
-from tabpfn.perceiver import TabPerceiver
-from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
+
 
 
 def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
@@ -11,6 +9,10 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     encoder = encoder_generator(num_features, emsize)
     decoder_hidden_size = decoder_hidden_size or nhid
 
+    from tabpfn.transformer import TransformerModel
+    from tabpfn.perceiver import TabPerceiver
+    from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
+    
     if max_num_classes > 2:
         n_out = max_num_classes
     else:

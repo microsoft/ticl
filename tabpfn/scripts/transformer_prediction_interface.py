@@ -97,8 +97,8 @@ def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', 
     if model_file is None:
         model_file, model_path, results_file = get_file(e)
         raise Exception('No checkpoint found at '+str(model_path))
-
-    model, c = load_model(base_path, model_file, device, verbose=False)
+    path = os.path.join(model_path, model_file)
+    model, c = load_model(path, device, verbose=False)
 
     return model, c, results_file
 
