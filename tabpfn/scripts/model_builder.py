@@ -13,12 +13,18 @@ import subprocess as sp
 import os
 import math
 
+try:
+    from functools import cache
+except ImportError:
+    from functools import lru_cache
+    cache = lru_cache(maxsize=None)
+
+
 def save_model(model, path, filename, config_sample):
     config_sample = {**config_sample}
 
     import cloudpickle
     torch.save((model.state_dict(), None, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
-
 
 
 def get_gpu_memory():
@@ -27,6 +33,7 @@ def get_gpu_memory():
     return memory_free_info
 
 
+@cache
 def load_model(path, device, verbose=False):
     model_state, _, config_sample = torch.load(path, map_location='cpu')
 

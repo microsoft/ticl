@@ -10,19 +10,12 @@ from tabpfn.utils import normalize_by_used_features_f, normalize_data
 
 from tabpfn.transformer import TransformerEncoderDiffInit
 from tabpfn.decoders import LinearModelDecoder, MLPModelDecoder
-from tabpfn import encoders
 from tabpfn.scripts.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import clone
 from sklearn.ensemble import VotingClassifier
 
-
-try:
-    from functools import cache
-except ImportError:
-    from functools import lru_cache
-    cache = lru_cache(maxsize=None)
 
 
 class TransformerModelMaker(nn.Module):
@@ -353,42 +346,6 @@ def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2, inference_device="cp
         X_test_scaled = torch.clamp(X_test_scaled, min=-100, max=100)
         res = torch.matmul(torch.relu(torch.matmul(X_test_scaled, w1) + b1), w2) + b2
         return torch.nn.functional.softmax(res / .8, dim=1).cpu().numpy()
-
-
-@cache
-def load_model_maker(path, **kwargs):
-    # kwargs allow overwriting parameters that were introduced later
-    model_state, _, config  = torch.load(path)
-    config.update(kwargs)
-    encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
-    y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
-    loss = torch.nn.CrossEntropyLoss(reduction='none', weight=torch.ones(int(config['max_num_classes'])))
-    model_maker = config.get('model_maker', "")
-    output_attention = config.get('output_attention', "")
-    special_token = config.get('special_token', False)
-    decoder_embed_dim = config.get("decoder_embed_dim", 2048)
-    decoder_hidden_size = config.get("decoder_hidden_size", config['emsize'] * config['nhid_factor'])
-    decoder_two_hidden_layers = config.get("decoder_two_hidden_layers", False)
-    predicted_hidden_layer_size = config.get("predicted_hidden_layer_size", 128)
-    no_double_embedding = config.get("no_double_embedding", False)
-
-    if model_maker  == "mlp":
-        model = TransformerModelMakeMLP(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'],
-                                        encoder=encoder, y_encoder=y_encoder, output_attention=output_attention, special_token=special_token, decoder_embed_dim=decoder_embed_dim,
-                                        predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size,
-                                        no_double_embedding=no_double_embedding)
-    elif model_maker:
-        model = TransformerModelMaker(ninp=config['emsize'], nlayers=config['nlayers'], n_out=config['max_num_classes'], nhead=config['nhead'],nhid=config['emsize'] * config['nhid_factor'], encoder=encoder, y_encoder=y_encoder)
-    else:
-        raise ValueError("model_maker not specified")
-
-    model.criterion = loss
-    module_prefix = 'module.'
-    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-
-    model.load_state_dict(model_state)
-    model.eval()
-    return model
 
 
 class ForwardMLPModel(ClassifierMixin, BaseEstimator):
