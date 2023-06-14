@@ -27,90 +27,18 @@ def get_gpu_memory():
     return memory_free_info
 
 
-def load_model_only_inference(path, filename, device, verbose=False):
-    """
-    Loads a saved model from the specified position. This function only restores inference capabilities and
-    cannot be used for further training.
-    """
+def load_model(path, filename, device, verbose=False):
+    model_state, _, config_sample = torch.load(
+        os.path.join(path, filename), map_location='cpu')
 
-    model_state, _, config_sample = torch.load(os.path.join(path, filename), map_location='cpu')
-
-    if (('nan_prob_no_reason' in config_sample and config_sample['nan_prob_no_reason'] > 0.0) or
-        ('nan_prob_a_reason' in config_sample and config_sample['nan_prob_a_reason'] > 0.0) or
-        ('nan_prob_unknown_reason' in config_sample and config_sample['nan_prob_unknown_reason'] > 0.0)):
-        encoder = encoders.NanHandlingEncoder
-    else:
-        encoder = partial(encoders.Linear, replace_nan_by_zero=True)
-
-    if 'encoder' in config_sample and config_sample['encoder'] == 'featurewise_mlp':
-        encoder = encoders.FeaturewiseMLP
-
-    n_out = config_sample['max_num_classes']
-
-    device = device if torch.cuda.is_available() else 'cpu:0'
-    encoder = encoder(config_sample['num_features'], config_sample['emsize'])
-
-    nhid = config_sample['emsize'] * config_sample['nhid_factor']
-
-    if 'y_encoder' not in config_sample:
-        if 'onehot' in filename:
-            config_sample['y_encoder'] = 'one_hot'
-        else:
-            config_sample['y_encoder'] = 'linear'
-
-    if config_sample['y_encoder'] == 'one_hot':
-        y_encoder = encoders.OneHotAndLinear(config_sample['max_num_classes'], emsize=config_sample['emsize'])
-    elif config_sample['y_encoder'] == 'linear':
-        y_encoder = encoders.Linear(1, emsize=config_sample['emsize'])
-    else:
-        raise ValueError(f"Unknown y_encoder: {config_sample['y_encoder']}")
-
-    model = TransformerModel(encoder, n_out, config_sample['emsize'], config_sample['nhead'], nhid,
-                             config_sample['nlayers'], y_encoder=y_encoder,
-                             dropout=config_sample['dropout'],
-                             efficient_eval_masking=config_sample['efficient_eval_masking'])
-    if verbose:
-        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters()) / 1000 / 1000:.{2}f} M parameters")
-
+    _, model, _ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model_state.pop("criterion.weight", None)
+
     model.load_state_dict(model_state)
     model.to(device)
     model.eval()
-
-    return (float('inf'), float('inf'), model), config_sample # no loss measured
-
-def load_model(path, filename, device, verbose=False):
-    # TODO: This function only restores evaluation functionality but training canät be continued. It is also not flexible.
-    # print('Loading....')
-    model_state, _, config_sample = torch.load(
-        os.path.join(path, filename), map_location='cpu')
-    if ('differentiable_hyperparameters' in config_sample
-            and 'prior_mlp_activations' in config_sample['differentiable_hyperparameters']):
-        config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values_used'] = config_sample[
-                                                                                                         'differentiable_hyperparameters'][
-                                                                                                         'prior_mlp_activations'][
-                                                                                                         'choice_values']
-        config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values'] = [
-            torch.nn.Tanh for k in config_sample['differentiable_hyperparameters']['prior_mlp_activations']['choice_values']]
-
-    config_sample['categorical_features_sampler'] = lambda: lambda x: ([], [], [])
-    config_sample['num_features_used_in_training'] = config_sample['num_features_used']
-    config_sample['num_features_used'] = lambda: config_sample['num_features']
-    # config_sample['num_classes_in_training'] = config_sample['num_classes']
-    # config_sample['num_classes'] = 2
-    # config_sample['batch_size_in_training'] = config_sample['batch_size']
-    # config_sample['batch_size'] = 1
-    # config_sample['bptt_in_training'] = config_sample['bptt']
-    # config_sample['bptt'] = 10
-
-    model = get_model(config_sample, device=device, should_train=False, verbose=verbose)
-    module_prefix = 'module.'
-    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-    model[1].load_state_dict(model_state)
-    model[1].to(device)
-    model[1].eval()
 
     return model, config_sample
 
@@ -162,9 +90,10 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
 
 
     dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], device=device,
+                             prior_type=config['prior_type'], flexible=config['flexible'], differentiable=config['differentiable'],
                              single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']),
-                                                                                     min_len=config.get('min_eval_pos', 0)))
-    dl = get_dataloader(config['prior_type'], config['flexible'], config['differentiable'], config,
+                                                                                     min_len=config.get('min_eval_pos', 0)),)
+    dl = get_dataloader(config=config,
                         **dataloader_config)
     y_encoder = get_y_encoder(config)
 
@@ -173,7 +102,9 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
-                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict, pre_norm=config['pre_norm'], verbose=True)
+                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict,
+                           decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
+                           verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False))
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']

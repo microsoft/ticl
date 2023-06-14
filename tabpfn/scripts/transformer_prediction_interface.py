@@ -19,7 +19,7 @@ from sklearn.utils import gen_batches
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from pathlib import Path
-from tabpfn.scripts.model_builder import load_model, load_model_only_inference
+from tabpfn.scripts.model_builder import load_model
 import os
 import pickle
 import io
@@ -42,7 +42,7 @@ class CustomUnpickler(pickle.Unpickler):
         else:
             return super().find_class(module, name)
 
-def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', only_inference=True, verbose=0):
+def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', verbose=0):
     """
     Workflow for loading a model and setting appropriate parameters for diffable hparam tuning.
 
@@ -98,16 +98,7 @@ def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', 
         model_file, model_path, results_file = get_file(e)
         raise Exception('No checkpoint found at '+str(model_path))
 
-
-    #print(f'Loading {model_file}')
-    if only_inference:
-        if verbose:
-            print('Loading model that can be used for inference only')
-        model, c = load_model_only_inference(base_path, model_file, device)
-    else:
-        #until now also only capable of inference
-        model, c = load_model(base_path, model_file, device, eval_positions=[], verbose=False)
-    #model, c = load_model(base_path, model_file, device, eval_positions=[], verbose=False)
+    model, c = load_model(base_path, model_file, device, verbose=False)
 
     return model, c, results_file
 
@@ -118,17 +109,17 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, only_inference=True, seed=0, verbose=0, temperature=1, model=None):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, seed=0, verbose=0, temperature=1, model=None):
         # Model file specification (Model name, Epoch)
         self.epoch = epoch
         model_key = model_string+'|'+str(device)
-        if model_string in self.models_in_memory:
+        if model_key in self.models_in_memory:
             if verbose:
                 print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
             model, c, results_file = load_model_workflow(epoch, add_name=model_string, base_path=base_path, device=device,
-                                                         eval_addition='', only_inference=only_inference)
+                                                         eval_addition='')
             self.models_in_memory[model_key] = (model, c, results_file)
             if len(self.models_in_memory) == 2:
                 print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
@@ -153,7 +144,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.combine_preprocessing = combine_preprocessing
         self.feature_shift_decoder = feature_shift_decoder
         self.multiclass_decoder = multiclass_decoder
-        self.only_inference = only_inference
         self.seed = seed
 
     def remove_models_from_memory(self):
@@ -222,7 +212,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         eval_pos = self.X_.shape[0]
 
-        prediction = transformer_predict(self.model[2], X_full, y_full, eval_pos,
+        prediction = transformer_predict(self.model, X_full, y_full, eval_pos,
                                          device=self.device,
                                          style=self.style,
                                          inference_mode=True,
