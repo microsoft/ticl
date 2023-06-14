@@ -104,7 +104,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
                            load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict,
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
-                           verbose=True, pre_norm=config['pre_norm'])
+                           verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False))
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
