@@ -16,6 +16,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.base import clone
 from sklearn.ensemble import VotingClassifier
 
+from einops import rearrange, repeat
 
 
 class TransformerModelMaker(nn.Module):
@@ -157,12 +158,13 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         if len(src) == 2: # (x,y) and no style
             src = (None,) + src
 
-        style_src, x_src_org, y_src = src
+        _, x_src_org, y_src = src
         x_src = self.encoder(x_src_org)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         if self.special_token:
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
+        
         output = self.transformer_encoder(train_x)
 
         b1, w1, b2, w2 = self.decoder(output)
@@ -229,7 +231,24 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
-    output = model.transformer_encoder(train_x)
+    if hasattr(model, "transformer_encoder"):
+        # tabpfn mlp model maker
+        output = model.transformer_encoder(train_x)
+    else:
+        # perceiver
+        data = rearrange(train_x, 'n b d -> b n d')
+        x = repeat(model.latents, 'n d -> b n d', b = data.shape[0])
+
+        # layers
+        for cross_attn, cross_ff, self_attns in model.layers:
+            x = cross_attn(x, context = data) + x
+            x = cross_ff(x) + x
+
+            for self_attn, self_ff in self_attns:
+                x = self_attn(x) + x
+                x = self_ff(x) + x
+
+        output = rearrange(x, 'b n d -> n b d')
     b1, w1, b2, w2 = model.decoder(output)
     if model.no_double_embedding:
         total_weights = w1.squeeze()[:n_features, :]
@@ -304,7 +323,7 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model = load_model_maker(self.path).to(self.device)
+        model, _ = load_model(self.path, device=self.device)
 
         weights, biases = extract_linear_model(model, X, y, device=self.device)
         self.weights_ = weights
