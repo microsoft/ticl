@@ -155,13 +155,14 @@ def save_callback(model, epoch):
         config_sample['epoch_in_training'] = epoch
         config_sample['learning_rates'] = model.learning_rates
         config_sample['losses'] = model.losses
+        config_sample['wallclock_time'] = model.wallclock_times
         save_model(model, base_path, file_name, config_sample)
 
 model = get_model(config_sample
                     , device
                     , should_train=True
                     , verbose=1
-                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=not continue_old_config)    
+                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 rank = 0
 if 'LOCAL_RANK' in os.environ:

@@ -125,6 +125,8 @@ def train(dl, model, criterion,
     if rank == 0:
         model.learning_rates = []
         model.losses = []
+        model.wallclock_times = []
+        model.start_time = time.time()
 
     dl.model = model
 
@@ -175,6 +177,7 @@ def train(dl, model, criterion,
             if epoch_callback is not None and rank == 0:
                 model.learning_rates.append(scheduler.get_last_lr()[0])
                 model.losses.append(total_loss)
+                model.wallclock_times.append(time.time() - model.start_time)
                 epoch_callback(model, epoch)
             scheduler.step()
     except KeyboardInterrupt:
