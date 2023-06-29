@@ -12,7 +12,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     from tabpfn.transformer import TransformerModel
     from tabpfn.perceiver import TabPerceiver
     from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
-    
+
     if max_num_classes > 2:
         n_out = max_num_classes
     else:

@@ -1,28 +1,15 @@
 from datetime import datetime
 import os
-
 import torch
 
 from scripts.model_builder import get_model, save_model
-
 from scripts.model_configs import get_prior_config, evaluate_hypers
 
 from priors.utils import uniform_int_sampler_f
 
-# from notebook_utils import *
-
-
-
-large_datasets = True
-max_samples = 10000 if large_datasets else 5000
-bptt = 10000 if large_datasets else 3000
-suite='cc'
-
-
 
 device = 'cuda'
 base_path = '.'
-max_features = 100
 
 def reload_config(config_type='causal'):
     config = get_prior_config(config_type=config_type)
@@ -68,17 +55,17 @@ config['batch_size_per_gp_sample'] = None
 config['normalize_ignore_label_too'] = False
 
 config['differentiable_hps_as_style'] = False
-config['max_eval_pos'] = 8 * 1000
+config['max_eval_pos'] = 1000
 
 config['random_feature_rotation'] = True
 config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
-config['lr'] = 0.00003
-#config['lr'] = 0.0001
-config['nlayers'] = 18
-# config['nlayers'] = 12
+#config['lr'] = 0.00003
+config['lr'] = 0.0001
+# config['nlayers'] = 18
+config['nlayers'] = 12
 # config['nlayers'] = 6
 # config['emsize'] = 2048
 # config['emsize'] = 1024
@@ -87,12 +74,12 @@ config['emsize'] = 512
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
 # config['nhead'] = 4
-config['bptt'] = 8 * 1024+128
+config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
     
-config['aggregate_k_gradients'] = 8
-#config['aggregate_k_gradients'] = 2
+# config['aggregate_k_gradients'] = 8
+config['aggregate_k_gradients'] = 2
 config['batch_size'] = 64
 config['num_steps'] = 256
 #config['num_steps'] = 32
@@ -104,7 +91,8 @@ config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 1e-5
 
-config['model_maker'] = 'perceiver'
+#config['model_maker'] = 'perceiver'
+config['model_maker'] = 'mlp'
 #config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
@@ -112,8 +100,8 @@ config['decoder_embed_dim'] = 512
 config['decoder_hidden_size'] = 512
 config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
-# config['predicted_hidden_layer_size'] = 128
-config['predicted_hidden_layer_size'] = 64
+config['predicted_hidden_layer_size'] = 128
+# config['predicted_hidden_layer_size'] = 64
 
 config['no_double_embedding'] = True
 config['prenorm'] = True
@@ -122,11 +110,11 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-# warm_start_weights = "models_diff/reproduce_reference_config_06_02_2023_17_08_59_epoch_on_exit.cpkt"
-warm_start_weights = None
+warm_start_weights = 'models_diff/reproduce_reference_config_try_again_800_epochs_06_07_2023_21_49_10_epoch_on_exit.cpkt'
+# warm_start_weights = None
 continue_old_config = False
 
-model_string = 'perceiver_first_try'
+model_string = 'mothernet_warm_start_512_everywhere'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None
@@ -155,7 +143,7 @@ def save_callback(model, epoch):
         config_sample['epoch_in_training'] = epoch
         config_sample['learning_rates'] = model.learning_rates
         config_sample['losses'] = model.losses
-        config_sample['wallclock_time'] = model.wallclock_times
+        config_sample['wallclock_times'] = model.wallclock_times
         save_model(model, base_path, file_name, config_sample)
 
 model = get_model(config_sample

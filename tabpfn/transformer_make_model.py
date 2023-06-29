@@ -131,7 +131,6 @@ class TransformerModelMaker(nn.Module):
             import pdb; pdb.set_trace()
         return result
     
-
     
 class TransformerModelMakeMLP(TransformerModelMaker):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
@@ -177,6 +176,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         h1 = torch.relu(h1)
         result = (h1.unsqueeze(-1) * w2.unsqueeze(0)).sum(2) + b2
         if result.isnan().all():
+            print("NAN")
             import pdb; pdb.set_trace()
         return result
 
