@@ -53,7 +53,7 @@ def _encode_y(y):
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01):
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
@@ -63,6 +63,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.device = device
         self.layernorm = layernorm
         self.weight_decay = weight_decay
+        self.batch_size = batch_size
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
         model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
@@ -72,19 +73,20 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         for epoch in range(self.n_epochs):
             size = len(dataloader.dataset)
+            losses = []
             for batch, (X, y) in enumerate(dataloader):
                 # Compute prediction and loss
                 pred = model(X)
                 loss = loss_fn(pred, y)
-
+                losses.append(loss.item())
                 # Backpropagation
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                if epoch % 10 == 0 and self.verbose:
-                    loss, current = loss.item(), (batch + 1) * len(X)
-                    print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            if epoch % 10 == 0 and self.verbose:
+                loss, current = np.mean(losses), (batch + 1) * len(X)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         self.model_ = model
         self.classes_ = classes
 
@@ -99,7 +101,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         else:
             y = torch.tensor(y, device=self.device)
         X = X.nan_to_num()
-        dataloader = DataLoader(TensorDataset(X, y), batch_size=X.shape[0])
+        dataloader = DataLoader(TensorDataset(X, y), batch_size=self.batch_size or X.shape[0])
         self.fit_from_dataloader(dataloader, n_features=X.shape[1], classes=classes)
         return self
 
