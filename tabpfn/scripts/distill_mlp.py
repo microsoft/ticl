@@ -86,7 +86,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
             if epoch % 10 == 0 and self.verbose:
                 loss, current = np.mean(losses), (batch + 1) * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"epoch: {epoch}  loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         self.model_ = model
         self.classes_ = classes
 
