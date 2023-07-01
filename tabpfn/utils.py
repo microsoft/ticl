@@ -296,3 +296,25 @@ def normalize_by_used_features_f(x, num_features_used, num_features, normalize_w
     if normalize_with_sqrt:
         return x / (num_features_used / num_features)**(1 / 2)
     return x / (num_features_used / num_features)
+
+
+def compare_dicts(left, right, prefix=None):
+    for d in [left, right]:
+        d.pop("losses", None)
+        d.pop("learning_rates", None)
+        d.pop("wallclock_times", None)
+
+    prefix = prefix or ""
+    for k in set(left).union(set(right)):
+        if k not in left:
+            print(f"{prefix}{k} missing in left")
+            continue
+        if k not in right:
+            print(f"{prefix}{k} missing in right")
+            continue
+        if isinstance(left[k], dict):
+            compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->")
+        else:
+            if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
+                print(f"{prefix}{k}: ", left[k], right[k])
+    
