@@ -1,4 +1,5 @@
 from sklearn.base import BaseEstimator, RegressorMixin
+import numpy as np
 
 from scipy.optimize import minimize
 
@@ -24,3 +25,35 @@ class ExponentialRegression(RegressorMixin, BaseEstimator):
         
     def predict(self, X):
         return self.fitted_func_(X)
+
+import plotly.graph_objects as go
+from tabpfn.fit_learning_curve import ExponentialRegression
+
+
+def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run'):
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+
+    er = ExponentialRegression()
+    colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692',
+              '#B6E880', '#FF97FF', '#FECB52']
+
+    for color, run in zip(colors, loss_df[hue].unique()):
+        this_df = loss_df[loss_df[hue] == run]
+        this_X = this_df[x]
+        this_y = this_df[y]
+        er.fit(this_X, this_y)
+        print(run)
+        print(er.score(this_X, this_y))
+        pred_train = er.predict(this_X)
+        # start of extrapolation is per-run, end is the same for all runs
+        extrapolate = np.linspace(this_X.max(), loss_df[x].max() * 3, num=100)
+        pred_extrapolation = er.predict(extrapolate)
+
+        markers_scatter = go.Scatter(x=this_X, y=this_y, mode="markers", name=run, marker_color=color, opacity=.3)
+        fig.add_trace(markers_scatter)
+        fig.add_trace(go.Scatter(x=this_X, y=pred_train, mode="lines", name=run, marker_color=color))
+        fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color, line_dash="dash"))
+    fig.update_layout(height=800)
+    return fig
