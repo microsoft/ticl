@@ -303,6 +303,10 @@ def compare_dicts(left, right, prefix=None):
         d.pop("losses", None)
         d.pop("learning_rates", None)
         d.pop("wallclock_times", None)
+        d.pop("bptt_extra_samples", None)
+        d.pop("num_classes", None)
+        d.pop("differentiable_hyperparameters", None)
+        d.pop("num_features_used", None)
 
     prefix = prefix or ""
     for k in set(left).union(set(right)):
@@ -317,4 +321,3 @@ def compare_dicts(left, right, prefix=None):
         else:
             if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
                 print(f"{prefix}{k}: ", left[k], right[k])
-    
