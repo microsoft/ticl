@@ -152,6 +152,34 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
     def classes_(self):
         return self.mlp_.classes_
 
+
+class DistilledMLP(ClassifierMixin, BaseEstimator):
+    def __init__(self, clf, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, verbose=0, **kwargs):
+        self.clf = clf
+        self.temperature = temperature
+        self.n_epochs = n_epochs
+        self.hidden_size = hidden_size
+        self.learning_rate = learning_rate
+        self.device = device
+        self.n_layers = n_layers
+        self.dropout_rate = dropout_rate
+        self.layernorm = layernorm
+        self.verbose = verbose
+
+    def fit(self, X, y):
+        y, self.classes_ = _encode_y(y)
+        y_train_soft_probs = self.clf.predict_proba(X) * self.temperature ** 2
+        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
+                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
+	
+        self.mlp_.fit(X, y_train_soft_probs)
+        return self
+    def predict(self, X):
+        return self.classes_[self.mlp_.predict(X)]
+    def predict_proba(self, X):
+        return self.mlp_.predict_proba(X)
+
+
 class SmoteAugmentedDataset(IterableDataset):
     def __init__(self, X, y, tabpfn, categorical_features=None, upsample_rate=2, temperature=1, device='cpu'):
         if isinstance(X, torch.Tensor):
