@@ -71,22 +71,25 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-        for epoch in range(self.n_epochs):
-            size = len(dataloader.dataset)
-            losses = []
-            for batch, (X, y) in enumerate(dataloader):
-                # Compute prediction and loss
-                pred = model(X)
-                loss = loss_fn(pred, y)
-                losses.append(loss.item())
-                # Backpropagation
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+        try:
+            for epoch in range(self.n_epochs):
+                size = len(dataloader.dataset)
+                losses = []
+                for batch, (X, y) in enumerate(dataloader):
+                    # Compute prediction and loss
+                    pred = model(X)
+                    loss = loss_fn(pred, y)
+                    losses.append(loss.item())
+                    # Backpropagation
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
-            if epoch % 10 == 0 and self.verbose:
-                loss, current = np.mean(losses), (batch + 1) * len(X)
-                print(f"epoch: {epoch}  loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                if epoch % 10 == 0 and self.verbose:
+                    loss, current = np.mean(losses), (batch + 1) * len(X)
+                    print(f"epoch: {epoch}  loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        except KeyboardInterrupt:
+            pass
         self.model_ = model
         self.classes_ = classes
 
