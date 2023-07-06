@@ -4,7 +4,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 def exp_curve(x, a, b, c):
-    return a * (x + 1) ** b + c
+    return a * (x + 1e-5) ** b + c
 
 def fit_exp_curve(x, y):
     def exp_loss(params):
@@ -30,7 +30,7 @@ import plotly.graph_objects as go
 from tabpfn.fit_learning_curve import ExponentialRegression
 
 
-def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run'):
+def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run', extrapolation_factor=3):
     import plotly.graph_objects as go
 
     fig = go.Figure()
@@ -48,7 +48,7 @@ def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run'):
         print(er.score(this_X, this_y))
         pred_train = er.predict(this_X)
         # start of extrapolation is per-run, end is the same for all runs
-        extrapolate = np.linspace(this_X.max(), loss_df[x].max() * 3, num=100)
+        extrapolate = np.linspace(this_X.max(), loss_df[x].max() * extrapolation_factor, num=100)
         pred_extrapolation = er.predict(extrapolate)
 
         markers_scatter = go.Scatter(x=this_X, y=this_y, mode="markers", name=run, marker_color=color, opacity=.3)
