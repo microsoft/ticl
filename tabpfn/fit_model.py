@@ -6,7 +6,7 @@ from scripts.model_builder import get_model, save_model
 from scripts.model_configs import get_prior_config, evaluate_hypers
 
 from priors.utils import uniform_int_sampler_f
-
+import argparse
 
 device = 'cuda'
 base_path = '.'
@@ -79,11 +79,11 @@ config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
     
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 2
-config['batch_size'] = 64
-config['num_steps'] = 256
+config['aggregate_k_gradients'] = 1
+config['batch_size'] = 4
+config['num_steps'] = 1024
 #config['num_steps'] = 32
-config['epochs'] = 800
+config['epochs'] = 2000
 #config['epochs'] = 1
 
 config['train_mixed_precision'] = True
@@ -110,11 +110,11 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-warm_start_weights = 'models_diff/reproduce_reference_config_try_again_800_epochs_06_07_2023_21_49_10_epoch_on_exit.cpkt'
-# warm_start_weights = None
+# warm_start_weights = 'models_diff/mothernet_512_lr_0003_steps_256_07_01_2023_00_19_31_epoch_on_exit.cpkt'
+warm_start_weights = None
 continue_old_config = False
 
-model_string = 'mothernet_warm_start_512_everywhere'
+model_string = 'mothernet_512_everywhere_steps_1024_batch_4_epochs_2000_k_aggregate_1'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None
@@ -146,6 +146,19 @@ def save_callback(model, epoch):
         config_sample['wallclock_times'] = model.wallclock_times
         save_model(model, base_path, file_name, config_sample)
 
+
+if 'LOCAL_RANK' in os.environ:
+    # launched with torch.distributed.launch
+    rank = int(os.environ["LOCAL_RANK"])
+    print('torch.distributed.launch and my rank is', rank)
+else:
+    # Single GPU training, get GPU ID from command line
+    parser = argparse.ArgumentParser(description='Train Mothernet')
+    parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
+    args = parser.parse_args()
+    if args.gpu_id is not None:
+        device = f'cuda:{args.gpu_id[0]}'
+
 model = get_model(config_sample
                     , device
                     , should_train=True
@@ -153,10 +166,8 @@ model = get_model(config_sample
                     , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 rank = 0
-if 'LOCAL_RANK' in os.environ:
-    # launched with torch.distributed.launch
-    rank = int(os.environ["LOCAL_RANK"])
-    print('torch.distributed.launch and my rank is', rank)
+
+
 
 if rank == 0:
     save_callback(model[1], "on_exit")

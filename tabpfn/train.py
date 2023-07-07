@@ -121,6 +121,8 @@ def train(dl, model, criterion,
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
         if rank == 0:
             print("Distributed training")
+    else:
+        print(f"Single GPU training on {torch.cuda.get_device_name()}")
 
     if rank == 0:
         model.learning_rates = []
