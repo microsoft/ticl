@@ -158,6 +158,7 @@ else:
     args = parser.parse_args()
     if args.gpu_id is not None:
         device = f'cuda:{args.gpu_id[0]}'
+    torch.set_num_threads(24)
 
 model = get_model(config_sample
                     , device
