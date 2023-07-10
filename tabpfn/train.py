@@ -129,13 +129,12 @@ def train(dl, model, criterion,
         model.losses = []
         model.wallclock_times = []
         model.start_time = time.time()
+        epoch_callback(model, "start")
+
 
     dl.model = model
 
     # learning rate
-    if rank == 0:
-        print(f"learning rate:{lr}")
-        print(f"steps_per_epoch:{len(dl)}")
     if lr is None:
         lr = get_openai_lr(model)
         if rank == 0:
