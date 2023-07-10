@@ -4,11 +4,16 @@ import argparse
 import random
 import datetime
 import itertools
+import glob
+import re
 
 import torch
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 import numpy as np
+import pandas as pd
+from scipy.signal import convolve, windows
+
 
 # copied from huggingface
 def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, num_cycles=0.5, last_epoch=-1):
@@ -321,3 +326,68 @@ def compare_dicts(left, right, prefix=None):
         else:
             if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
                 print(f"{prefix}{k}: ", left[k], right[k])
+
+
+def get_latest_losses(fileglob="models_diff/*.cpkt"):
+
+    losses_dict = {}
+    lr_dict = {}
+    wallclock_dict = {}
+    last_saves = {}
+    for name in glob.glob(fileglob):
+        if "prior_diff_real" in name:
+            continue
+        shortname, epoch_string = name.split("/")[1].split("_epoch_")
+        epoch_string = epoch_string.split(".")[0]
+        if epoch_string == "on_exit":
+            epoch = np.inf
+        else:
+            epoch = int(re.findall("(\d+)", epoch_string)[0])
+        if shortname in last_saves:
+            if last_saves[shortname][1] < epoch:
+                last_saves[shortname] = (name, epoch)
+        else:
+            last_saves[shortname] = (name, epoch)
+
+    for shortname, (name, _) in last_saves.items():
+        try:
+            _, _, config = torch.load(name, map_location="cpu")
+        except Exception as e:
+            print(f"Error on {name}: {str(e)}")
+            continue
+        if "losses" in config:
+            losses_dict[shortname] = config['losses']
+        if "wallclock_time" in config:
+            wallclock_dict[shortname] = config['wallclock_time']
+        elif "wallclock_times" in config:
+            wallclock_dict[shortname] = config['wallclock_times']
+        else:
+            wallclock_dict[shortname] = np.NaN
+        lr_dict[shortname] = config.get("learning_rates", np.NaN)
+    return losses_dict, lr_dict, wallclock_dict, last_saves
+
+def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
+    def trim(series, skip):
+        if pd.api.types.is_scalar(series):
+            return series
+        return series[skip:-skip-1]
+    
+    dfs = []
+    for name, losses in losses_dict.items():
+        if smoother is not None:
+            if len(smoother) > len(losses):
+                continue
+            smoothed_losses = convolve(losses, smoother, mode="valid")
+            skip = (len(losses) - len(smoothed_losses)) // 2
+            if skip < 0:
+                continue
+            this_df = pd.DataFrame({"loss": smoothed_losses,
+                                    "learning_rate": trim(lr_dict[name], skip),
+                                    "time": trim(wallclock_dict[name], skip),
+                                    "epoch": trim(np.arange(len(losses)), skip)})
+        else:
+            this_df = pd.DataFrame({"loss": losses, "learning_rate": lr_dict[name], "time": wallclock_dict[name], "epoch": np.arange(len(losses))})
+        
+        this_df['run'] = name
+        dfs.append(this_df)
+    return pd.concat(dfs)
