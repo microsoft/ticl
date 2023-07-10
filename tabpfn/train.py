@@ -158,7 +158,7 @@ def train(dl, model, criterion,
                 train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
             if new_loss > 2 * total_loss:
                 print("LOSS DIVERGED")
-            new_loss = total_loss
+            total_loss = new_loss
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
                 with torch.no_grad():
                     val_score = dl.validate(model)
