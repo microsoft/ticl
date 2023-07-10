@@ -390,4 +390,7 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
         
         this_df['run'] = name
         dfs.append(this_df)
-    return pd.concat(dfs)
+    long_df = pd.concat(dfs)
+    long_df['time_hours'] = long_df.time / 3600
+    long_df['time_days'] = long_df.time_hours / 24
+    return long_df
