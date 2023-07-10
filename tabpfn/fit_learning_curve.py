@@ -53,8 +53,8 @@ def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run', extrapo
         extrapolate = np.linspace(this_X.max(), loss_df[x].max() * extrapolation_factor, num=100)
         pred_extrapolation = er.predict(extrapolate)
 
-        fig.add_trace(go.Scatter(x=this_X, y=this_y, mode="markers", name=run, marker_color=color, opacity=.3, legendgroup=run, showlegend=False))
-        fig.add_trace(go.Scatter(x=this_X, y=pred_train, mode="lines", name=run, marker_color=color, legendgroup=run, showlegend=True))
-        fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color, line_dash="dash", legendgroup=run, showlegend=False))
+        fig.add_trace(go.Scatter(x=this_X, y=this_y, mode="markers", name=run, marker_color=color, opacity=.3, legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
+        fig.add_trace(go.Scatter(x=this_X, y=pred_train, mode="lines", name=run, marker_color=color, legendgroup=run, showlegend=True, hoverinfo="name", hoverlabel_namelength=-1))
+        fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color, line_dash="dash", legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
     fig.update_layout(xaxis_title=x, yaxis_title=y, height=800)
     return fig
