@@ -55,7 +55,7 @@ config['batch_size_per_gp_sample'] = None
 config['normalize_ignore_label_too'] = False
 
 config['differentiable_hps_as_style'] = False
-config['max_eval_pos'] = 1000
+config['max_eval_pos'] = 8 * 1000
 
 config['random_feature_rotation'] = True
 config['rotate_normalized_labels'] = True
@@ -69,19 +69,20 @@ config['nlayers'] = 12
 # config['nlayers'] = 6
 # config['emsize'] = 2048
 # config['emsize'] = 1024
-config['emsize'] = 512
+config['emsize'] = 768
+config['hid_factor'] = 2
 # config['emsize'] = 256
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
 # config['nhead'] = 4
-config['bptt'] = 1024+128
+config['bptt'] = 8 * 1024+128
 config['y_encoder'] = "one_hot"
 #config['encoder'] = 'featurewise_mlp'
     
-# config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 1
-config['batch_size'] = 4
-config['num_steps'] = 1024
+config['aggregate_k_gradients'] = 8
+config['aggregate_k_gradients'] = 8
+config['batch_size'] = 8
+config['num_steps'] = 1024 * 4
 #config['num_steps'] = 32
 config['epochs'] = 2000
 #config['epochs'] = 1
@@ -89,15 +90,15 @@ config['epochs'] = 2000
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 
-config['weight_decay'] = 1e-5
+config['weight_decay'] = 0
 
-#config['model_maker'] = 'perceiver'
-config['model_maker'] = 'mlp'
+config['model_maker'] = 'perceiver'
+#config['model_maker'] = 'mlp'
 #config['model_maker'] = False
 config['output_attention'] = True
 config['special_token'] = False
-config['decoder_embed_dim'] = 512
-config['decoder_hidden_size'] = 512
+config['decoder_embed_dim'] = config['emsize'] 
+config['decoder_hidden_size'] = config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
@@ -110,11 +111,13 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-# warm_start_weights = 'models_diff/mothernet_512_lr_0003_steps_256_07_01_2023_00_19_31_epoch_on_exit.cpkt'
+#warm_start_weights = "models_diff/perceiver_output_128_emsize_512_nlayers_12_06_28_2023_22_09_12_epoch_430.cpkt"
 warm_start_weights = None
 continue_old_config = False
 
-model_string = 'mothernet_512_everywhere_steps_1024_batch_4_epochs_2000_k_aggregate_1'
+model_maker_string = "perceiver" if config['model_maker'] else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
+model_string = f"{config['model_maker']}_{config['predicted_hidden_layer_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_batch_{config['batch_size'] * config['aggregate_k_gradients']}_lr_{config['lr']}_one_gpu"
+# model_string = 'perceiver_output_128_emsize_512_nlayers_12_steps_4096_batch_16_one_gpu'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_dict = None
@@ -133,6 +136,9 @@ def save_callback(model, epoch):
     if not hasattr(model, 'last_saved_epoch'):
         model.last_saved_epoch = 0
     log_file = f'log/{model_string}.log'
+    if epoch == "start":
+        print(f"Starting training of model {model_string}")
+        return
     with open(log_file, 'a') as f:
         f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
     if (epoch == "on_exit") or epoch % save_every == 0:
@@ -167,6 +173,7 @@ model = get_model(config_sample
                     , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 rank = 0
+
 
 
 
