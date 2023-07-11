@@ -157,7 +157,7 @@ def train(dl, model, criterion,
             epoch_start_time = time.time()
             new_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
                 train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
-            if new_loss > 2 * total_loss:
+            if new_loss > 1.5 * total_loss:
                 print("LOSS DIVERGED")
             total_loss = new_loss
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
