@@ -55,54 +55,50 @@ config['batch_size_per_gp_sample'] = None
 config['normalize_ignore_label_too'] = False
 
 config['differentiable_hps_as_style'] = False
-config['max_eval_pos'] = 8 * 1000
+config['max_eval_pos'] = 1000
 
 config['random_feature_rotation'] = True
 config['rotate_normalized_labels'] = True
 
 config["mix_activations"] = False # False heisst eig True
 
-#config['lr'] = 0.00003
-config['lr'] = 0.0001
+config['output_attention'] = True
+config['special_token'] = False
+
+config['lr'] = 0.00003
+#config['lr'] = 0.0001
 # config['nlayers'] = 18
 config['nlayers'] = 12
-# config['nlayers'] = 6
 # config['emsize'] = 2048
 # config['emsize'] = 1024
-config['emsize'] = 768
+config['emsize'] = 512
 config['hid_factor'] = 2
 # config['emsize'] = 256
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
 # config['nhead'] = 4
-config['bptt'] = 8 * 1024+128
+config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
-#config['encoder'] = 'featurewise_mlp'
     
-config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 8
-config['batch_size'] = 8
+# config['aggregate_k_gradients'] = 8
+config['aggregate_k_gradients'] = 1
+config['batch_size'] = 16
 config['num_steps'] = 1024 * 4
-#config['num_steps'] = 32
 config['epochs'] = 2000
-#config['epochs'] = 1
 
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 
 config['weight_decay'] = 0
 
-config['model_maker'] = 'perceiver'
-#config['model_maker'] = 'mlp'
+#config['model_maker'] = 'perceiver'
+config['model_maker'] = 'mlp'
 #config['model_maker'] = False
-config['output_attention'] = True
-config['special_token'] = False
 config['decoder_embed_dim'] = config['emsize'] 
 config['decoder_hidden_size'] = config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
 config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
-# config['predicted_hidden_layer_size'] = 64
 
 config['no_double_embedding'] = True
 config['prenorm'] = True
