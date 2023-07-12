@@ -112,7 +112,7 @@ warm_start_weights = None
 continue_old_config = False
 
 model_maker_string = "perceiver" if config['model_maker'] else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
-model_string = f"{config['model_maker']}_{config['predicted_hidden_layer_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_batch_{config['batch_size'] * config['aggregate_k_gradients']}_lr_{config['lr']}_one_gpu"
+model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_batch_{config['batch_size'] * config['aggregate_k_gradients']}_lr_{config['lr']}_one_gpu"
 # model_string = 'perceiver_output_128_emsize_512_nlayers_12_steps_4096_batch_16_one_gpu'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
