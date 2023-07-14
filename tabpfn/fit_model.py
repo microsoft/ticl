@@ -65,14 +65,15 @@ config["mix_activations"] = False # False heisst eig True
 config['output_attention'] = True
 config['special_token'] = False
 
-config['lr'] = 0.00003
-#config['lr'] = 0.0001
+#config['lr'] = 0.00003
+config['lr'] = 0.0003
 # config['nlayers'] = 18
 config['nlayers'] = 12
 # config['emsize'] = 2048
 # config['emsize'] = 1024
-config['emsize'] = 512
 config['hid_factor'] = 2
+config['emsize'] = 512
+# config['emsize'] = 512
 # config['emsize'] = 256
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
@@ -81,9 +82,9 @@ config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
     
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 1
-config['batch_size'] = 16
-config['num_steps'] = 1024 * 4
+config['aggregate_k_gradients'] = 8
+config['batch_size'] = 128
+config['num_steps'] = 1024
 config['epochs'] = 2000
 
 config['train_mixed_precision'] = True
@@ -106,13 +107,30 @@ config['prenorm'] = True
 config_sample = evaluate_hypers(config)
 
 
+
+if 'LOCAL_RANK' in os.environ:
+    # launched with torch.distributed.launch
+    rank = int(os.environ["LOCAL_RANK"])
+    print('torch.distributed.launch and my rank is', rank)
+    config_sample['num_gpus'] = int(os.environ["WORLD_SIZE"])
+else:
+    # Single GPU training, get GPU ID from command line
+    parser = argparse.ArgumentParser(description='Train Mothernet')
+    parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
+    args = parser.parse_args()
+    if args.gpu_id is not None:
+        device = f'cuda:{args.gpu_id[0]}'
+    torch.set_num_threads(24)
+    config_sample['num_gpus'] = 1
+
+
 # ## Training
 #warm_start_weights = "models_diff/perceiver_output_128_emsize_512_nlayers_12_06_28_2023_22_09_12_epoch_430.cpkt"
 warm_start_weights = None
 continue_old_config = False
 
 model_maker_string = "perceiver" if config['model_maker'] == "perceiver" else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
-model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_batch_{config['batch_size'] * config['aggregate_k_gradients']}_lr_{config['lr']}_one_gpu"
+model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_eff_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}"
 # model_string = 'perceiver_output_128_emsize_512_nlayers_12_steps_4096_batch_16_one_gpu'
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
@@ -148,19 +166,6 @@ def save_callback(model, epoch):
         config_sample['wallclock_times'] = model.wallclock_times
         save_model(model, base_path, file_name, config_sample)
 
-
-if 'LOCAL_RANK' in os.environ:
-    # launched with torch.distributed.launch
-    rank = int(os.environ["LOCAL_RANK"])
-    print('torch.distributed.launch and my rank is', rank)
-else:
-    # Single GPU training, get GPU ID from command line
-    parser = argparse.ArgumentParser(description='Train Mothernet')
-    parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
-    args = parser.parse_args()
-    if args.gpu_id is not None:
-        device = f'cuda:{args.gpu_id[0]}'
-    torch.set_num_threads(24)
 
 model = get_model(config_sample
                     , device
