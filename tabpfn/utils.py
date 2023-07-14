@@ -338,7 +338,7 @@ def get_latest_losses(fileglob="models_diff/*.cpkt"):
         if "prior_diff_real" in name:
             continue
         shortname, epoch_string = name.split("/")[1].split("_epoch_")
-        epoch_string = epoch_string.split(".")[0]
+        epoch_string = epoch_string[:-len(".cpkt")]
         if epoch_string == "on_exit":
             epoch = np.inf
         else:
