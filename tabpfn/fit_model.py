@@ -67,7 +67,7 @@ config['output_attention'] = True
 config['special_token'] = False
 
 #config['lr'] = 0.00003
-config['lr'] = 0.0003
+config['lr'] = 0.0001
 # config['nlayers'] = 18
 config['nlayers'] = 12
 # config['emsize'] = 2048
@@ -83,8 +83,8 @@ config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
     
 # config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 8
-config['batch_size'] = 128
+config['aggregate_k_gradients'] = 1
+config['batch_size'] = 32
 config['num_steps'] = 1024
 config['epochs'] = 2000
 
@@ -156,10 +156,11 @@ def save_callback(model, epoch):
         return
     with open(log_file, 'a') as f:
         f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
-    mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-    mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-    mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-    mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+    if epoch != "on_exit":
+        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+        mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+        mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+        mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
     
     if (epoch == "on_exit") or epoch % save_every == 0:
         file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
