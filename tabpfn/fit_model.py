@@ -156,19 +156,20 @@ def save_callback(model, epoch):
         return
     with open(log_file, 'a') as f:
         f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
+    mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+    mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+    mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+    mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+    
     if (epoch == "on_exit") or epoch % save_every == 0:
         file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
         with open(log_file, 'a') as f:
             f.write(f'Saving model to {file_name}\n')
         print(f'Saving model to {file_name}')
-        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         config_sample['epoch_in_training'] = epoch
         config_sample['learning_rates'] = model.learning_rates
         config_sample['losses'] = model.losses
         config_sample['wallclock_times'] = model.wallclock_times
-        mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-        mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-        mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
 
         save_model(model, base_path, file_name, config_sample)
 
