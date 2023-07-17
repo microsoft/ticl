@@ -96,6 +96,14 @@ config['weight_decay'] = 0
 #config['model_maker'] = 'perceiver'
 config['model_maker'] = 'mlp'
 #config['model_maker'] = False
+
+if config['model_maker'] == 'perceiver':
+    config['max_eval_pos'] = 8 * 1000
+    config['bptt'] = 8 * 1024+128
+else:
+    config['max_eval_pos'] = 1000
+    config['bptt'] = 1024+128
+    
 config['decoder_embed_dim'] = config['emsize'] 
 config['decoder_hidden_size'] = config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
