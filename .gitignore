@@ -168,3 +168,4 @@ tabpfn/results
 *.pickle
 tabpfn/joblib_cache
 tabpfn/catboost_info
+tabpfn/mlruns
