@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import torch
+import mlflow
 
 from scripts.model_builder import get_model, save_model
 from scripts.model_configs import get_prior_config, evaluate_hypers
@@ -160,18 +161,23 @@ def save_callback(model, epoch):
         with open(log_file, 'a') as f:
             f.write(f'Saving model to {file_name}\n')
         print(f'Saving model to {file_name}')
+        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         config_sample['epoch_in_training'] = epoch
         config_sample['learning_rates'] = model.learning_rates
         config_sample['losses'] = model.losses
         config_sample['wallclock_times'] = model.wallclock_times
+        mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+        mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+        mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+
         save_model(model, base_path, file_name, config_sample)
 
-
-model = get_model(config_sample
-                    , device
-                    , should_train=True
-                    , verbose=1
-                    , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
+with mlflow.start_run(run_name=model_string):
+    model = get_model(config_sample
+                        , device
+                        , should_train=True
+                        , verbose=1
+                        , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 rank = 0
 
