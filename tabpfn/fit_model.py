@@ -172,6 +172,7 @@ def save_callback(model, epoch):
 
         save_model(model, base_path, file_name, config_sample)
 
+mlflow.set_tracking_uri("http://20.114.249.177:5000")
 with mlflow.start_run(run_name=model_string):
     model = get_model(config_sample
                         , device
@@ -180,8 +181,6 @@ with mlflow.start_run(run_name=model_string):
                         , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 rank = 0
-
-
 
 
 if rank == 0:
