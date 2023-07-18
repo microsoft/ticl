@@ -20,11 +20,11 @@ except ImportError:
     cache = lru_cache(maxsize=None)
 
 
-def save_model(model, path, filename, config_sample):
+def save_model(model, optimizer, scheduler, path, filename, config_sample):
     config_sample = {**config_sample}
 
     import cloudpickle
-    torch.save((model.state_dict(), None, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
+    torch.save((model.state_dict(), optimizer.state_dict(), scheduler, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
 
 
 def get_gpu_memory():

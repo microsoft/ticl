@@ -112,6 +112,7 @@ config['predicted_hidden_layer_size'] = 128
 
 config['no_double_embedding'] = True
 config['prenorm'] = True
+config['adaptive_batch_size'] = True
 
 config_sample = evaluate_hypers(config)
 
@@ -155,7 +156,7 @@ if warm_start_weights is not None:
 
 save_every = 10
 
-def save_callback(model, epoch):
+def save_callback(model, optimizer, scheduler, epoch):
     if not hasattr(model, 'last_saved_epoch'):
         model.last_saved_epoch = 0
     log_file = f'log/{model_string}.log'
@@ -180,7 +181,7 @@ def save_callback(model, epoch):
         config_sample['losses'] = model.losses
         config_sample['wallclock_times'] = model.wallclock_times
 
-        save_model(model, base_path, file_name, config_sample)
+        save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
 
 with mlflow.start_run(run_name=model_string):
     mlflow.set_tracking_uri("http://20.114.249.177:5000")
