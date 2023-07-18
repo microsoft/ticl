@@ -182,9 +182,9 @@ def save_callback(model, optimizer, scheduler, epoch):
         config_sample['wallclock_times'] = model.wallclock_times
 
         save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
-
+        
+mlflow.set_tracking_uri("http://20.114.249.177:5000")
 with mlflow.start_run(run_name=model_string):
-    mlflow.set_tracking_uri("http://20.114.249.177:5000")
     model = get_model(config_sample
                         , device
                         , should_train=True
