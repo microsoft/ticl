@@ -161,17 +161,21 @@ def save_callback(model, optimizer, scheduler, epoch):
         mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
         mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
     
-    if (epoch == "on_exit") or epoch % save_every == 0:
-        file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
-        with open(log_file, 'a') as f:
-            f.write(f'Saving model to {file_name}\n')
-        print(f'Saving model to {file_name}')
-        config_sample['epoch_in_training'] = epoch
-        config_sample['learning_rates'] = model.learning_rates
-        config_sample['losses'] = model.losses
-        config_sample['wallclock_times'] = model.wallclock_times
+    try:
+        if (epoch == "on_exit") or epoch % save_every == 0:
+            file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
+            with open(log_file, 'a') as f:
+                f.write(f'Saving model to {file_name}\n')
+            print(f'Saving model to {file_name}')
+            config_sample['epoch_in_training'] = epoch
+            config_sample['learning_rates'] = model.learning_rates
+            config_sample['losses'] = model.losses
+            config_sample['wallclock_times'] = model.wallclock_times
 
-        save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+            save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+    except Exception as e:
+        print("WRITING TO LOG FILE FAILED")
+        print(e)
 
 if socket.gethostname() == "amueller-tabpfn-4gpu":
     mlflow.set_tracking_uri("http://localhost:5000")
