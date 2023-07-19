@@ -172,8 +172,11 @@ def save_callback(model, optimizer, scheduler, epoch):
         config_sample['wallclock_times'] = model.wallclock_times
 
         save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
-        
-mlflow.set_tracking_uri("http://20.114.249.177:5000")
+
+if socket.gethostname() == "amueller-tabpfn-4gpu":
+    mlflow.set_tracking_uri("http://localhost:5000")
+else:            
+    mlflow.set_tracking_uri("http://20.114.249.177:5000")
 with mlflow.start_run(run_name=model_string):
     mlflow.log_param('hostname', socket.gethostname())
     mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
