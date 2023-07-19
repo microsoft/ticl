@@ -12,17 +12,12 @@ import argparse
 device = 'cuda'
 base_path = '.'
 
-def reload_config(config_type='causal'):
-    config = get_prior_config(config_type=config_type)
-    config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
-    config['recompute_attn'] = True
-    config['max_num_classes'] = 10
-    config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
-    config['balanced'] = False
-    return config
-
-
-config = reload_config()
+config = get_prior_config(config_type='causal')
+config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
+config['recompute_attn'] = True
+config['max_num_classes'] = 10
+config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
+config['balanced'] = False
 
 # diff
 config['output_multiclass_ordered_p'] = 0.
@@ -65,37 +60,56 @@ config["mix_activations"] = False # False heisst eig True
 
 config['output_attention'] = True
 config['special_token'] = False
-
-#config['lr'] = 0.00003
-config['lr'] = 0.0001
-# config['nlayers'] = 18
-config['nlayers'] = 12
-# config['emsize'] = 2048
-# config['emsize'] = 1024
-config['hid_factor'] = 2
-config['emsize'] = 512
-# config['emsize'] = 512
-# config['emsize'] = 256
-config['nhead'] = config['emsize'] // 128
-# config['nhead'] = 16
-# config['nhead'] = 4
-config['bptt'] = 1024+128
 config['y_encoder'] = "one_hot"
+config['train_mixed_precision'] = True
+config['efficient_eval_masking'] = True
+config['min_eval_pos'] = 2
+
+config['no_double_embedding'] = True
+config['prenorm'] = True
+
+if 'LOCAL_RANK' in os.environ:
+    # launched with torch.distributed.launch
+    rank = int(os.environ["LOCAL_RANK"])
+    print('torch.distributed.launch and my rank is', rank)
+    config['num_gpus'] = int(os.environ["WORLD_SIZE"])
+    raise ValueError("Gave up on multi-gpu for now")
+
+# Single GPU training, get GPU ID from command line
+parser = argparse.ArgumentParser(description='Train Mothernet')
+parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
+parser.add_argument('-e', '--em-size', nargs=1, type=int, help='embedding size', default=512)
+parser.add_argument('-l', '--learning-rate', nargs=1, type=float, help='maximum learning rate', default=0.0001)
+parser.add_argument('-N', '--num-layers', nargs=1, type=int, help='number of transformer layers', default=12)
+parser.add_argument('-k', '--agg-gradients', nargs=1, type=int, help='number steps to aggregate gradient over', default=1)
+parser.add_argument('-b', '--batch-size', nargs=1, type=int, help='physical batch size', default=32)
+parser.add_argument('-m', '--model-maker', nargs=1, type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
+parser.add_argument('-a', '--addaptive-batch-size', nargs=1, type=bool, help='Wether to progressively increase effective batch size.', default=True)
+parser.add_argument('-W', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=0)
+
+
+args = parser.parse_args()
+if args.gpu_id is not None:
+    device = f'cuda:{args.gpu_id[0]}'
+torch.set_num_threads(24)
+config['num_gpus'] = 1
+
+
+config['lr'] = args.learning_rate[0]
+config['nlayers'] = args.num_layers[0]
+config['emsize'] = args.em_size[0]
+config['aggregate_k_gradients'] = args.agg_gradients[0]
+config['batch_size'] = args.batch_size[0]
+config['model_maker'] = args.model_maker[0]
+config['adaptive_batch_size'] = args.adaptive_batch_size[0]
+config['weight_decay'] = args.weight_decay[0]
+
+config['hid_factor'] = 2
+config['nhead'] = config['emsize'] // 128
     
-# config['aggregate_k_gradients'] = 8
-config['aggregate_k_gradients'] = 1
-config['batch_size'] = 32
 config['num_steps'] = 1024
 config['epochs'] = 2000
 
-config['train_mixed_precision'] = True
-config['efficient_eval_masking'] = True
-
-config['weight_decay'] = 0
-
-#config['model_maker'] = 'perceiver'
-config['model_maker'] = 'mlp'
-#config['model_maker'] = False
 
 if config['model_maker'] == 'perceiver':
     config['max_eval_pos'] = 8 * 1000
@@ -107,31 +121,12 @@ else:
 config['decoder_embed_dim'] = config['emsize'] 
 config['decoder_hidden_size'] = config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
-config['min_eval_pos'] = 2
 config['predicted_hidden_layer_size'] = 128
-
-config['no_double_embedding'] = True
-config['prenorm'] = True
-config['adaptive_batch_size'] = True
 
 config_sample = evaluate_hypers(config)
 
 
 
-if 'LOCAL_RANK' in os.environ:
-    # launched with torch.distributed.launch
-    rank = int(os.environ["LOCAL_RANK"])
-    print('torch.distributed.launch and my rank is', rank)
-    config_sample['num_gpus'] = int(os.environ["WORLD_SIZE"])
-else:
-    # Single GPU training, get GPU ID from command line
-    parser = argparse.ArgumentParser(description='Train Mothernet')
-    parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
-    args = parser.parse_args()
-    if args.gpu_id is not None:
-        device = f'cuda:{args.gpu_id[0]}'
-    torch.set_num_threads(24)
-    config_sample['num_gpus'] = 1
 
 
 # ## Training
