@@ -85,7 +85,7 @@ parser.add_argument('-k', '--agg-gradients', nargs=1, type=int, help='number ste
 parser.add_argument('-b', '--batch-size', nargs=1, type=int, help='physical batch size', default=[32])
 parser.add_argument('-m', '--model-maker', nargs=1, type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default=['mlp'])
 parser.add_argument('-a', '--adaptive-batch-size', nargs=1, type=bool, help='Wether to progressively increase effective batch size.', default=[True])
-parser.add_argument('-W', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=[0])
+parser.add_argument('-w', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=[0])
 
 
 args = parser.parse_args()
