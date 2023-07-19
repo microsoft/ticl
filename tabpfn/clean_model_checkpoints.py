@@ -24,6 +24,7 @@ for canonical_name, files in file_dict.items():
             canonical_file[canonical_name] = f
             
 for canonical_name, files in file_dict.items():
+    print(f"Loading {canonical_file[canonical_name]}")
     try:
         torch.load(canonical_file[canonical_name])
     except Exception as e:
