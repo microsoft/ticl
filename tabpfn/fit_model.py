@@ -8,6 +8,7 @@ from scripts.model_configs import get_prior_config, evaluate_hypers
 
 from priors.utils import uniform_int_sampler_f
 import argparse
+import socket
 
 device = 'cuda'
 base_path = '.'
@@ -77,14 +78,14 @@ if 'LOCAL_RANK' in os.environ:
 # Single GPU training, get GPU ID from command line
 parser = argparse.ArgumentParser(description='Train Mothernet')
 parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
-parser.add_argument('-e', '--em-size', nargs=1, type=int, help='embedding size', default=512)
-parser.add_argument('-l', '--learning-rate', nargs=1, type=float, help='maximum learning rate', default=0.0001)
-parser.add_argument('-N', '--num-layers', nargs=1, type=int, help='number of transformer layers', default=12)
-parser.add_argument('-k', '--agg-gradients', nargs=1, type=int, help='number steps to aggregate gradient over', default=1)
-parser.add_argument('-b', '--batch-size', nargs=1, type=int, help='physical batch size', default=32)
-parser.add_argument('-m', '--model-maker', nargs=1, type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
-parser.add_argument('-a', '--addaptive-batch-size', nargs=1, type=bool, help='Wether to progressively increase effective batch size.', default=True)
-parser.add_argument('-W', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=0)
+parser.add_argument('-e', '--em-size', nargs=1, type=int, help='embedding size', default=[512])
+parser.add_argument('-l', '--learning-rate', nargs=1, type=float, help='maximum learning rate', default=[0.0001])
+parser.add_argument('-N', '--num-layers', nargs=1, type=int, help='number of transformer layers', default=[12])
+parser.add_argument('-k', '--agg-gradients', nargs=1, type=int, help='number steps to aggregate gradient over', default=[1])
+parser.add_argument('-b', '--batch-size', nargs=1, type=int, help='physical batch size', default=[32])
+parser.add_argument('-m', '--model-maker', nargs=1, type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default=['mlp'])
+parser.add_argument('-a', '--adaptive-batch-size', nargs=1, type=bool, help='Wether to progressively increase effective batch size.', default=[True])
+parser.add_argument('-W', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=[0])
 
 
 args = parser.parse_args()
@@ -156,7 +157,6 @@ def save_callback(model, optimizer, scheduler, epoch):
     with open(log_file, 'a') as f:
         f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
     if epoch != "on_exit":
-        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
         mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
         mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
@@ -175,6 +175,8 @@ def save_callback(model, optimizer, scheduler, epoch):
         
 mlflow.set_tracking_uri("http://20.114.249.177:5000")
 with mlflow.start_run(run_name=model_string):
+    mlflow.log_param('hostname', socket.gethostname())
+    mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
     model = get_model(config_sample
                         , device
                         , should_train=True
