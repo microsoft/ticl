@@ -6,8 +6,8 @@ import torch
 
 file_dict = defaultdict(list)
 for name in glob.glob("models_diff/*.cpkt"):
-    shortname = name.split("/")[1][len("prior_diff_real_checkpoint_"):-5]
-    canonical_name = shortname.split("epoch")[0][:-5]
+    shortname = name.split("/")[1]
+    canonical_name = shortname.split("epoch")[0]
     file_dict[canonical_name].append(name)
 
 
