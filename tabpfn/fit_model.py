@@ -56,7 +56,6 @@ config['batch_size_per_gp_sample'] = None
 config['normalize_ignore_label_too'] = False
 
 config['differentiable_hps_as_style'] = False
-config['max_eval_pos'] = 1000
 
 config['random_feature_rotation'] = True
 config['rotate_normalized_labels'] = True
@@ -79,7 +78,7 @@ config['emsize'] = 512
 config['nhead'] = config['emsize'] // 128
 # config['nhead'] = 16
 # config['nhead'] = 4
-config['bptt'] = 1024+128
+
 config['y_encoder'] = "one_hot"
     
 # config['aggregate_k_gradients'] = 8
