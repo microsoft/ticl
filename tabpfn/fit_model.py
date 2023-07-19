@@ -51,7 +51,6 @@ config['batch_size_per_gp_sample'] = None
 config['normalize_ignore_label_too'] = False
 
 config['differentiable_hps_as_style'] = False
-config['max_eval_pos'] = 1000
 
 config['random_feature_rotation'] = True
 config['rotate_normalized_labels'] = True
@@ -94,7 +93,6 @@ if args.gpu_id is not None:
 torch.set_num_threads(24)
 config['num_gpus'] = 1
 
-
 config['lr'] = args.learning_rate[0]
 config['nlayers'] = args.num_layers[0]
 config['emsize'] = args.em_size[0]
@@ -127,8 +125,6 @@ config_sample = evaluate_hypers(config)
 
 
 
-
-
 # ## Training
 #warm_start_weights = "models_diff/perceiver_output_128_emsize_512_nlayers_12_06_28_2023_22_09_12_epoch_430.cpkt"
 warm_start_weights = None
@@ -147,7 +143,6 @@ if warm_start_weights is not None:
     model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     if continue_old_config:
         config_sample = old_config
-
 
 save_every = 10
 
@@ -185,9 +180,6 @@ with mlflow.start_run(run_name=model_string):
                         , should_train=True
                         , verbose=1
                         , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
-
-rank = 0
-
 
 if rank == 0:
     save_callback(model[1], "on_exit")
