@@ -351,10 +351,11 @@ def get_latest_losses(fileglob="models_diff/*.cpkt"):
 
     for shortname, (name, _) in last_saves.items():
         try:
-            _, _, config = torch.load(name, map_location="cpu")
+            model_things = torch.load(name, map_location="cpu")
         except Exception as e:
             print(f"Error on {name}: {str(e)}")
             continue
+        config = model_things[-1]
         if "losses" in config:
             losses_dict[shortname] = config['losses']
         if "wallclock_time" in config:

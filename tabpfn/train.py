@@ -182,7 +182,7 @@ def train(dl, model, criterion,
                 if increased_batch_size == 0 and total_loss <= .5:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 1
-                elif increased_batch_size == 1 and total_loss <= .4:
+                elif increased_batch_size == 1 and total_loss <= .45:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 2
                 
