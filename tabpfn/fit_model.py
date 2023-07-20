@@ -193,4 +193,4 @@ with mlflow.start_run(run_name=model_string):
                         , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
 
 if rank == 0:
-    save_callback(model[1], "on_exit")
+    save_callback(model[1], None, None, "on_exit")
