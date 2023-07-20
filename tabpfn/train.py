@@ -129,7 +129,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         model.losses = getattr(model, 'losses', [])
         model.wallclock_times = getattr(model, 'wallclock_times', [])
         model.start_time = time.time()
-        if len(model.wallckock_times):
+        if len(model.wallclock_times):
             model.start_time -= model.wallclock_times[-1]
         if epoch_callback is not None:
             epoch_callback(model, None, None, "start")
