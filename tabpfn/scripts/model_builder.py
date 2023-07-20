@@ -129,6 +129,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
                   , verbose=verbose_train,
-                  weight_decay=config['weight_decay'])
+                  weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'])
 
     return model

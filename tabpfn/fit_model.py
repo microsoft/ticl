@@ -142,17 +142,19 @@ config_sample = evaluate_hypers(config)
 
 
 model_maker_string = "perceiver" if config['model_maker'] == "perceiver" else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
-model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'a' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
+model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
-model_dict = None
+model_state, optimizer_state, scheduler = None, None, None
 if warm_start_weights is not None:
-    model_state, optimizer_state, old_config = torch.load(
+    model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
         warm_start_weights, map_location='cpu')
     module_prefix = 'module.'
-    model_dict = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
+    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     if continue_old_config:
         config_sample = old_config
+        optimizer_state = old_optimizer_state
+        scheduler = old_scheduler
 
 save_every = 10
 
@@ -197,7 +199,8 @@ with mlflow.start_run(run_name=model_string):
                         , device
                         , should_train=True
                         , verbose=1
-                        , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config or args.load_strict)    
+                        , epoch_callback=save_callback, model_state=model_state, optimizer_state=optimizer_state, scheduler=scheduler,
+                        load_model_strict=continue_old_config or args.load_strict)    
 
 if rank == 0:
     save_callback(model[1], None, None, "on_exit")
