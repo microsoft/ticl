@@ -22,9 +22,10 @@ except ImportError:
 
 def save_model(model, optimizer, scheduler, path, filename, config_sample):
     config_sample = {**config_sample}
+    optimizer_dict = optimizer.state_dict() if optimizer is not None else None
 
     import cloudpickle
-    torch.save((model.state_dict(), optimizer.state_dict(), scheduler, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
+    torch.save((model.state_dict(), optimizer_dict, scheduler, config_sample), os.path.join(path, filename), pickle_module=cloudpickle)
 
 
 def get_gpu_memory():
