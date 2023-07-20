@@ -182,9 +182,12 @@ def train(dl, model, criterion,
                 if increased_batch_size == 0 and total_loss <= .5:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 1
+                    print("increased aggregate_k_gradients size to", aggregate_k_gradients)
                 elif increased_batch_size == 1 and total_loss <= .45:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 2
+                    print("increased aggregate_k_gradients size to", aggregate_k_gradients)
+
                 
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
