@@ -179,15 +179,18 @@ def train(dl, model, criterion,
                     + (f'val score {val_score}' if val_score is not None else ''))
                 print('-' * 89)
             if adaptive_batch_size:
-                if increased_batch_size == 0 and total_loss <= .5:
+                if increased_batch_size == 0 and total_loss <= .55:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 1
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-                elif increased_batch_size == 1 and total_loss <= .45:
+                elif increased_batch_size == 1 and total_loss <= .50:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 2
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-
+                elif increased_batch_size == 2 and total_loss <= .45:
+                    aggregate_k_gradients *= 2
+                    increased_batch_size = 3
+                    print("increased aggregate_k_gradients size to", aggregate_k_gradients)
                 
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
