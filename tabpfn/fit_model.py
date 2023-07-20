@@ -74,6 +74,8 @@ if 'LOCAL_RANK' in os.environ:
     print('torch.distributed.launch and my rank is', rank)
     config['num_gpus'] = int(os.environ["WORLD_SIZE"])
     raise ValueError("Gave up on multi-gpu for now")
+else:
+    rank = 0
 
 # Single GPU training, get GPU ID from command line
 parser = argparse.ArgumentParser(description='Train Mothernet')
