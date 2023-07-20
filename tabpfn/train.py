@@ -103,8 +103,8 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 ignore_steps.cpu().item()/steps_per_epoch)
 
 
-def train(dl, model, criterion,
-          epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10, scheduler=get_cosine_schedule_with_warmup,
+def train(dl, model, criterion, optimizer_state=None, scheduler=None,
+          epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           ):
@@ -141,7 +141,13 @@ def train(dl, model, criterion,
         if rank == 0:
             print(f"Using OpenAI max lr of {lr}.")
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = scheduler(optimizer, warmup_epochs, epochs) 
+    if optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
+    if scheduler is None:
+        scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
+        start_epoch = 1
+    else:
+        start_epoch = scheduler.last_epoch + 1
     scaler = GradScaler() if train_mixed_precision else None
 
     # check that everything uses up-to-date APIs
@@ -151,7 +157,7 @@ def train(dl, model, criterion,
     increased_batch_size = 0
 
     try:
-        for epoch in (range(1, epochs + 1) if epochs is not None else itertools.count(1)):
+        for epoch in range(start_epoch, epochs + 1):
             if verbose:
                 print(f"start of epoch {epoch}")
 
@@ -167,13 +173,15 @@ def train(dl, model, criterion,
             else:
                 val_score = None
 
+            last_lr = scheduler.get_last_lr()[0]
+
             if verbose:
                 print('-' * 89)
                 print(
                     f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.4f} | ')
 
                 print(
-                    f' lr {scheduler.get_last_lr()[0]} data time {time_to_get_batch:5.2f} step time {step_time:5.2f}'
+                    f' lr {last_lr} data time {time_to_get_batch:5.2f} step time {step_time:5.2f}'
                     f' forward time {forward_time:5.2f}' 
                     f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
                     + (f'val score {val_score}' if val_score is not None else ''))
@@ -191,14 +199,15 @@ def train(dl, model, criterion,
                     aggregate_k_gradients *= 2
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-                
+            scheduler.step()
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
-                model.learning_rates.append(scheduler.get_last_lr()[0])
+                model.learning_rates.append(last_lr)
                 model.losses.append(total_loss)
                 model.wallclock_times.append(time.time() - model.start_time)
                 epoch_callback(model, optimizer, scheduler, epoch)
-            scheduler.step()
+            
+
     except KeyboardInterrupt:
         pass
 

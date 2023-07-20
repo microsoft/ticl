@@ -75,7 +75,7 @@ def get_y_encoder(config):
     return y_encoder
 
 
-def get_model(config, device, should_train=True, verbose=False, state_dict=None, epoch_callback=None, load_model_strict=True):
+def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
@@ -110,7 +110,7 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
-                           load_weights_from_this_state_dict=state_dict, load_model_strict=load_model_strict,
+                           model_state=model_state, load_model_strict=load_model_strict,
                            decoder_embed_dim=config['decoder_embed_dim'],
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
@@ -120,8 +120,8 @@ def get_model(config, device, should_train=True, verbose=False, state_dict=None,
         model.losses = config['losses']
         model.learning_rates = config['learning_rates']
     model = train(dl,
-                  model,
-                  criterion=criterion
+                  model, criterion=criterion,
+                  optimizer_state=optimizer_state, scheduler=scheduler
                   , epochs=epochs
                   , warmup_epochs=20
                   , gpu_device=device
