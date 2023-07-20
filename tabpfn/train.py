@@ -125,10 +125,12 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         print(f"Single GPU training on {torch.cuda.get_device_name()}")
 
     if rank == 0:
-        model.learning_rates = []
-        model.losses = []
-        model.wallclock_times = []
+        model.learning_rates = getattr(model, 'learning_rates', [])
+        model.losses = getattr(model, 'losses', [])
+        model.wallclock_times = getattr(model, 'wallclock_times', [])
         model.start_time = time.time()
+        len(model.wallckock_times):
+            model.start_time -= model.wallclock_times[-1]
         if epoch_callback is not None:
             epoch_callback(model, None, None, "start")
 
