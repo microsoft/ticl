@@ -79,31 +79,39 @@ else:
 
 # Single GPU training, get GPU ID from command line
 parser = argparse.ArgumentParser(description='Train Mothernet')
-parser.add_argument('-g', '--gpu-id', nargs=1, type=int, help='GPU id')
-parser.add_argument('-e', '--em-size', nargs=1, type=int, help='embedding size', default=[512])
-parser.add_argument('-l', '--learning-rate', nargs=1, type=float, help='maximum learning rate', default=[0.0001])
-parser.add_argument('-N', '--num-layers', nargs=1, type=int, help='number of transformer layers', default=[12])
-parser.add_argument('-k', '--agg-gradients', nargs=1, type=int, help='number steps to aggregate gradient over', default=[1])
-parser.add_argument('-b', '--batch-size', nargs=1, type=int, help='physical batch size', default=[32])
-parser.add_argument('-m', '--model-maker', nargs=1, type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default=['mlp'])
-parser.add_argument('-a', '--adaptive-batch-size', nargs=1, type=bool, help='Wether to progressively increase effective batch size.', default=[True])
-parser.add_argument('-w', '--weight-decay', nargs=1, type=float, help='Weight decay for AdamW.', default=[0])
+parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
+parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
+parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
+parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.0001)
+parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
+parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
+parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=32)
+parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
+parser.add_argument('-a', '--adaptive-batch-size', type=bool, help='Wether to progressively increase effective batch size.', default=True)
+parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
+parser.add_argument('-f', '--load-file', help='Warm start from this file')
+parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
+parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
 
 
 args = parser.parse_args()
 if args.gpu_id is not None:
-    device = f'cuda:{args.gpu_id[0]}'
+    device = f'cuda:{args.gpu_id}'
 torch.set_num_threads(24)
 config['num_gpus'] = 1
 
-config['lr'] = args.learning_rate[0]
-config['nlayers'] = args.num_layers[0]
-config['emsize'] = args.em_size[0]
-config['aggregate_k_gradients'] = args.agg_gradients[0]
-config['batch_size'] = args.batch_size[0]
-config['model_maker'] = args.model_maker[0]
-config['adaptive_batch_size'] = args.adaptive_batch_size[0]
-config['weight_decay'] = args.weight_decay[0]
+config['lr'] = args.learning_rate
+config['nlayers'] = args.num_layers
+config['emsize'] = args.em_size
+config['aggregate_k_gradients'] = args.agg_gradients
+config['batch_size'] = args.batch_size
+config['model_maker'] = args.model_maker
+config['adaptive_batch_size'] = args.adaptive_batch_size
+config['weight_decay'] = args.weight_decay
+
+warm_start_weights = args.load_file
+continue_old_config = args.continue_run
+
 
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
@@ -120,7 +128,7 @@ else:
     config['bptt'] = 1024+128
     
 config['decoder_embed_dim'] = config['emsize'] 
-config['decoder_hidden_size'] = config['emsize'] * config['hid_factor'] 
+config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
 config['predicted_hidden_layer_size'] = 128
 
@@ -129,9 +137,7 @@ config_sample = evaluate_hypers(config)
 
 
 # ## Training
-#warm_start_weights = "models_diff/perceiver_output_128_emsize_512_nlayers_12_06_28_2023_22_09_12_epoch_430.cpkt"
-warm_start_weights = None
-continue_old_config = False
+
 
 model_maker_string = "perceiver" if config['model_maker'] == "perceiver" else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
 model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'a' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}"
@@ -190,7 +196,7 @@ with mlflow.start_run(run_name=model_string):
                         , device
                         , should_train=True
                         , verbose=1
-                        , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config)    
+                        , epoch_callback=save_callback, state_dict=model_dict, load_model_strict=continue_old_config or args.load_strict)    
 
 if rank == 0:
     save_callback(model[1], None, None, "on_exit")
