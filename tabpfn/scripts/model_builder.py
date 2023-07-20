@@ -119,6 +119,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         # for continuing training
         model.losses = config['losses']
         model.learning_rates = config['learning_rates']
+        model.wallclock_times = config['wallclock_times']
+
     model = train(dl,
                   model, criterion=criterion,
                   optimizer_state=optimizer_state, scheduler=scheduler
