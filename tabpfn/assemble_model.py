@@ -34,11 +34,6 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 no_double_embedding=no_double_embedding,
                                 **model_extra_args
                                 )
-    elif model_maker:
-        model = TransformerModelMaker(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
-                                )
     else:
         model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
                                 y_encoder=y_encoder, input_normalization=input_normalization,
