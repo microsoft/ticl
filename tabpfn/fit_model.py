@@ -116,7 +116,7 @@ continue_old_config = args.continue_run
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
     
-config['num_steps'] = 1024 * 64 / config['batch_size'] / config['aggregate_k_gradients']
+config['num_steps'] = 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
 config['epochs'] = 2000
 
 
