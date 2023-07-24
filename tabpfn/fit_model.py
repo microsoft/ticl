@@ -116,7 +116,7 @@ continue_old_config = args.continue_run
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
     
-config['num_steps'] = 1024
+config['num_steps'] = 1024 * 64 / config['batch_size'] / config['aggregate_k_gradients']
 config['epochs'] = 2000
 
 
@@ -142,7 +142,8 @@ config_sample = evaluate_hypers(config)
 
 
 model_maker_string = "perceiver" if config['model_maker'] == "perceiver" else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
-model_string = f"{model_maker_string}_{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
+mothernet_params = f"{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}"
+model_string = f"{model_maker_string}_{mothernet_params if model_maker_string != "tabpfn"}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_state, optimizer_state, scheduler = None, None, None
