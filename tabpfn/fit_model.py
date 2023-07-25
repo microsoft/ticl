@@ -92,6 +92,7 @@ parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for A
 parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
+parser.add_argument('-r', '--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
 
 
 args = parser.parse_args()
@@ -108,6 +109,7 @@ config['batch_size'] = args.batch_size
 config['model_maker'] = args.model_maker
 config['adaptive_batch_size'] = args.adaptive_batch_size
 config['weight_decay'] = args.weight_decay
+config['device'] = device
 
 warm_start_weights = args.load_file
 continue_old_config = args.continue_run
@@ -138,13 +140,6 @@ config_sample = evaluate_hypers(config)
 
 
 
-# ## Training
-
-
-model_maker_string = "perceiver" if config['model_maker'] == "perceiver" else ('mothernet' if config['model_maker'] == "mlp" else "tabpfn")
-mothernet_params = f"{config['predicted_hidden_layer_size']}_decoder_{config['decoder_hidden_size']}"
-model_string = f"{model_maker_string}{'_' + mothernet_params if model_maker_string != 'tabpfn' else ''}_emsize_{config['emsize']}_nlayers_{config['nlayers']}_steps_{config['num_steps']}_bs_{config['batch_size'] * config['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config['adaptive_batch_size'] else ''}_lr_{config['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
-model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     
 model_state, optimizer_state, scheduler = None, None, None
 if warm_start_weights is not None:
@@ -155,7 +150,13 @@ if warm_start_weights is not None:
     if continue_old_config:
         config_sample = old_config
         optimizer_state = old_optimizer_state
-        scheduler = old_scheduler
+        if not args.restart_scheduler:
+            scheduler = old_scheduler
+
+model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mothernet' if config_sample['model_maker'] == "mlp" else "tabpfn")
+mothernet_params = f"{config_sample['predicted_hidden_layer_size']}_decoder_{config_sample['decoder_hidden_size']}"
+model_string = f"{model_maker_string}{'_' + mothernet_params if model_maker_string != 'tabpfn' else ''}_emsize_{config_sample['emsize']}_nlayers_{config_sample['nlayers']}_steps_{config_sample['num_steps']}_bs_{config_sample['batch_size'] * config_sample['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config_sample['adaptive_batch_size'] else ''}_lr_{config_sample['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
+model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 save_every = 10
 
