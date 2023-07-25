@@ -93,7 +93,7 @@ parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for A
 parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
-parser.add_argument('-D', '--double-embeding', help='whether to use embedding for mlp', action='store_true')
+parser.add_argument('-D', '--double-embedding', help='whether to use embedding for mlp', action='store_true')
 
 
 args = parser.parse_args()
