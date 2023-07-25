@@ -65,7 +65,6 @@ config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 config['min_eval_pos'] = 2
 
-config['no_double_embedding'] = True
 config['prenorm'] = True
 
 if 'LOCAL_RANK' in os.environ:
@@ -81,6 +80,7 @@ else:
 parser = argparse.ArgumentParser(description='Train Mothernet')
 parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
 parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
+parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size')
 parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
 parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.0001)
 parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
@@ -92,6 +92,7 @@ parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for A
 parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
+parser.add_argument('-D', '--double-embeding', help='whether to use embedding for mlp', action='store_true')
 
 
 args = parser.parse_args()
@@ -112,7 +113,7 @@ config['weight_decay'] = args.weight_decay
 warm_start_weights = args.load_file
 continue_old_config = args.continue_run
 
-
+config['no_double_embedding'] = not args.double_embedding
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
     
@@ -127,7 +128,7 @@ else:
     config['max_eval_pos'] = 1000
     config['bptt'] = 1024+128
     
-config['decoder_embed_dim'] = config['emsize'] 
+config['decoder_embed_dim'] = args.decoder_em_size or config['emsize'] 
 config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
 config['predicted_hidden_layer_size'] = 128
