@@ -109,7 +109,7 @@ config['emsize'] = args.em_size
 config['aggregate_k_gradients'] = args.agg_gradients
 config['batch_size'] = args.batch_size
 config['model_maker'] = args.model_maker
-config['adaptive_batch_size'] = args.adaptive_batch_size
+config['adaptive_batch_size'] = not args.no_adaptive_batch_size
 config['weight_decay'] = args.weight_decay
 
 warm_start_weights = args.load_file
