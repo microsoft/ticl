@@ -36,7 +36,9 @@ def get_gpu_memory():
 
 @cache
 def load_model(path, device, verbose=False):
-    model_state, _, config_sample = torch.load(path, map_location='cpu')
+    states = torch.load(path, map_location='cpu')
+    model_state = states[0]
+    config_sample = states[-1]
 
     _, model, _ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
@@ -119,7 +121,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         # for continuing training
         model.losses = config['losses']
         model.learning_rates = config['learning_rates']
-        model.wallclock_times = config['wallclock_times']
+        model.wallclock_times = config.get('wallclock_times', [])
 
     model = train(dl,
                   model, criterion=criterion,
@@ -131,6 +133,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
                   , verbose=verbose_train,
-                  weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'])
+                  weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False))
 
     return model
