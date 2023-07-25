@@ -80,6 +80,7 @@ else:
 parser = argparse.ArgumentParser(description='Train Mothernet')
 parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
 parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
+parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
 parser.add_argument('-E', '--epochs', type=int, help='embedding size', default=2000)
 parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size')
 parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
@@ -118,7 +119,7 @@ config['no_double_embedding'] = not args.double_embedding
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
     
-config['num_steps'] = 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
+config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
 config['epochs'] = args.epochs
 
 
