@@ -65,7 +65,6 @@ config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 config['min_eval_pos'] = 2
 
-config['no_double_embedding'] = True
 config['prenorm'] = True
 
 if 'LOCAL_RANK' in os.environ:
@@ -81,18 +80,22 @@ else:
 parser = argparse.ArgumentParser(description='Train Mothernet')
 parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
 parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
+parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
+parser.add_argument('-E', '--epochs', type=int, help='embedding size', default=2000)
+parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size')
 parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
 parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.0001)
 parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
 parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
 parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=32)
 parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
-parser.add_argument('-a', '--adaptive-batch-size', type=bool, help='Wether to progressively increase effective batch size.', default=True)
+parser.add_argument('-A', '--no-adaptive-batch-size', help='Wether to progressively increase effective batch size.', action='store_true')
 parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
 parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
 parser.add_argument('-r', '--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
+parser.add_argument('-D', '--double-embedding', help='whether to use embedding for mlp', action='store_true')
 
 
 args = parser.parse_args()
@@ -107,19 +110,19 @@ config['emsize'] = args.em_size
 config['aggregate_k_gradients'] = args.agg_gradients
 config['batch_size'] = args.batch_size
 config['model_maker'] = args.model_maker
-config['adaptive_batch_size'] = args.adaptive_batch_size
+config['adaptive_batch_size'] = not args.no_adaptive_batch_size
 config['weight_decay'] = args.weight_decay
 config['device'] = device
 
 warm_start_weights = args.load_file
 continue_old_config = args.continue_run
 
-
+config['no_double_embedding'] = not args.double_embedding
 config['hid_factor'] = 2
 config['nhead'] = config['emsize'] // 128
     
-config['num_steps'] = 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
-config['epochs'] = 2000
+config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
+config['epochs'] = args.epochs
 
 
 if config['model_maker'] == 'perceiver':
@@ -129,7 +132,7 @@ else:
     config['max_eval_pos'] = 1000
     config['bptt'] = 1024+128
     
-config['decoder_embed_dim'] = config['emsize'] 
+config['decoder_embed_dim'] = args.decoder_em_size or config['emsize'] 
 config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = False
 config['predicted_hidden_layer_size'] = 128
