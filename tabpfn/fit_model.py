@@ -89,7 +89,7 @@ parser.add_argument('-N', '--num-layers', type=int, help='number of transformer 
 parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
 parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=32)
 parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
-parser.add_argument('-a', '--adaptive-batch-size', type=bool, help='Wether to progressively increase effective batch size.', default=True)
+parser.add_argument('-A', '--no-adaptive-batch-size', help='Wether to progressively increase effective batch size.', action='store_true')
 parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
 parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
