@@ -95,7 +95,8 @@ parser.add_argument('-f', '--load-file', help='Warm start from this file')
 parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
 parser.add_argument('-r', '--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
-parser.add_argument('-D', '--double-embedding', help='whether to use embedding for mlp', action='store_true')
+parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
+parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
 
 
 args = parser.parse_args()
@@ -134,7 +135,7 @@ else:
     
 config['decoder_embed_dim'] = args.decoder_em_size or config['emsize'] 
 config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
-config['decoder_two_hidden_layers'] = False
+config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
 config['predicted_hidden_layer_size'] = 128
 config['warm_start_from'] = warm_start_weights
 config['continue_old_config'] = continue_old_config
