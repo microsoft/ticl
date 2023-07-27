@@ -59,7 +59,6 @@ config['rotate_normalized_labels'] = True
 config["mix_activations"] = False # False heisst eig True
 
 config['output_attention'] = True
-config['special_token'] = False
 config['y_encoder'] = "one_hot"
 config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
@@ -96,6 +95,7 @@ parser.add_argument('-c', '--continue-run', help='Whether to read the old config
 parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
 parser.add_argument('-r', '--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
 parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
+parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', action='store_true')
 parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
 
 
@@ -113,6 +113,7 @@ config['batch_size'] = args.batch_size
 config['model_maker'] = args.model_maker
 config['adaptive_batch_size'] = not args.no_adaptive_batch_size
 config['weight_decay'] = args.weight_decay
+config['special_token'] = args.special_token
 config['device'] = device
 
 warm_start_weights = args.load_file
