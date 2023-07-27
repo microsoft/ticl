@@ -483,6 +483,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         style = None
 
     if style is not None:
+        raise ValueError("We should delete this")
         style = style.to(device)
         style = style.unsqueeze(0) if len(style.shape) == 1 else style
         num_styles = style.shape[0]
@@ -494,19 +495,13 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         softmax_temperature = torch.log(torch.tensor([0.8]))
 
     styles_configurations = range(0, num_styles)
-    def get_preprocess(i):
-        if i == 0:
-            return 'power_all'
-#            if i == 1:
-#                return 'robust_all'
-        if i == 1:
-            return 'none'
 
     preprocess_transform_configurations = ['none', 'power_all'] if preprocess_transform == 'mix' else [preprocess_transform]
 
     if seed is not None:
         torch.manual_seed(seed)
 
+    # we don't really need to do a permutation if we're gonna shuffle, right?
     feature_shift_configurations = torch.randperm(eval_xs.shape[2]) if feature_shift_decoder else [0]
     class_shift_configurations = torch.randperm(len(torch.unique(eval_ys))) if multiclass_decoder == 'permutation' else [0]
 
