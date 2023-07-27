@@ -171,8 +171,12 @@ def save_callback(model, optimizer, scheduler, epoch):
     if epoch == "start":
         print(f"Starting training of model {model_string}")
         return
-    with open(log_file, 'a') as f:
-        f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
+    try:
+        with open(log_file, 'a') as f:
+            f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
+    except Exception as e:
+        print(f'Failed to write to log file {log_file}: {e}')
+        
     if epoch != "on_exit":
         mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
         mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
@@ -191,7 +195,7 @@ def save_callback(model, optimizer, scheduler, epoch):
 
             save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
     except Exception as e:
-        print("WRITING TO LOG FILE FAILED")
+        print("WRITING TO MODEL FILE FAILED")
         print(e)
 
 if socket.gethostname() == "amueller-tabpfn-4gpu":
