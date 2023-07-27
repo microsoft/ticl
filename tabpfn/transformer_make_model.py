@@ -1,4 +1,8 @@
 import numpy as np
+import itertools
+import random
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PowerTransformer
 
 import torch
 import torch.nn as nn
@@ -403,6 +407,71 @@ class PermutationsMeta(ClassifierMixin, BaseEstimator):
         for i in range(len(np.unique(y))):
             estimator = clone(self.base_estimator).set_params(label_offset=i)
             estimators.append((str(i), estimator))
+        self.vc_ = VotingClassifier(estimators, voting='soft')
+        self.vc_.fit(X, y)
+        return self
+
+    def predict_proba(self, X):
+        return self.vc_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.vc_.predict(X)
+
+    @property
+    def classes_(self):
+        return self.vc_.classes_
+
+class ShiftClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, base_estimator, feature_shift=0, label_shift=0, transformer=None):
+        self.base_estimator = base_estimator
+        self.feature_shift = feature_shift
+        self.label_shift = label_shift
+        self.transformer = transformer
+
+    def _feature_shift(self, X):
+        return np.concatenate([X[:, self.feature_shift:], X[:, :self.feature_shift]], axis=1)
+
+    def fit(self, X, y):
+        if self.transformer is not None:
+            X = self.transformer.fit_transform(X)
+        X = self._feature_shift(X)
+        unique_y = np.unique(y)
+        self.n_classes_ = len(np.unique(y))
+        self.class_indices_ = np.mod(np.arange(self.n_classes_) + self.label_shift, self.n_classes_)
+
+        if not (unique_y == np.arange(self.n_classes_)).all():
+            raise ValueError('y has to be in range(0, n_classes) but is %s' % unique_y)
+        self.base_estimator_ = clone(self.base_estimator)
+        self.base_estimator_.fit(X, np.mod(y + self.label_shift, self.n_classes_))
+        return self
+    
+    def predict_proba(self, X):
+        X = self._feature_shift(X)
+        if self.transformer is not None:
+            X = self.transformer.transform(X)
+        return self.base_estimator_.predict_proba(X)[:, self.class_indices_]
+    
+    def predict(self, X):
+        return self.predict_proba(X).argmax(axis=1)
+
+class EnsembleMeta(ClassifierMixin, BaseEstimator):
+    def __init__(self, base_estimator, n_estimators=32, random_state=0):
+        self.base_estimator = base_estimator
+        self.n_estimators = n_estimators
+        self.random_state = random_state
+    
+    def fit(self, X, y):
+        self.n_features_ = X.shape[1]
+        self.n_classes_ = len(np.unique(y))
+        shifts = list(itertools.product(np.arange(self.n_classes_), np.arange(self.n_features_), [True, False]))
+        rng = random.Random(self.random_state)
+        shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
+        estimators = []
+        for label_shift, feature_shift, use_power_transformer in shifts:
+            estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
+            if use_power_transformer:
+                estimator = Pipeline([('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
+            estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft')
         self.vc_.fit(X, y)
         return self
