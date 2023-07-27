@@ -29,7 +29,7 @@ for canonical_name, files in file_dict.items():
         continue
     print(f"Loading {canonical_file[canonical_name]}")
     try:
-        torch.load(canonical_file[canonical_name])
+        torch.load(canonical_file[canonical_name], map_location='cpu')
     except Exception as e:
         print(f"Error loading {canonical_file[canonical_name]}")
         print(e)
