@@ -24,6 +24,9 @@ for canonical_name, files in file_dict.items():
             canonical_file[canonical_name] = f
             
 for canonical_name, files in file_dict.items():
+    if canonical_name not in canonical_file:
+        # we only have "on exit" because we cleaned up before
+        continue
     print(f"Loading {canonical_file[canonical_name]}")
     try:
         torch.load(canonical_file[canonical_name])
