@@ -67,3 +67,13 @@ def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run', extrapo
         fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color, line_dash="dash", legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
     fig.update_layout(xaxis_title=x, yaxis_title=y, height=800)
     return fig
+
+def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run'):
+    import plotly.graph_objects as go
+    fig = go.Figure()
+    for run in loss_df[hue].unique():
+        this_df = loss_df[loss_df[hue] == run]
+        smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2).mean().reset_index()
+        fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run))
+    fig.update_layout(height=800)
+    return fig
