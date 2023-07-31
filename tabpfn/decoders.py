@@ -110,9 +110,15 @@ class MLPModelDecoder(nn.Module):
             else:
                 raise ValueError("Only 1D and 2D shapes are supported")
             return res[:, :size].reshape(-1, *shape), res[:, size:]
-
         w2, next_res = take_weights(res, (hidden_size, self.nout))
         b2, next_res = take_weights(next_res, (self.nout,))
         w1, next_res = take_weights(next_res, (self.in_size, hidden_size))
-        b1 = next_res.reshape(-1, hidden_size)
-        return (b1, w1), (b2, w2)
+        b1, next_res = take_weights(next_res, (hidden_size,))
+        result = [(b1, w1)]
+        for _ in range(self.predicted_hidden_layers - 1):
+            w, next_res = take_weights(next_res, (hidden_size, hidden_size))
+            b, next_res = take_weights(next_res, (hidden_size,))
+            result.append((b, w))
+        assert next_res.shape[1] == 0
+        result.append((b2, w2))
+        return result
