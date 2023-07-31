@@ -291,6 +291,7 @@ class TabPerceiver(nn.Module):
         decoder_two_hidden_layers=False, no_double_embedding=False,
         y_encoder=None,
         encoder=None,
+        predicted_hidden_layers=1,
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)
@@ -322,7 +323,7 @@ class TabPerceiver(nn.Module):
         self.input_dim = input_dim
         self.n_out = n_out
         self.no_double_embedding = no_double_embedding
-
+        assert predicted_hidden_layers == 1, "Only one hidden layer is supported for now"
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
 
