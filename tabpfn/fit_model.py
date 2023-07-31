@@ -160,6 +160,7 @@ if warm_start_weights is not None:
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     if continue_old_config:
         config_sample = old_config
+        config_sample['device'] = device
         optimizer_state = old_optimizer_state
         if not args.restart_scheduler:
             scheduler = old_scheduler
