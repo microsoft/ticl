@@ -121,8 +121,12 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank, broadcast_buffers=False)
         if rank == 0:
             print("Distributed training")
-    else:
+    elif "cuda" in device:
         print(f"Single GPU training on {torch.cuda.get_device_name()}")
+    elif "cpu" in device:
+        print("Single CPU training")
+    else:
+        raise ValueError(f"Invalid device: {device}")
 
     if rank == 0:
         model.learning_rates = getattr(model, 'learning_rates', [])

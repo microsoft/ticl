@@ -10,7 +10,6 @@ from priors.utils import uniform_int_sampler_f
 import argparse
 import socket
 
-device = 'cuda'
 base_path = '.'
 
 config = get_prior_config(config_type='causal')
@@ -97,11 +96,15 @@ parser.add_argument('-r', '--restart-scheduler', help='Whether to restart the sc
 parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
 parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', action='store_true')
 parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
-
+parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 
 args = parser.parse_args()
 if args.gpu_id is not None:
+    if args.use_cpu:
+        raise ValueError("Can't use cpu and gpu at the same time")
     device = f'cuda:{args.gpu_id}'
+elif args.use_cpu:
+    device = 'cpu'
 torch.set_num_threads(24)
 config['num_gpus'] = 1
 
