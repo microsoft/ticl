@@ -115,7 +115,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,
-                           decoder_embed_dim=config['decoder_embed_dim'],
+                           decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False),
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
                            output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'])
