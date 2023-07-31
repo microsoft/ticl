@@ -97,6 +97,8 @@ parser.add_argument('-D', '--double-embedding', help='whether to reuse transform
 parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', action='store_true')
 parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
 parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
+parser.add_argument('--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
+
 
 args = parser.parse_args()
 if args.gpu_id is not None:
@@ -118,6 +120,7 @@ config['adaptive_batch_size'] = not args.no_adaptive_batch_size
 config['weight_decay'] = args.weight_decay
 config['special_token'] = args.special_token
 config['device'] = device
+config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
 
 warm_start_weights = args.load_file
 continue_old_config = args.continue_run

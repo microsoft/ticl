@@ -93,6 +93,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['weight_decay'] = config.get('weight_decay', 0.0)
     config['pre_norm'] = config.get('pre_norm', False)
     config['decoder_embed_dim'] = config.get('decoder_embed_dim', 2048)
+    config['predicted_hidden_layer_size'] = config.get('predicted_hidden_layer_size', None)
+    config['predicted_hidden_layers'] = config.get('predicted_hidden_layers', 1)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -111,12 +113,12 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
-                           predicted_hidden_layer_size=config.get('predicted_hidden_layer_size', None),
+                           predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,
                            decoder_embed_dim=config['decoder_embed_dim'],
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
-                           output_attention=config.get('output_attention', False))
+                           output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'])
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']

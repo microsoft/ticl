@@ -45,7 +45,7 @@ class LinearModelDecoder(nn.Module):
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4):
+                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
@@ -58,6 +58,8 @@ class MLPModelDecoder(nn.Module):
         self.in_size = 100 if no_double_embedding else emsize
         out_size = emsize
         self.nhead = nhead
+        self.predicted_hidden_layers = predicted_hidden_layers
+
         if output_attention:
             if special_token:
                 out_size = emsize
@@ -67,20 +69,23 @@ class MLPModelDecoder(nn.Module):
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
                 out_size = embed_dim
                 self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
+    
+        self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size
+        if self.predicted_hidden_layers > 1:
+            self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size** 2 + self.predicted_hidden_layer_size)
+
         if decoder_two_hidden_layers:
             self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
                             nn.ReLU(),
                             nn.Linear(hidden_size, hidden_size),
                             nn.ReLU(),
-                            nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size))
+                            nn.Linear(hidden_size, self.num_output_layer_weights))
         else:
             self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
                                     nn.ReLU(),
-                                    nn.Linear(hidden_size, (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size))
-        self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size
+                                    nn.Linear(hidden_size, self.num_output_layer_weights))
 
     def forward(self, x):
-        emsize = self.emsize
         hidden_size = self.predicted_hidden_layer_size
         if x.shape[0] != 0:
             if self.output_attention:
@@ -93,14 +98,21 @@ class MLPModelDecoder(nn.Module):
         else:
             raise ValueError("Empty input")
             res = torch.zeros((hidden_size + 1) * nout + (self.in_size + 1) * hidden_size, device=x.device)
-        w2_size = self.nout * hidden_size
-        b2_size = self.nout
-        w1_size = self.in_size * hidden_size
-        b1_size = hidden_size
-        assert res.shape[1] == w2_size + b2_size + w1_size + b1_size
+
+        assert res.shape[1] == self.num_output_layer_weights
         # let's confuse ourselves by storing them in the opposite order!
-        w2 = res[:, :w2_size].reshape(-1, hidden_size, self.nout)
-        b2 = res[:, w2_size: w2_size + b2_size].reshape(-1, self.nout)
-        w1 = res[:, w2_size + b2_size: w2_size + b2_size + w1_size].reshape(-1, self.in_size, hidden_size)
-        b1 = res[:, -b1_size:].reshape(-1, hidden_size)
-        return b1, w1, b2, w2
+
+        def take_weights(res, shape):
+            if len(shape) == 1:
+                size = shape[0]
+            elif len(shape) == 2:
+                size = shape[0] * shape[1]
+            else:
+                raise ValueError("Only 1D and 2D shapes are supported")
+            return res[:, :size].reshape(-1, *shape), res[:, size:]
+
+        w2, next_res = take_weights(res, (hidden_size, self.nout))
+        b2, next_res = take_weights(next_res, (self.nout,))
+        w1, next_res = take_weights(next_res, (self.in_size, hidden_size))
+        b1 = next_res.reshape(-1, hidden_size)
+        return (b1, w1), (b2, w2)

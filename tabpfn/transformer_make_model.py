@@ -141,7 +141,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1):
         super().__init__(encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
                  pos_encoder=pos_encoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
                  activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
@@ -151,7 +151,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         self.special_token = special_token
         self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, nout=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead)
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 
@@ -169,20 +169,23 @@ class TransformerModelMakeMLP(TransformerModelMaker):
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
         
         output = self.transformer_encoder(train_x)
+        (b1, w1), *layers = self.decoder(output)
+        
 
-        b1, w1, b2, w2 = self.decoder(output)
         if self.no_double_embedding:
             x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-            h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+            h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
         else:
-            h1 = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
-        #h1 = torch.nn.functional.layer_norm(h1, (h1.shape[-1],))
-        h1 = torch.relu(h1)
-        result = (h1.unsqueeze(-1) * w2.unsqueeze(0)).sum(2) + b2
-        if result.isnan().all():
+            h = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
+        
+        for b, w in layers:
+            h = torch.relu(h)
+            h = (h.unsqueeze(-1) * w.unsqueeze(0)).sum(2) + b
+        
+        if h.isnan().all():
             print("NAN")
             import pdb; pdb.set_trace()
-        return result
+        return h
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
