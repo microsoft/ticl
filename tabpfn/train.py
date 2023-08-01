@@ -124,7 +124,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     elif "cuda" in device:
         print(f"Single GPU training on {torch.cuda.get_device_name()}")
     elif "cpu" in device:
-        print("Single CPU training")
+        pass
     else:
         raise ValueError(f"Invalid device: {device}")
 
