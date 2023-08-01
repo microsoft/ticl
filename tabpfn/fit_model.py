@@ -165,9 +165,22 @@ if warm_start_weights is not None:
         if not args.restart_scheduler:
             scheduler = old_scheduler
 
-model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mothernet' if config_sample['model_maker'] == "mlp" else "tabpfn")
-mothernet_params = f"{config_sample['predicted_hidden_layer_size']}_decoder_{config_sample['decoder_hidden_size']}"
-model_string = f"{model_maker_string}{'_' + mothernet_params if model_maker_string != 'tabpfn' else ''}_emsize_{config_sample['emsize']}_nlayers_{config_sample['nlayers']}_steps_{config_sample['num_steps']}_bs_{config_sample['batch_size'] * config_sample['aggregate_k_gradients'] * config_sample['num_gpus']}{'ada' if config_sample['adaptive_batch_size'] else ''}_lr_{config_sample['lr']}_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}{'_warm' if args.load_file else ''}"
+model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
+
+default_args_dict = vars(parser.parse_args([]))
+args_dict = vars(args)
+config_string = ""
+for arg in parser._actions:
+    if arg.option_strings:
+        k = arg.dest
+        if k not in args_dict:
+            continue
+        v = args_dict[k]
+        short_name = arg.option_strings[0].replace('-', '')
+        if v != default_args_dict[k] and k != 'load_file' and k != 'use_cpu' and k != 'continue_run' and k != 'restart_scheduler' and k != 'load_strict':
+            config_string += f"_{short_name}_{v}"
+gpu_string = f"{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
+model_string = f"{model_maker_string}{config_string}{gpu_string}{'_warm' if args.load_file else ''}"
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 save_every = 10
