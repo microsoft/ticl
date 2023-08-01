@@ -82,10 +82,10 @@ parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epo
 parser.add_argument('-E', '--epochs', type=int, help='embedding size', default=2000)
 parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size')
 parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
-parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.0001)
+parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
 parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
 parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
-parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=32)
+parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
 parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
 parser.add_argument('-A', '--no-adaptive-batch-size', help='Wether to progressively increase effective batch size.', action='store_true')
 parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
@@ -177,7 +177,7 @@ for arg in parser._actions:
             continue
         v = args_dict[k]
         short_name = arg.option_strings[0].replace('-', '')
-        if v != default_args_dict[k] and k != 'load_file' and k != 'use_cpu' and k != 'continue_run' and k != 'restart_scheduler' and k != 'load_strict':
+        if v != default_args_dict[k] and k not in ['load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id']:
             config_string += f"_{short_name}_{v}"
 gpu_string = f"{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
 model_string = f"{model_maker_string}{config_string}{gpu_string}{'_warm' if args.load_file else ''}"
