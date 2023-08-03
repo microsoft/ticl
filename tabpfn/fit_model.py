@@ -99,6 +99,7 @@ parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use tw
 parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
 parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
+parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
 
 
 args = parser.parse_args()
@@ -144,7 +145,7 @@ else:
 config['decoder_embed_dim'] = args.decoder_em_size or config['emsize'] 
 config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
 config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
-config['predicted_hidden_layer_size'] = 128
+config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
 config['warm_start_from'] = warm_start_weights
 config['continue_old_config'] = continue_old_config
 
