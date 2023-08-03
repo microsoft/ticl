@@ -5,7 +5,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                    model_maker, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
-                   model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, **model_extra_args):
+                   model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, weight_embedding_rank=None, **model_extra_args):
     encoder = encoder_generator(num_features, emsize)
     decoder_hidden_size = decoder_hidden_size or nhid
 
@@ -23,7 +23,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
                                 predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
                                 decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
-                                no_double_embedding=no_double_embedding, pre_norm=pre_norm, predicted_hidden_layers=predicted_hidden_layers,
+                                no_double_embedding=no_double_embedding, pre_norm=pre_norm, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
                                 **model_extra_args
                                 )
     elif model_maker == 'perceiver':

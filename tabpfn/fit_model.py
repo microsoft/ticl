@@ -97,7 +97,8 @@ parser.add_argument('-D', '--double-embedding', help='whether to reuse transform
 parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', action='store_true')
 parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
 parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
-parser.add_argument('--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
+parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
+parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
 
 
 args = parser.parse_args()
@@ -131,7 +132,7 @@ config['nhead'] = config['emsize'] // 128
     
 config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
 config['epochs'] = args.epochs
-
+config['weight_embedding_rank'] = args.weight_embedding_rank
 
 if config['model_maker'] == 'perceiver':
     config['max_eval_pos'] = 8 * 1000
@@ -146,6 +147,7 @@ config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
 config['predicted_hidden_layer_size'] = 128
 config['warm_start_from'] = warm_start_weights
 config['continue_old_config'] = continue_old_config
+
 
 config_sample = evaluate_hypers(config)
 

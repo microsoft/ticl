@@ -95,6 +95,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['decoder_embed_dim'] = config.get('decoder_embed_dim', 2048)
     config['predicted_hidden_layer_size'] = config.get('predicted_hidden_layer_size', None)
     config['predicted_hidden_layers'] = config.get('predicted_hidden_layers', 1)
+    config['weight_embedding_rank'] = config.get('weight_embedding_rank', None)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -119,7 +120,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
                            output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'],
-                           special_token=config.get('special_token', False))
+                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'],)
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
