@@ -80,7 +80,7 @@ class MLPModelDecoder(nn.Module):
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * nout + self.in_size * self.weight_embedding_rank + self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
                 self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size * self.weight_embedding_rank + self.predicted_hidden_layer_size)
-            self.shared_weights = [nn.Parameter(torch.randn(self.weight_embedding_rank, self.predicted_hidden_layer_size)) for _ in range(self.predicted_hidden_layers)]
+            self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(self.weight_embedding_rank, self.predicted_hidden_layer_size)) for _ in range(self.predicted_hidden_layers)])
 
         if decoder_two_hidden_layers:
             self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
