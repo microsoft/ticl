@@ -211,7 +211,7 @@ def save_callback(model, optimizer, scheduler, epoch):
         if (epoch == "on_exit") or epoch % save_every == 0:
             
             file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
-            disk_usage = shutil.disk_usage(file_name)
+            disk_usage = shutil.disk_usage("models_diff")
             if disk_usage.free < 1024 * 1024 * 1024 * 2:
                 print("Not saving model, not enough disk space")
                 print("DISK FULLLLLLL")
