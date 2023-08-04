@@ -259,7 +259,7 @@ if args.run_id is not None:
 else:
     run_args = {'run_name': model_string}
 
-with mlflow.start_run(run_name=model_string):
+with mlflow.start_run(**run_args):
     mlflow.log_param('hostname', socket.gethostname())
     mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
     model = get_model(config_sample
