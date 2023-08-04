@@ -170,7 +170,7 @@ if warm_start_weights is not None:
             scheduler = old_scheduler
 
 if args.continue_run:
-    model_string = warm_start_weights.split("/")[-1][:-5]
+    model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
     print(model_string)
 else:
     model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
