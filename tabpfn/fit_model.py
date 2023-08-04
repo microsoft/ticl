@@ -101,7 +101,7 @@ parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_
 parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
 parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
 parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
-
+parser.add_argument('-R', '--run-id', help="Run id for MLFLow", default=None)
 
 args = parser.parse_args()
 if args.gpu_id is not None:
@@ -110,6 +110,10 @@ if args.gpu_id is not None:
     device = f'cuda:{args.gpu_id}'
 elif args.use_cpu:
     device = 'cpu'
+
+if args.run_id is not None and not args.continue_run:
+    raise ValueError("Can't specify run id without continue run")
+
 torch.set_num_threads(24)
 config['num_gpus'] = 1
 
@@ -233,6 +237,12 @@ if socket.gethostname() == "amueller-tabpfn-4gpu":
     mlflow.set_tracking_uri("http://localhost:5000")
 else:            
     mlflow.set_tracking_uri("http://20.114.249.177:5000")
+
+if args.run_id is not None:
+    run_args = {'run_id': args.run_id}
+else:
+    run_args = {'run_name': model_string}
+
 with mlflow.start_run(run_name=model_string):
     mlflow.log_param('hostname', socket.gethostname())
     mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
