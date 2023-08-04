@@ -181,11 +181,27 @@ config_string = ""
 for arg in parser._actions:
     if arg.option_strings:
         k = arg.dest
-        if k not in args_dict:
+        if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help']:
             continue
-        v = args_dict[k]
+
+        if args.continue_run:
+            args_translation = {'num_layers': 'nlayers', 'em_size': 'emsize', 'agg_gradients': 'aggregate_k_gradients', 'no_adaptive_batch_size': 'adaptive_batch_size',
+                                'num_predicted_hidden_layers': 'predicted_hidden_layers', 'double_embedding': 'no_double_embedding', 'decoder_em_size': 'decoder_embed_dim', 'learning_rate': 'lr'}
+            k_org = k
+            if k in args_translation:
+                k = args_translation[k]
+            if k not in config_sample:
+                print(f"Warning: {k} not in config")
+                continue
+            v = config_sample[k]
+            if k_org.startswith("no_"):
+                v = not v
+        else:
+            if k not in args_dict:
+                continue
+            v = args_dict[k]
         short_name = arg.option_strings[0].replace('-', '')
-        if v != default_args_dict[k] and k not in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id']:
+        if v != default_args_dict[k_org]:
             config_string += f"_{short_name}{v}"
 gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
 model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
