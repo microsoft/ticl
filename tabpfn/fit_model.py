@@ -185,10 +185,10 @@ for arg in parser._actions:
             continue
         v = args_dict[k]
         short_name = arg.option_strings[0].replace('-', '')
-        if v != default_args_dict[k] and k not in ['load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id']:
+        if v != default_args_dict[k] and k not in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id']:
             config_string += f"_{short_name}{v}"
 gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
-model_string = f"{model_maker_string}{config_string}{gpu_string}{'_warm' if args.load_file else ''}"
+model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
 model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 save_every = 10
