@@ -243,7 +243,7 @@ if run_id is None and args.continue_run:
     # find run id via mlflow
     run_id = mlflow.search_runs(filter_string=f"run_name='{model_string}'")['run_id']
     import pdb;
-    pdb.set_trace
+    pdb.set_trace()
 
 if run_id is not None:
     run_args = {'run_id': run_id}
