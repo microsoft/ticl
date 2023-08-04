@@ -9,6 +9,7 @@ from scripts.model_configs import get_prior_config, evaluate_hypers
 from priors.utils import uniform_int_sampler_f
 import argparse
 import socket
+import shutil
 
 base_path = '.'
 
@@ -208,7 +209,13 @@ def save_callback(model, optimizer, scheduler, epoch):
     
     try:
         if (epoch == "on_exit") or epoch % save_every == 0:
+            
             file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
+            disk_usage = shutil.disk_usage(file_name)
+            if disk_usage.free < 1024 * 1024 * 1024 * 2:
+                print("Not saving model, not enough disk space")
+                print("DISK FULLLLLLL")
+                return
             with open(log_file, 'a') as f:
                 f.write(f'Saving model to {file_name}\n')
             print(f'Saving model to {file_name}')
