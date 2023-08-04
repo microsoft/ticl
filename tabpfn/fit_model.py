@@ -154,11 +154,7 @@ config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
 config['warm_start_from'] = warm_start_weights
 config['continue_old_config'] = continue_old_config
 
-
 config_sample = evaluate_hypers(config)
-
-
-
     
 model_state, optimizer_state, scheduler = None, None, None
 if warm_start_weights is not None:
@@ -173,39 +169,27 @@ if warm_start_weights is not None:
         if not args.restart_scheduler:
             scheduler = old_scheduler
 
-model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
+if args.continue_run:
+    model_string = warm_start_weights.split("/")[-1][:-5]
+    print(model_string)
+else:
+    model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
 
-default_args_dict = vars(parser.parse_args([]))
-args_dict = vars(args)
-config_string = ""
-for arg in parser._actions:
-    if arg.option_strings:
-        k = arg.dest
-        if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help']:
-            continue
-
-        if args.continue_run:
-            args_translation = {'num_layers': 'nlayers', 'em_size': 'emsize', 'agg_gradients': 'aggregate_k_gradients', 'no_adaptive_batch_size': 'adaptive_batch_size',
-                                'num_predicted_hidden_layers': 'predicted_hidden_layers', 'double_embedding': 'no_double_embedding', 'decoder_em_size': 'decoder_embed_dim', 'learning_rate': 'lr'}
-            k_org = k
-            if k in args_translation:
-                k = args_translation[k]
-            if k not in config_sample:
-                print(f"Warning: {k} not in config")
-                continue
-            v = config_sample[k]
-            if k_org.startswith("no_"):
-                v = not v
-        else:
-            if k not in args_dict:
+    default_args_dict = vars(parser.parse_args([]))
+    args_dict = vars(args)
+    config_string = ""
+    for arg in parser._actions:
+        if arg.option_strings:
+            k = arg.dest
+            if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help'] or k not in args_dict:
                 continue
             v = args_dict[k]
-        short_name = arg.option_strings[0].replace('-', '')
-        if v != default_args_dict[k_org]:
-            config_string += f"_{short_name}{v}"
-gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
-model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
-model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+            short_name = arg.option_strings[0].replace('-', '')
+            if v != default_args_dict[k]:
+                config_string += f"_{short_name}{v}"
+    gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
+    model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
+    model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 save_every = 10
 
@@ -254,10 +238,7 @@ if socket.gethostname() == "amueller-tabpfn-4gpu":
 else:            
     mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
-if args.run_id is not None:
-    run_args = {'run_id': args.run_id}
-else:
-    run_args = {'run_name': model_string}
+run_args = {'run_name': model_string}
 
 with mlflow.start_run(**run_args):
     mlflow.log_param('hostname', socket.gethostname())
