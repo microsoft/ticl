@@ -113,6 +113,7 @@ elif args.use_cpu:
 
 if args.run_id is not None and not args.continue_run:
     raise ValueError("Can't specify run id without continue run")
+run_id = args.run_id
 
 torch.set_num_threads(24)
 config['num_gpus'] = 1
@@ -238,7 +239,16 @@ if socket.gethostname() == "amueller-tabpfn-4gpu":
 else:            
     mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
-run_args = {'run_name': model_string}
+if run_id is None and args.continue_run:
+    # find run id via mlflow
+    run_id = mlflow.search_runs(filter_string=f"run_name='{model_string}'")['run_id']
+    import pdb;
+    pdb.set_trace
+
+if run_id is not None:
+    run_args = {'run_id': run_id}
+else:
+    run_args = {'run_name': model_string}
 
 with mlflow.start_run(**run_args):
     mlflow.log_param('hostname', socket.gethostname())
