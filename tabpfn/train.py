@@ -170,9 +170,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             epoch_start_time = time.time()
             new_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
                 train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
-            if new_loss > 1.5 * total_loss:
-                print("LOSS DIVERGED")
-                return total_loss, model.to('cpu'), dl
+
             total_loss = new_loss
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
                 with torch.no_grad():
@@ -193,6 +191,9 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
                     + (f'val score {val_score}' if val_score is not None else ''))
                 print('-' * 89)
+            if new_loss > 1.5 * total_loss:
+                print("LOSS DIVERGED")
+                return total_loss, model.to('cpu'), dl
             if adaptive_batch_size:
                 if increased_batch_size == 0 and total_loss <= .55:
                     aggregate_k_gradients *= 2
