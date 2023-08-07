@@ -102,8 +102,8 @@ parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='numbe
 parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
 parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
 parser.add_argument('-R', '--run-id', help="Run id for MLFLow", default=None)
-parser.add_argument('--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
-parser.add_argument('--warmup-episodes', type=int, help="Number of episodes to warm up learning rate (linear climb)", default=20)
+parser.add_argument('-L', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
+parser.add_argument('-U', '--warmup-episodes', type=int, help="Number of episodes to warm up learning rate (linear climb)", default=20)
 
 args = parser.parse_args()
 if args.gpu_id is not None:
