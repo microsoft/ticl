@@ -7,7 +7,7 @@ from torch import nn
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr
+from tabpfn.utils import get_cosine_schedule_with_warmup, get_warmup_schedule
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import lr_scheduler
@@ -144,9 +144,9 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         if learning_rate_schedule == 'cosine':
             scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
         elif learning_rate_schedule == 'exponential':
-            scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=0.99)])
         elif learning_rate_schedule == 'constant':
-            scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=1.0)
+            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=1)])
         else:
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
         start_epoch = 1
