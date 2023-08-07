@@ -7,7 +7,7 @@ from torch import nn
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import get_cosine_schedule_with_warmup, get_warmup_schedule
+from tabpfn.utils import get_cosine_schedule_with_warmup
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import lr_scheduler
