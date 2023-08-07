@@ -234,6 +234,15 @@ def save_callback(model, optimizer, scheduler, epoch):
             config_sample['wallclock_times'] = model.wallclock_times
 
             save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+            # remove last checkpoint
+            if epoch != "on_exit" and epoch - save_every > 0:
+                old_file_name = f'models_diff/{model_string}_epoch_{epoch - save_every}.cpkt'
+                if os.path.exists(old_file_name):
+                    try:
+                        os.remove(old_file_name)
+                    except Exception as e:
+                        print(f"Failed to remove old model file {old_file_name}: {e}")
+
     except Exception as e:
         print("WRITING TO MODEL FILE FAILED")
         print(e)
