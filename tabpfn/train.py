@@ -1,9 +1,4 @@
-import os
-import itertools
-import argparse
 import time
-import datetime
-import yaml
 from contextlib import nullcontext
 
 
@@ -15,6 +10,7 @@ import tabpfn.utils as utils
 from tabpfn.utils import get_cosine_schedule_with_warmup, get_openai_lr
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
+from torch.optim import lr_scheduler
 from torch import nn
 
 
@@ -107,6 +103,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
+          learning_rate_schedule='cosine'
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -140,17 +137,18 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
 
     dl.model = model
-
-    # learning rate
-    if lr is None:
-        lr = get_openai_lr(model)
-        if rank == 0:
-            print(f"Using OpenAI max lr of {lr}.")
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
     if scheduler is None:
-        scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
+        if learning_rate_schedule == 'cosine':
+            scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
+        elif learning_rate_schedule == 'exponential':
+            scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+        elif learning_rate_schedule == 'constant':
+            scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=1.0)
+        else:
+            raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1

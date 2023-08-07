@@ -96,6 +96,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['predicted_hidden_layer_size'] = config.get('predicted_hidden_layer_size', None)
     config['predicted_hidden_layers'] = config.get('predicted_hidden_layers', 1)
     config['weight_embedding_rank'] = config.get('weight_embedding_rank', None)
+    config['learning_rate_schedule'] = config.get('learning_rate_schedule', 'cosine')
+    config['warmup_epochs'] = config.get('warmup_epochs', 20)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -131,11 +133,12 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   model, criterion=criterion,
                   optimizer_state=optimizer_state, scheduler=scheduler
                   , epochs=epochs
-                  , warmup_epochs=20
+                  , warmup_epochs=config['warmup_epochs']
                   , gpu_device=device
                   , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
+                  , learning_rate_schedule=config['learning_rate_schedule']
                   , verbose=verbose_train,
                   weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False))
 
