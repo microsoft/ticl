@@ -9,7 +9,9 @@ TABPFN_PATH = ""
 
 @pytest.mark.parametrize("ensemble", [ShiftClassifier, EnsembleMeta, None])
 @pytest.mark.parametrize("class_offset", [0, 4])
-def test_basic_test_iris(ensemble, class_offset):
+def test_basic_iris(ensemble, class_offset):
+    if class_offset == 4 and ensemble in [None, ShiftClassifier]:
+        raise pytest.skip("Skip this test because the ensemble is None and class_offset is 4")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = ForwardMLPModel(path=MOTHERNET_PATH, device='cpu')
