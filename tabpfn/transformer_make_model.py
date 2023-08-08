@@ -379,7 +379,6 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         std[np.isnan(std)] = 1
         X_test_scaled = (X_test - mean) / std
         out = np.clip(X_test_scaled, a_min=-100, a_max=100)
-        import pdb; pdb.set_trace()
         for i, (b, w) in enumerate(layers):
             out = np.dot(out, w) + b
             if i != len(layers) - 1:
