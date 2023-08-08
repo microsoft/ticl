@@ -278,8 +278,14 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
 
+    if model.decoder.weight_embedding_rank is not None:
+        w1_data_space = torch.matmul(w1_data_space, model.decoder.shared_weights[0])
+
     layers_result = [(b1_data_space, w1_data_space)]
-    for (b, w) in layers[:-1]:
+
+    for i, (b, w) in enumerate(layers[:-1]):
+        if model.decoder.weight_embedding_rank is not None:
+            w = torch.matmul(w, model.decoder.shared_weights[i + 1])
         layers_result.append((b, w))
     
     # remove extra classes on output layer
