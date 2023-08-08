@@ -264,26 +264,36 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
                 x = self_ff(x) + x
 
         output = rearrange(x, 'b n d -> n b d')
-    b1, w1, b2, w2 = model.decoder(output)
+    (b1, w1), *layers = model.decoder(output)
+
     if model.no_double_embedding:
-        total_weights = w1.squeeze()[:n_features, :]
-        total_biases = b1.squeeze()
+        w1_data_space_prenorm = w1.squeeze()[:n_features, :]
+        b1_data_space = b1.squeeze()
     else:
         encoder_weight = model.encoder.get_parameter("weight")
         encoder_bias = model.encoder.get_parameter("bias")
 
-        total_weights = torch.matmul(encoder_weight[:, :n_features].T, w1)
-        total_biases = torch.matmul(encoder_bias, w1) + b1
+        w1_data_space_prenorm  = torch.matmul(encoder_weight[:, :n_features].T, w1)
+        b1_data_space= torch.matmul(encoder_bias, w1) + b1
+    
+    w1_data_space = w1_data_space_prenorm / (n_features / max_features)
+
+    layers_result = [(w1_data_space, b1_data_space)]
+    for (b, w) in layers[:-1]:
+        layers_result.append((b, w))
+    
+    # remove extra classes on output layer
+    layers_result.append((layers[-1][0][:n_classes], layers[-1][1][:n_classes]))
+
     if inference_device == "cpu":
-        return  (total_biases.squeeze().detach().cpu().numpy(),
-                total_weights.squeeze().detach().cpu().numpy() / (n_features / max_features),
-                b2.squeeze()[:n_classes].detach().cpu().numpy(), w2.squeeze()[:, :n_classes].detach().cpu().numpy())
+        def detach(x):
+            return x.squeeze().detach().cpu().numpy()
     else:
-        return  (total_biases.squeeze().detach(),
-                total_weights.squeeze().detach() / (n_features / max_features),
-                b2.squeeze()[:n_classes].detach(), w2.squeeze()[:, :n_classes].detach())
-
-
+        def detach(x):
+            return x.squeeze().detach()
+    
+    return [(detach(b), detach(w)) for (b, w) in layers_result]
+    
 def predict_with_linear_model(X_train, X_test, weights, biases):
     mean = X_train.mean(axis=0)
     std = X_train.std(axis=0, ddof=1) + .000001
@@ -353,7 +363,7 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2, inference_device="cpu"):
+def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
     if inference_device == "cpu":
         mean = np.nanmean(X_train, axis=0)
         std = np.nanstd(X_train, axis=0, ddof=1) + .000001
@@ -362,13 +372,14 @@ def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2, inference_device="cp
         X_test = np.nan_to_num(X_test, 0)
         std[np.isnan(std)] = 1
         X_test_scaled = (X_test - mean) / std
-        X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
-        res = np.dot(np.maximum(np.dot(X_test_scaled, w1) + b1, 0), w2) + b2
-        if np.isnan(res).any():
+        out = np.clip(X_test_scaled, a_min=-100, a_max=100)
+        for (b, w) in layers:
+            out = np.maximum(np.dot(out, w) + b, 0)
+        if np.isnan(out).any():
             print("NAN")
             import pdb; pdb.set_trace()
         from scipy.special import softmax
-        return softmax(res / .8, axis=1)
+        return softmax(out / .8, axis=1)
     elif inference_device == "cuda":
         mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
         std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
@@ -377,9 +388,10 @@ def predict_with_mlp_model(X_train, X_test, b1, w1, b2, w2, inference_device="cp
         X_test = np.nan_to_num(X_test, 0)
         std[torch.isnan(std)] = 1
         X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
-        X_test_scaled = torch.clamp(X_test_scaled, min=-100, max=100)
-        res = torch.matmul(torch.relu(torch.matmul(X_test_scaled, w1) + b1), w2) + b2
-        return torch.nn.functional.softmax(res / .8, dim=1).cpu().numpy()
+        out = torch.clamp(X_test_scaled, min=-100, max=100)
+        for (b, w) in layers:
+            out = torch.relu(torch.matmul(out, w) + b)
+        return torch.nn.functional.softmax(out / .8, dim=1).cpu().numpy()
 
 
 class ForwardMLPModel(ClassifierMixin, BaseEstimator):
@@ -397,13 +409,17 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        b1, w1, b2, w2 = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device)
-        self.parameters_  = (b1, w1, b2[indices], w2[:, indices])
+        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device)
+        if self.label_offset == 0:
+            self.parameters_ = layers
+        else:
+            *lower_layers, b_last, w_last = layers
+            self.parameters_  = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
         return self
         
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, *self.parameters_, inference_device=self.inference_device)
+        return predict_with_mlp_model(self.X_train_, X, self.parameters_, inference_device=self.inference_device)
     
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
