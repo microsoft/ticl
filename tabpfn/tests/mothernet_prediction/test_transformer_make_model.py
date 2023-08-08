@@ -1,7 +1,7 @@
 from tabpfn.transformer_make_model import ShiftClassifier, EnsembleMeta, ForwardMLPModel
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-
+from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 import pytest
 
 MOTHERNET_PATH = "models_diff/prior_diff_real_checkpointcontinue_hidden_128_embed_dim_1024_decoder_nhid_2048_nlayer12_lr0003_n_0_epoch_on_exit.cpkt"
@@ -37,6 +37,17 @@ def test_two_layers_iris():
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
 
+def test_two_layers_iris_tabpfn_logic():
+    iris = load_iris()
+    X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
+    mothernet = TabPFNClassifier(model_string="mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33", epoch=780, device='cpu', N_ensemble_configurations=1)
+    mothernet.fit(X_train, y_train)
+    pred = mothernet.predict(X_test)
+    assert pred.shape == (38,)
+    pred_prob = mothernet.predict_proba(X_test)
+    assert pred_prob.shape == (38, 3)
+    assert mothernet.score(X_test, y_test) > 0.9
+
 
 def test_low_rank_iris():
     iris = load_iris()
@@ -48,3 +59,16 @@ def test_low_rank_iris():
     pred_prob = mothernet.predict_proba(X_test)
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
+
+def test_low_rank_iris_tabpfn_logic():
+    iris = load_iris()
+    X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
+    mothernet = TabPFNClassifier(model_string="mn_n1024_L2_W128_P512_1_gpu_08_03_2023_03_48_19", epoch="on_exit", device='cpu')
+    mothernet.fit(X_train, y_train)
+    pred = mothernet.predict(X_test)
+    assert pred.shape == (38,)
+    pred_prob = mothernet.predict_proba(X_test)
+    assert pred_prob.shape == (38, 3)
+    assert mothernet.score(X_test, y_test) > 0.9
+
+    
