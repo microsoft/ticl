@@ -274,16 +274,16 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         encoder_bias = model.encoder.get_parameter("bias")
 
         w1_data_space_prenorm  = torch.matmul(encoder_weight[:, :n_features].T, w1)
-        b1_data_space= torch.matmul(encoder_bias, w1) + b1
+        b1_data_space = torch.matmul(encoder_bias, w1) + b1
     
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
 
-    layers_result = [(w1_data_space, b1_data_space)]
+    layers_result = [(b1_data_space, w1_data_space)]
     for (b, w) in layers[:-1]:
         layers_result.append((b, w))
     
     # remove extra classes on output layer
-    layers_result.append((layers[-1][0][:n_classes], layers[-1][1][:n_classes]))
+    layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
 
     if inference_device == "cpu":
         def detach(x):

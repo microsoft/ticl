@@ -12,7 +12,7 @@ def test_basic_test_iris():
     mothernet = ForwardMLPModel(path=MOTHERNET_PATH, device='cpu')
     mothernet.fit(X_train, y_train)
     pred = mothernet.predict(X_test)
-    assert pred.shape == (50,)
+    assert pred.shape == (38,)
     pred_prob = mothernet.predict_proba(X_test)
-    assert pred_prob.shape == (50, 3)
+    assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
