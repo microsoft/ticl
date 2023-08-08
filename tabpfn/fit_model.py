@@ -64,7 +64,7 @@ config['train_mixed_precision'] = True
 config['efficient_eval_masking'] = True
 config['min_eval_pos'] = 2
 
-config['prenorm'] = True
+config['pre_norm'] = True
 
 if 'LOCAL_RANK' in os.environ:
     # launched with torch.distributed.launch
