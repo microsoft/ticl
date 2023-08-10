@@ -48,36 +48,21 @@ def get_dataloader(prior_type, flexible, differentiable, config, steps_per_epoch
     import tabpfn.priors as priors
 
     extra_kwargs = {}
+    if prior_type != 'prior_bag':
+        raise NotImplementedError("This was removed")
 
-    if prior_type == 'prior_bag':
-        # Prior bag combines priors
-        get_batch_gp = make_get_batch(priors.fast_gp)
-        get_batch_mlp = make_get_batch(priors.mlp)
-        if flexible:
-            get_batch_gp = make_get_batch(priors.flexible_categorical, **{'get_batch': get_batch_gp})
-            get_batch_mlp = make_get_batch(priors.flexible_categorical, **{'get_batch': get_batch_mlp})
-        prior_bag_hyperparameters = {'prior_bag_get_batch': (get_batch_gp, get_batch_mlp)
-            , 'prior_bag_exp_weights_1': 2.0}
-        prior_hyperparameters = {**get_mlp_prior_hyperparameters(config), **get_gp_prior_hyperparameters(config)
-            , **prior_bag_hyperparameters}
-        model_proto = priors.prior_bag
-    else:
-        if prior_type == 'mlp':
-            prior_hyperparameters = get_mlp_prior_hyperparameters(config)
-            model_proto = priors.mlp
-        elif prior_type == 'gp':
-            prior_hyperparameters = get_gp_prior_hyperparameters(config)
-            model_proto = priors.fast_gp
-        elif prior_type == 'gp_mix':
-            prior_hyperparameters = get_gp_mix_prior_hyperparameters(config)
-            model_proto = priors.fast_gp_mix
-        else:
-            raise Exception()
+    # Prior bag combines priors
+    get_batch_gp = make_get_batch(priors.fast_gp)
+    get_batch_mlp = make_get_batch(priors.mlp)
+    if flexible:
+        get_batch_gp = make_get_batch(priors.flexible_categorical, **{'get_batch': get_batch_gp})
+        get_batch_mlp = make_get_batch(priors.flexible_categorical, **{'get_batch': get_batch_mlp})
+    prior_bag_hyperparameters = {'prior_bag_get_batch': (get_batch_gp, get_batch_mlp)
+        , 'prior_bag_exp_weights_1': 2.0}
+    prior_hyperparameters = {**get_mlp_prior_hyperparameters(config), **get_gp_prior_hyperparameters(config)
+        , **prior_bag_hyperparameters}
+    model_proto = priors.prior_bag
 
-        if flexible:
-            get_batch_base = make_get_batch(model_proto)
-            extra_kwargs['get_batch'] = get_batch_base
-            model_proto = priors.flexible_categorical
 
     if flexible:
         prior_hyperparameters['normalize_labels'] = True
