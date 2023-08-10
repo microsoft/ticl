@@ -42,61 +42,61 @@ def eval_criterion(criterion, targets, output, device, n_out):
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
 
 def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out):
-        model.train()  # Turn on the train mode
-        total_loss = 0.
-        nan_steps = 0
-        ignore_steps = 0
-        before_get_batch = time.time()
-        steps_per_epoch = len(dl)
-        assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
-        for batch, (data, targets, single_eval_pos) in enumerate(dl):
-            if using_dist and not (batch % aggregate_k_gradients == aggregate_k_gradients - 1):
-                cm = model.no_sync()
+    model.train()  # Turn on the train mode
+    total_loss = 0.
+    nan_steps = 0
+    ignore_steps = 0
+    before_get_batch = time.time()
+    steps_per_epoch = len(dl)
+    assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
+    for batch, (data, targets, single_eval_pos) in enumerate(dl):
+        if using_dist and not (batch % aggregate_k_gradients == aggregate_k_gradients - 1):
+            cm = model.no_sync()
+        else:
+            cm = nullcontext()
+        with cm:
+            time_to_get_batch = time.time() - before_get_batch
+            before_forward = time.time()
+            with autocast(enabled=scaler is not None):
+                output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
+                                , single_eval_pos=single_eval_pos)
+
+                forward_time = time.time() - before_forward
+
+                if single_eval_pos is not None:
+                    targets = targets[single_eval_pos:]
+                loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
+                loss = loss / aggregate_k_gradients
+
+            if scaler: loss = scaler.scale(loss)
+            loss.backward()
+
+            if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
+                if scaler: scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+                try:
+                    if scaler:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
+                except:
+                    print("Invalid optimization step encountered")
+                optimizer.zero_grad()
+
+            step_time = time.time() - before_forward
+
+            if torch.isnan(loss):
+                print("NAN loss encountered")
             else:
-                cm = nullcontext()
-            with cm:
-                time_to_get_batch = time.time() - before_get_batch
-                before_forward = time.time()
-                with autocast(enabled=scaler is not None, dtype=torch.bfloat16):
-                    output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
-                                   , single_eval_pos=single_eval_pos)
+                total_loss += loss.mean().cpu().detach().item()
+            nan_steps += nan_share
+            ignore_steps += (targets == -100).float().mean()
 
-                    forward_time = time.time() - before_forward
-
-                    if single_eval_pos is not None:
-                        targets = targets[single_eval_pos:]
-                    loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
-                    loss = loss / aggregate_k_gradients
-
-                if scaler: loss = scaler.scale(loss)
-                loss.backward()
-
-                if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
-                    if scaler: scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
-                    try:
-                        if scaler:
-                            scaler.step(optimizer)
-                            scaler.update()
-                        else:
-                            optimizer.step()
-                    except:
-                        print("Invalid optimization step encountered")
-                    optimizer.zero_grad()
-
-                step_time = time.time() - before_forward
-
-                if torch.isnan(loss):
-                    print("NAN loss encountered")
-                else:
-                    total_loss += loss.mean().cpu().detach().item()
-                nan_steps += nan_share
-                ignore_steps += (targets == -100).float().mean()
-
-            before_get_batch = time.time()
-        return (total_loss / steps_per_epoch * aggregate_k_gradients,
-                time_to_get_batch, forward_time, step_time, nan_steps.cpu().item() / steps_per_epoch,
-                ignore_steps.cpu().item()/steps_per_epoch)
+        before_get_batch = time.time()
+    return (total_loss / steps_per_epoch * aggregate_k_gradients,
+            time_to_get_batch, forward_time, step_time, nan_steps.cpu().item() / steps_per_epoch,
+            ignore_steps.cpu().item()/steps_per_epoch)
 
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
