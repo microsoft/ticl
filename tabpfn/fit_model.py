@@ -14,8 +14,6 @@ import shutil
 
 
 def main(argv):
-    base_path = '.'
-
     config = get_prior_config(config_type='causal')
     config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
     config['recompute_attn'] = True
@@ -106,6 +104,7 @@ def main(argv):
     parser.add_argument('-R', '--run-id', help="Run id for MLFLow", default=None)
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
+    parser.add_argument('-B', '--base-path', default='.')
 
     args = parser.parse_args(argv)
     if args.gpu_id is not None:
@@ -118,6 +117,7 @@ def main(argv):
     if args.run_id is not None and not args.continue_run:
         raise ValueError("Can't specify run id without continue run")
     run_id = args.run_id
+    base_path = args.base_path
 
     torch.set_num_threads(24)
     config['num_gpus'] = 1
@@ -189,7 +189,7 @@ def main(argv):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help'] or k not in args_dict:
+                if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
@@ -204,11 +204,12 @@ def main(argv):
     def save_callback(model, optimizer, scheduler, epoch):
         if not hasattr(model, 'last_saved_epoch'):
             model.last_saved_epoch = 0
-        log_file = f'log/{model_string}.log'
+        log_file = f'{base_path}/log/{model_string}.log'
         if epoch == "start":
             print(f"Starting training of model {model_string}")
             return
         try:
+            os.makedirs(f"{base_path}/log", exist_ok=True)
             with open(log_file, 'a') as f:
                 f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
         except Exception as e:
@@ -221,16 +222,16 @@ def main(argv):
         
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
-                
                 file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
-                disk_usage = shutil.disk_usage("models_diff")
+                os.makedirs(f"{base_path}/models_diff", exist_ok=True)
+                disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
                 if disk_usage.free < 1024 * 1024 * 1024 * 2:
                     print("Not saving model, not enough disk space")
                     print("DISK FULLLLLLL")
                     return
                 with open(log_file, 'a') as f:
-                    f.write(f'Saving model to {file_name}\n')
-                print(f'Saving model to {file_name}')
+                    f.write(f'Saving model to {base_path}/{file_name}\n')
+                print(f'Saving model to {base_path}/{file_name}')
                 config_sample['epoch_in_training'] = epoch
                 config_sample['learning_rates'] = model.learning_rates
                 config_sample['losses'] = model.losses
@@ -239,7 +240,7 @@ def main(argv):
                 save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
                 # remove last checkpoint
                 if epoch != "on_exit" and epoch - save_every > 0:
-                    old_file_name = f'models_diff/{model_string}_epoch_{epoch - save_every}.cpkt'
+                    old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch - save_every}.cpkt'
                     if os.path.exists(old_file_name):
                         try:
                             os.remove(old_file_name)
@@ -270,7 +271,7 @@ def main(argv):
     with mlflow.start_run(**run_args):
         mlflow.log_param('hostname', socket.gethostname())
         mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-        model = get_model(config_sample
+        total_loss, model, dl = get_model(config_sample
                             , device
                             , should_train=True
                             , verbose=1
@@ -278,7 +279,8 @@ def main(argv):
                             load_model_strict=continue_old_config or args.load_strict)    
 
     if rank == 0:
-        save_callback(model[1], None, None, "on_exit")
+        save_callback(model, None, None, "on_exit")
+    return total_loss, model, dl
 
 if __name__ == "__main__":
     main(sys.argv[1:])
