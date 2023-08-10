@@ -4,10 +4,10 @@ import torch
 import mlflow
 import sys
 
-from scripts.model_builder import get_model, save_model
-from scripts.model_configs import get_prior_config, evaluate_hypers
+from tabpfn.scripts.model_builder import get_model, save_model
+from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
 
-from priors.utils import uniform_int_sampler_f
+from tabpfn.priors.utils import uniform_int_sampler_f
 import argparse
 import socket
 import shutil
@@ -63,7 +63,6 @@ def main(argv):
 
     config['output_attention'] = True
     config['y_encoder'] = "one_hot"
-    config['train_mixed_precision'] = True
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
 
@@ -136,6 +135,7 @@ def main(argv):
     config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
     config['learning_rate_schedule'] = args.learning_rate_schedule
     config['warmup_epochs'] = args.warmup_epochs
+    config['train_mixed_precision'] = device != "cpu"
 
     warm_start_weights = args.load_file
     continue_old_config = args.continue_run
