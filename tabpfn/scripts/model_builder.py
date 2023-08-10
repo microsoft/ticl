@@ -139,7 +139,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   , epoch_callback=epoch_callback
                   , lr=config['lr']
                   , learning_rate_schedule=config['learning_rate_schedule']
-                  , verbose=verbose_train,
+                  , verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
                   weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False))
 
     return model
