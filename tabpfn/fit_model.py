@@ -173,6 +173,7 @@ def main(argv):
         if args.continue_run:
             config_sample = old_config
             config_sample['device'] = device
+            config_sample['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
             if not args.restart_scheduler:
                 scheduler = old_scheduler
