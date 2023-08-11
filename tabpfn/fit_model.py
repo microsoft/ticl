@@ -135,7 +135,7 @@ def main(argv):
     config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
     config['learning_rate_schedule'] = args.learning_rate_schedule
     config['warmup_epochs'] = args.warmup_epochs
-    config['train_mixed_precision'] = device != "cpu"
+    config['train_mixed_precision'] = False
 
     warm_start_weights = args.load_file
     continue_old_config = args.continue_run
