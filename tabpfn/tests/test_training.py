@@ -10,7 +10,7 @@ import lightning as L
 
 # really tiny model for smoke tests
 # one step per epoch, no adapting batchsize, CPU, Mothernet
-TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', '-e', '128', '-N', '4', '-P', '64']
+TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', '-e', '128', '-N', '4', '-P', '64', '--experiment', 'testing_experiment']
 
 
 def test_train_defaults():

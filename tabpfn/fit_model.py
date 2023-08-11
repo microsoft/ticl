@@ -104,6 +104,7 @@ def main(argv):
     parser.add_argument('-R', '--run-id', help="Run id for MLFLow", default=None)
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
+    parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('-B', '--base-path', default='.')
 
     args = parser.parse_args(argv)
@@ -253,6 +254,8 @@ def main(argv):
         mlflow.set_tracking_uri("http://localhost:5000")
     else:            
         mlflow.set_tracking_uri("http://20.114.249.177:5000")
+
+    mlflow.set_experiment(args.experiment)
 
     if run_id is None and args.continue_run:
         # find run id via mlflow
