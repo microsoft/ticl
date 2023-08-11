@@ -180,8 +180,10 @@ def main(argv):
             print("WARNING warm starting with new settings")
             compare_dicts(config_sample, old_config, all=True)
 
-    if args.continue_run and not args.create_new_run:
+    if args.continue_run:
         model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
+        if args.create_new_run:
+            model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     else:
         model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
 
