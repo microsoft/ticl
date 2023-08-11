@@ -55,6 +55,7 @@ class TransformerModelMaker(nn.Module):
 
     def __setstate__(self, state):
         super().__setstate__(state)
+        # ?!?!? FIXME THIS SEEMS WRONG
         self.__dict__.setdefault('efficient_eval_masking', False)
 
     @staticmethod

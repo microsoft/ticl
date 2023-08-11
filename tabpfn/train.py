@@ -68,17 +68,17 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
                 loss = loss / aggregate_k_gradients
 
-            if scaler: loss = scaler.scale(loss)
+            #if scaler: loss = scaler.scale(loss)
             loss.backward()
 
             if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
-                if scaler: scaler.unscale_(optimizer)
+                #if scaler: scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
                 try:
-                    if scaler:
-                        scaler.step(optimizer)
-                        scaler.update()
-                    else:
+                 #   if scaler:
+                 #       scaler.step(optimizer)
+                 #       scaler.update()
+                 #   else:
                         optimizer.step()
                 except:
                     print("Invalid optimization step encountered")
