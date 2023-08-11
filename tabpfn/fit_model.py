@@ -138,8 +138,6 @@ def main(argv):
     config['train_mixed_precision'] = False
 
     warm_start_weights = args.load_file
-    continue_old_config = args.continue_run
-
     config['no_double_embedding'] = not args.double_embedding
     config['hid_factor'] = 2
     config['nhead'] = config['emsize'] // 128
@@ -160,7 +158,7 @@ def main(argv):
     config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
     config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
-    config['continue_old_config'] = continue_old_config
+    config['continue_old_config'] = args.continue_run
 
     config_sample = evaluate_hypers(config)
         
@@ -170,7 +168,7 @@ def main(argv):
             warm_start_weights, map_location='cpu')
         module_prefix = 'module.'
         model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-        if continue_old_config:
+        if args.continue_run:
             config_sample = old_config
             config_sample['device'] = device
             optimizer_state = old_optimizer_state
@@ -276,7 +274,7 @@ def main(argv):
                             , should_train=True
                             , verbose=1
                             , epoch_callback=save_callback, model_state=model_state, optimizer_state=optimizer_state, scheduler=scheduler,
-                            load_model_strict=continue_old_config or args.load_strict)    
+                            load_model_strict=args.continue_run or args.load_strict)    
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")
