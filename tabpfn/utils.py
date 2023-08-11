@@ -303,15 +303,16 @@ def normalize_by_used_features_f(x, num_features_used, num_features, normalize_w
     return x / (num_features_used / num_features)
 
 
-def compare_dicts(left, right, prefix=None):
-    for d in [left, right]:
-        d.pop("losses", None)
-        d.pop("learning_rates", None)
-        d.pop("wallclock_times", None)
-        d.pop("bptt_extra_samples", None)
-        d.pop("num_classes", None)
-        d.pop("differentiable_hyperparameters", None)
-        d.pop("num_features_used", None)
+def compare_dicts(left, right, prefix=None, all=False):
+    if not all:
+        for d in [left, right]:
+            d.pop("losses", None)
+            d.pop("learning_rates", None)
+            d.pop("wallclock_times", None)
+            d.pop("bptt_extra_samples", None)
+            d.pop("num_classes", None)
+            d.pop("differentiable_hyperparameters", None)
+            d.pop("num_features_used", None)
 
     prefix = prefix or ""
     for k in set(left).union(set(right)):
@@ -322,10 +323,10 @@ def compare_dicts(left, right, prefix=None):
             print(f"{prefix}{k} missing in right")
             continue
         if isinstance(left[k], dict):
-            compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->")
+            compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->", all=all)
         else:
             if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
-                print(f"{prefix}{k}: ", left[k], right[k])
+                print(f"{prefix}{k}: left: {left[k]}, right: {right[k]}")
 
 
 def get_latest_losses(fileglob="models_diff/*.cpkt"):
