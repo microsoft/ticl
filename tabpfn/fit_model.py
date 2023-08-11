@@ -6,6 +6,7 @@ import sys
 
 from tabpfn.scripts.model_builder import get_model, save_model
 from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
+from tabpfn.utils import compare_dicts
 
 from tabpfn.priors.utils import uniform_int_sampler_f
 import argparse
@@ -64,7 +65,6 @@ def main(argv):
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
 
-    config['pre_norm'] = True
 
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
@@ -101,11 +101,12 @@ def main(argv):
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
-    parser.add_argument('-R', '--run-id', help="Run id for MLFLow", default=None)
+    parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('-B', '--base-path', default='.')
+    parser.add_argument('--no-pre-norm', action='store_true')
 
     args = parser.parse_args(argv)
     if args.gpu_id is not None:
@@ -115,9 +116,8 @@ def main(argv):
     elif args.use_cpu:
         device = 'cpu'
 
-    if args.run_id is not None and not args.continue_run:
-        raise ValueError("Can't specify run id without continue run")
-    run_id = args.run_id
+    if args.create_new_run and not args.continue_run:
+        raise ValueError("Specifying create-new-run makes no sense when not continuing run")
     base_path = args.base_path
 
     torch.set_num_threads(24)
@@ -137,6 +137,7 @@ def main(argv):
     config['learning_rate_schedule'] = args.learning_rate_schedule
     config['warmup_epochs'] = args.warmup_epochs
     config['train_mixed_precision'] = False
+    config['pre_norm'] = not args.no_pre_norm
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
@@ -175,10 +176,12 @@ def main(argv):
             optimizer_state = old_optimizer_state
             if not args.restart_scheduler:
                 scheduler = old_scheduler
+        else:
+            print("WARNING warm starting with new settings")
+            compare_dicts(config_sample, old_config, all=True)
 
-    if args.continue_run:
+    if args.continue_run and not args.create_new_run:
         model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
-        print(model_string)
     else:
         model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
 
@@ -257,15 +260,14 @@ def main(argv):
 
     mlflow.set_experiment(args.experiment)
 
-    if run_id is None and args.continue_run:
+    if args.continue_run and not args.create_new_run:
         # find run id via mlflow
         run_ids = mlflow.search_runs(filter_string=f"run_name='{model_string}'")['run_id']
         if len(run_ids) > 1:
             raise ValueError(f"Found more than one run with name {model_string}")
         run_id = run_ids.iloc[0]
-
-    if run_id is not None:
         run_args = {'run_id': run_id}
+
     else:
         run_args = {'run_name': model_string}
 
