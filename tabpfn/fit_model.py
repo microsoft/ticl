@@ -238,7 +238,7 @@ def main(argv):
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
                 # remove last checkpoint
-                if epoch != "on_exit" and epoch - save_every > 0:
+                if epoch != "on_exit" and epoch - save_every > 0 and model.losses[-1] < 1:
                     old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch - save_every}.cpkt'
                     if os.path.exists(old_file_name):
                         try:
