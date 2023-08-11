@@ -7,7 +7,7 @@ import pytest
 MOTHERNET_PATH = "models_diff/prior_diff_real_checkpointcontinue_hidden_128_embed_dim_1024_decoder_nhid_2048_nlayer12_lr0003_n_0_epoch_on_exit.cpkt"
 MOTHERNET_L2_PATH = "models_diff/mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33_epoch_780.cpkt"
 MOTHERNET_LOW_RANK_PATH = "models_diff/mn_n1024_L2_W128_P512_1_gpu_08_03_2023_03_48_19_epoch_on_exit.cpkt"
-MOTHERNET_NEW_CODE = "models_diff/mn_d2048_H4096_1_gpu_08_04_2023_16_28_11_epoch_390.cpkt"
+MOTHERNET_NEW_CODE = "models_diff/mn_d2048_H4096_1_gpu_08_04_2023_16_28_11_epoch_580.cpkt"
 
 @pytest.mark.parametrize("ensemble", [ShiftClassifier, EnsembleMeta, None])
 @pytest.mark.parametrize("class_offset", [0, 4])

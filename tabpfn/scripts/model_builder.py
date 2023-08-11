@@ -67,7 +67,8 @@ def get_encoder(config):
 
 def get_y_encoder(config):
     if 'y_encoder' not in config:
-        config['y_encoder'] = 'one_hot'
+        # backward compatibility
+        config['y_encoder'] = 'linear'
     if config['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
     elif config['y_encoder'] == 'linear':
@@ -78,6 +79,8 @@ def get_y_encoder(config):
 
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
+    # copy config. Maybe should be a deepcopy?
+    config = {**config}
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
@@ -86,7 +89,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     criterion = get_criterion(config['max_num_classes'])
 
-    # DEFAULTS
+    # DEFAULTS for backward compatibility.
+    # 'real' current defaults should be defined in fit_model.py command line parsing
     config['multiclass_type'] = config.get('multiclass_type', 'rank')
     config['mix_activations'] = config.get('mix_activations', False)
     config['recompute_attn'] = config.get('recompute_attn', False)
