@@ -139,7 +139,7 @@ def main(argv):
     config['warmup_epochs'] = args.warmup_epochs
     config['train_mixed_precision'] = False
     config['pre_norm'] = not args.no_pre_norm
-    config['lr-decay'] = args.lr_decay
+    config['lr_decay'] = args.lr_decay
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
