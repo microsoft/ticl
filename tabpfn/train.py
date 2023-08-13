@@ -103,7 +103,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
-          learning_rate_schedule='cosine'
+          learning_rate_schedule='cosine', lr_decay=0.99
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -144,7 +144,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         if learning_rate_schedule == 'cosine':
             scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
         elif learning_rate_schedule == 'exponential':
-            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=0.99)])
+            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=lr_decay)])
         elif learning_rate_schedule == 'constant':
             scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=1)])
         else:

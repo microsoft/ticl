@@ -105,6 +105,7 @@ def main(argv):
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
+    parser.add_argument('--lr-decay', default=0.99, type=float)
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--no-pre-norm', action='store_true')
 
@@ -138,6 +139,7 @@ def main(argv):
     config['warmup_epochs'] = args.warmup_epochs
     config['train_mixed_precision'] = False
     config['pre_norm'] = not args.no_pre_norm
+    config['lr-decay'] = args.lr_decay
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
