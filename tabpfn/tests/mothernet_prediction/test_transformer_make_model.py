@@ -7,7 +7,8 @@ import pytest
 MOTHERNET_PATH = "models_diff/prior_diff_real_checkpointcontinue_hidden_128_embed_dim_1024_decoder_nhid_2048_nlayer12_lr0003_n_0_epoch_on_exit.cpkt"
 MOTHERNET_L2_PATH = "models_diff/mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33_epoch_780.cpkt"
 MOTHERNET_LOW_RANK_PATH = "models_diff/mn_n1024_L2_W128_P512_1_gpu_08_03_2023_03_48_19_epoch_on_exit.cpkt"
-MOTHERNET_NEW_CODE = "models_diff/mn_d2048_H4096_1_gpu_08_04_2023_16_28_11_epoch_580.cpkt"
+MOTHERNET_NEW_CODE = "models_diff/mn_d2048_H4096_1_gpu_08_04_2023_16_28_11_epoch_950_kept_for_testing.cpkt"
+TABPFN_MODEL_PATH = "models_diff/download_epoch_100.cpkt"
 
 @pytest.mark.parametrize("ensemble", [ShiftClassifier, EnsembleMeta, None])
 @pytest.mark.parametrize("class_offset", [0, 4])
@@ -83,4 +84,9 @@ def test_low_rank_iris_tabpfn_logic():
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
 
-    
+def test_tabpfn_load_error():
+    iris = load_iris()
+    # test that we get a good error if we try to load tabpfn weights in ForwardMLPModel
+    mothernet = ForwardMLPModel(path=TABPFN_MODEL_PATH, device='cpu')
+    with pytest.raises(ValueError, match="Cannot load tabpfn weights into ForwardMLPModel"):
+        mothernet.fit(iris.data, iris.target)

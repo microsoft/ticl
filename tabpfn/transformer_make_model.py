@@ -414,7 +414,11 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model, _ = load_model(self.path, device=self.device)
+        model, config = load_model(self.path, device=self.device)
+        if "model_maker" not in config:
+            raise ValueError("Cannot load tabpfn weights into ForwardMLPModel")
+        if config['model_maker'] != "mlp":
+            raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)

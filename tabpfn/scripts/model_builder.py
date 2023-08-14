@@ -39,7 +39,10 @@ def load_model(path, device, verbose=False):
     states = torch.load(path, map_location='cpu')
     model_state = states[0]
     config_sample = states[-1]
-
+    if 'y_encoder' not in config_sample and 'onehot' in path:
+        # workaround for the single model that was saved without y_encoder
+        # that happens to be my reference model.
+        config_sample['y_encoder'] = 'one_hot'
     _, model, _ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
