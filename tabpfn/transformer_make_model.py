@@ -3,6 +3,7 @@ import itertools
 import random
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer
+from sklearn.feature_selection import VarianceThreshold
 
 import torch
 import torch.nn as nn
@@ -510,11 +511,16 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         for label_shift, feature_shift, use_power_transformer in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             if use_power_transformer:
-                estimator = Pipeline([('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
+                # remove zero-variance features to avoid division by zero
+                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
             estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft')
         self.vc_.fit(X, y)
         return self
+    
+    @property
+    def device(self):
+        return self.base_estimator.device
 
     def predict_proba(self, X):
         return self.vc_.predict_proba(X)

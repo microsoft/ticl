@@ -15,9 +15,11 @@ from tabpfn.scripts.tabular_baselines import get_scoring_string
 from tabpfn.scripts import tabular_metrics
 from tabpfn.scripts.transformer_prediction_interface import *
 from tabpfn.scripts.baseline_prediction_interface import *
+from tabpfn.scripts.tabular_baselines import transformer_metric
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import itertools
+from functools import partial
 
 def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
              , verbose=False
@@ -128,13 +130,22 @@ def _eval_single_dataset_wrapper(**kwargs):
     result['max_time'] = kwargs['max_time']
     return result
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, device, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
-    print("model_name ", model_name)
-    if device == "cuda":
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
+    if callable(model):
+        device = "cpu"
+        model_callable = model
+    elif isinstance(model, BaseEstimator):
+        model_callable = partial(transformer_metric, classifier=model)
+        device_param = [v for k, v in model.get_params().items() if "device" in k]
+        device = device_param[0] if len(device_param) > 0 else "cpu"
+    else:
+        raise ValueError(f"Got model {model} of type {type(model)} which is not callable or a BaseEstimator")
+    print(f"evaluating {model_name} on {device}")
+    if "cuda" in device:
         results = []
         for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
             result = _eval_single_dataset_wrapper(datasets=[ds]
-                                                , model=model
+                                                , model=model_callable
                                                 , model_name=model_name
                                                 , bptt=bptt, base_path=base_path
                                                 , eval_positions=eval_positions
@@ -152,7 +163,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
             results.append(result)
     else:
         results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
-                                                , model=model
+                                                , model=model_callable
                                                 , model_name=model_name
                                                 , bptt=bptt, base_path=base_path
                                                 , eval_positions=eval_positions
