@@ -2,7 +2,7 @@ import numpy as np
 import itertools
 import random
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PowerTransformer
+from sklearn.preprocessing import PowerTransformer, StandardScaler
 from sklearn.feature_selection import VarianceThreshold
 
 import torch
@@ -229,7 +229,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
 
 
 def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
-    if inference_device == "cuda" and device == "cpu":
+    if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     max_features = 100
     eval_position = X_train.shape[0]
@@ -390,7 +390,7 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
             import pdb; pdb.set_trace()
         from scipy.special import softmax
         return softmax(out / .8, axis=1)
-    elif inference_device == "cuda":
+    elif "cuda" in inference_device:
         mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
         std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
         # FIXME replacing nan with 0 as in TabPFN
@@ -399,9 +399,13 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         std[torch.isnan(std)] = 1
         X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
         out = torch.clamp(X_test_scaled, min=-100, max=100)
-        for (b, w) in layers:
-            out = torch.relu(torch.matmul(out, w) + b)
+        for i, (b, w) in enumerate(layers):
+            out = torch.matmul(out, w) + b
+            if i != len(layers) - 1:
+                out = torch.relu(out)
         return torch.nn.functional.softmax(out / .8, dim=1).cpu().numpy()
+    else:
+        raise ValueError(f"Unknown inference_device: {inference_device}")
 
 
 class ForwardMLPModel(ClassifierMixin, BaseEstimator):
@@ -512,7 +516,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             if use_power_transformer:
                 # remove zero-variance features to avoid division by zero
-                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
+                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()), ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
             estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft')
         self.vc_.fit(X, y)
