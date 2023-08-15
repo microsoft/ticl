@@ -137,14 +137,14 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
         self.categorical_features = categorical_features
         self.N_ensemble_configurations = N_ensemble_configurations
         self.kwargs = kwargs
-        self.verbose=verbose
+        self.verbose = verbose
 
     def fit(self, X, y):
         self.classes_ = np.unique(y)
         tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, verbose=self.verbose, **self.kwargs).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
-                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose, device=self.device)
+                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
 	
         self.mlp_.fit(X, y_train_soft_probs)
         return self
