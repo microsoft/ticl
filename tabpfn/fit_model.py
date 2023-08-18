@@ -107,7 +107,7 @@ def main(argv):
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', default=0.99, type=float)
     parser.add_argument('-B', '--base-path', default='.')
-    parser.add_argument('--no-pre-norm', action='store_true')
+    parser.add_argument('--pre-norm', action='store_true')
 
     args = parser.parse_args(argv)
     if args.gpu_id is not None:
@@ -138,7 +138,7 @@ def main(argv):
     config['learning_rate_schedule'] = args.learning_rate_schedule
     config['warmup_epochs'] = args.warmup_epochs
     config['train_mixed_precision'] = False
-    config['pre_norm'] = not args.no_pre_norm
+    config['pre_norm'] = args.pre_norm
     config['lr_decay'] = args.lr_decay
 
     warm_start_weights = args.load_file
