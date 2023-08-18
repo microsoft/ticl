@@ -81,8 +81,8 @@ def main(argv):
     parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
     parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
     parser.add_argument('-E', '--epochs', type=int, help='embedding size', default=2000)
-    parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size')
-    parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
+    parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024)
+    parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
     parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
     parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
     parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
@@ -157,8 +157,8 @@ def main(argv):
         config['max_eval_pos'] = 1000
         config['bptt'] = 1024+128
         
-    config['decoder_embed_dim'] = args.decoder_em_size or config['emsize'] 
-    config['decoder_hidden_size'] = args.decoder_hidden_size or config['emsize'] * config['hid_factor'] 
+    config['decoder_embed_dim'] = args.decoder_em_size
+    config['decoder_hidden_size'] = args.decoder_hidden_size 
     config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
     config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
