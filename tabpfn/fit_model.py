@@ -106,6 +106,7 @@ def main(argv):
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', default=0.99, type=float)
+    parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
 
@@ -140,6 +141,7 @@ def main(argv):
     config['train_mixed_precision'] = False
     config['pre_norm'] = args.pre_norm
     config['lr_decay'] = args.lr_decay
+    config['perceiver_large_dataset'] = args.perceiver_large_dataset
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
@@ -150,7 +152,7 @@ def main(argv):
     config['epochs'] = args.epochs
     config['weight_embedding_rank'] = args.weight_embedding_rank
 
-    if config['model_maker'] == 'perceiver':
+    if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
         config['bptt'] = 8 * 1024+128
     else:
