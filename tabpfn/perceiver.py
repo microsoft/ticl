@@ -9,6 +9,7 @@ from einops import rearrange, repeat
 from einops.layers.torch import Reduce
 
 from tabpfn.decoders import MLPModelDecoder
+from tabpfn.transformer_make_model import MLPModelPredictor
 
 # helpers
 
@@ -265,7 +266,7 @@ class Perceiver(nn.Module):
 
 
 
-class TabPerceiver(nn.Module):
+class TabPerceiver(MLPModelDecoder):
     def __init__(
         self,
         *,
@@ -292,6 +293,7 @@ class TabPerceiver(nn.Module):
         y_encoder=None,
         encoder=None,
         predicted_hidden_layers=1,
+        weight_embedding_rank=None
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)
@@ -323,7 +325,6 @@ class TabPerceiver(nn.Module):
         self.input_dim = input_dim
         self.n_out = n_out
         self.no_double_embedding = no_double_embedding
-        assert predicted_hidden_layers == 1, "Only one hidden layer is supported for now"
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
 
@@ -354,21 +355,10 @@ class TabPerceiver(nn.Module):
             ]))
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, nout=n_out, output_attention=output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads)
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
+                                       weight_embedding_rank=weight_embedding_rank)
 
-
-    def forward(
-        self,
-        src,
-        single_eval_pos=None,
-    ):
-        assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y)'
-        _, x_src_org, y_src = src
-        x_src = self.encoder(x_src_org)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        data = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-
-
+    def inner_forward(self, data, single_eval_pos=None):
         #b, *axis, _, device, dtype = *data.shape, data.device, data.dtype
         # assert len(axis) == self.input_axis, 'input data must have the right number of axis'
         assert len(data.shape) == self.input_axis + 2, 'input data must have the right number of axis'
@@ -391,7 +381,22 @@ class TabPerceiver(nn.Module):
                 x = self_ff(x) + x
 
         x = rearrange(x, 'b n d -> n b d')
-        b1, w1, b2, w2 = self.decoder(x)
+        return x
+
+    def forward(
+        self,
+        src,
+        single_eval_pos=None,
+    ):
+        assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y)'
+        _, x_src_org, y_src = src
+        x_src = self.encoder(x_src_org)
+        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
+        data = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+
+        x = self.inner_forward(data)
+
+        b1, w1, *layers = self.decoder(x)
         if self.no_double_embedding:
             x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
             h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1

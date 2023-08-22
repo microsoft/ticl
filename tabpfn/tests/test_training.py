@@ -55,7 +55,6 @@ def test_train_tabpfn():
     assert loss == 2.306408643722534
     assert isinstance(model, TransformerModel)
 
-@pytest.mark.skip(reason="Perceiver is not yet implemented after refactor")
 def test_train_perceiver():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -23,8 +23,48 @@ from sklearn.ensemble import VotingClassifier
 
 from einops import rearrange, repeat
 
+class MLPModelPredictor(nn.Module):
+    def forward(self, src, single_eval_pos=None):
+        assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-class TransformerModelMaker(nn.Module):
+        if len(src) == 2: # (x,y) and no style
+            src = (None,) + src
+
+        _, x_src_org, y_src = src
+        x_src = self.encoder(x_src_org)
+        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
+        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+        if self.special_token:
+            train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
+        
+        output = self.inner_forward(train_x)
+        (b1, w1), *layers = self.decoder(output)
+        
+        if self.no_double_embedding:
+            x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
+            h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
+        else:
+            h = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
+
+        if self.decoder.weight_embedding_rank is not None:
+            h = torch.matmul(h, self.decoder.shared_weights[0]) 
+        h = h + b1
+        
+        for i, (b, w) in enumerate(layers):
+            h = torch.relu(h)
+            h = (h.unsqueeze(-1) * w.unsqueeze(0)).sum(2)
+            if self.decoder.weight_embedding_rank is not None and i != len(layers) - 1:
+                # last layer has no shared weights
+                h = torch.matmul(h, self.decoder.shared_weights[i + 1])
+            h = h + b
+        
+        if h.isnan().all():
+            print("NAN")
+            import pdb; pdb.set_trace()
+        return h
+
+
+class TransformerModelMaker(MLPModelPredictor):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
@@ -111,31 +151,31 @@ class TransformerModelMaker(nn.Module):
                 nn.init.zeros_(attn.out_proj.weight)
                 nn.init.zeros_(attn.out_proj.bias)
 
-    def forward(self, src, single_eval_pos=None):
-        assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
+    # def forward(self, src, single_eval_pos=None):
+    #     assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        if len(src) == 2: # (x,y) and no style
-            src = (None,) + src
+    #     if len(src) == 2: # (x,y) and no style
+    #         src = (None,) + src
 
-        style_src, x_src, y_src = src
-        x_src = self.encoder(x_src)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        style_src = self.style_encoder(style_src).unsqueeze(0) if self.style_encoder else \
-            torch.tensor([], device=x_src.device)
+    #     style_src, x_src, y_src = src
+    #     x_src = self.encoder(x_src)
+    #     y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
+    #     style_src = self.style_encoder(style_src).unsqueeze(0) if self.style_encoder else \
+    #         torch.tensor([], device=x_src.device)
 
-        if single_eval_pos == 0:
-            linear_model_coefs = torch.zeros((x_src.shape[1], x_src.shape[2] + 1, self.n_out), device=x_src.device)
-        else:
-            train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-            # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
-            output = self.transformer_encoder(train_x)
+    #     if single_eval_pos == 0:
+    #         linear_model_coefs = torch.zeros((x_src.shape[1], x_src.shape[2] + 1, self.n_out), device=x_src.device)
+    #     else:
+    #         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+    #         # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
+    #         output = self.transformer_encoder(train_x)
 
-            linear_model_coefs = self.decoder(output)
-        matmul = (x_src[single_eval_pos:].unsqueeze(-1) * linear_model_coefs[:, :-1].unsqueeze(0)).sum(2)
-        result = matmul + linear_model_coefs[:, -1]
-        if result.isnan().all():
-            import pdb; pdb.set_trace()
-        return result
+    #         linear_model_coefs = self.decoder(output)
+    #     matmul = (x_src[single_eval_pos:].unsqueeze(-1) * linear_model_coefs[:, :-1].unsqueeze(0)).sum(2)
+    #     result = matmul + linear_model_coefs[:, -1]
+    #     if result.isnan().all():
+    #         import pdb; pdb.set_trace()
+    #     return result
     
     
 class TransformerModelMakeMLP(TransformerModelMaker):
@@ -158,45 +198,9 @@ class TransformerModelMakeMLP(TransformerModelMaker):
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 
-    def forward(self, src, single_eval_pos=None):
-        assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
-
-        if len(src) == 2: # (x,y) and no style
-            src = (None,) + src
-
-        _, x_src_org, y_src = src
-        x_src = self.encoder(x_src_org)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-        if self.special_token:
-            train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
+    def inner_forward(self, train_x):
+        return self.transformer_encoder(train_x)
         
-        output = self.transformer_encoder(train_x)
-        (b1, w1), *layers = self.decoder(output)
-        
-        if self.no_double_embedding:
-            x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-            h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
-        else:
-            h = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
-
-        if self.decoder.weight_embedding_rank is not None:
-            h = torch.matmul(h, self.decoder.shared_weights[0]) 
-        h = h + b1
-        
-        for i, (b, w) in enumerate(layers):
-            h = torch.relu(h)
-            h = (h.unsqueeze(-1) * w.unsqueeze(0)).sum(2)
-            if self.decoder.weight_embedding_rank is not None and i != len(layers) - 1:
-                # last layer has no shared weights
-                h = torch.matmul(h, self.decoder.shared_weights[i + 1])
-            h = h + b
-        
-        if h.isnan().all():
-            print("NAN")
-            import pdb; pdb.set_trace()
-        return h
-
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
     max_features = 100
