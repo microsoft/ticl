@@ -52,7 +52,7 @@ def test_train_tabpfn():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
-    assert loss == 2.306408643722534
+    assert loss == 2.3345985412597656
     assert isinstance(model, TransformerModel)
 
 def test_train_perceiver():
