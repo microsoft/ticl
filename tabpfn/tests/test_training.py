@@ -42,7 +42,7 @@ def test_train_special_token():
 def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L' '2'])
+        loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
     assert loss == 2.3295023441314697
     assert count_parameters(model) == 2081290
     assert isinstance(model, TransformerModelMakeMLP)
@@ -50,7 +50,7 @@ def test_train_two_hidden_layers():
 def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W' '16'])
+        loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16'])
     assert loss == 2.3065733909606934
     assert count_parameters(model) == 926474
     assert isinstance(model, TransformerModelMakeMLP)
@@ -84,6 +84,6 @@ def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16'])
-    assert loss == 2.3633618354797363
-    assert count_parameters(model) == 1744842
+    assert loss == 2.256040334701538
+    assert count_parameters(model) == 1126666
     assert isinstance(model, TabPerceiver)

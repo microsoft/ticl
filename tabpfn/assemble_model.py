@@ -31,7 +31,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 y_encoder=y_encoder, output_attention=output_attention, special_token=special_token,
                                 predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
                                 decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
-                                no_double_embedding=no_double_embedding, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=None,
+                                no_double_embedding=no_double_embedding, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
                                 **model_extra_args
                                 )
     else:
