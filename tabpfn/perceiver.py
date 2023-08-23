@@ -19,19 +19,19 @@ def exists(val):
 def default(val, d):
     return val if exists(val) else d
 
-def cache_fn(f):
-    cache = dict()
-    @wraps(f)
-    def cached_fn(*args, _cache = True, key = None, **kwargs):
-        if not _cache:
-            return f(*args, **kwargs)
-        nonlocal cache
-        if key in cache:
-            return cache[key]
-        result = f(*args, **kwargs)
-        cache[key] = result
-        return result
-    return cached_fn
+# def cache_fn(f):
+#     cache = dict()
+#     @wraps(f)
+#     def cached_fn(*args, _cache = True, key = None, **kwargs):
+#         if not _cache:
+#             return f(*args, **kwargs)
+#         nonlocal cache
+#         if key in cache:
+#             return cache[key]
+#         result = f(*args, **kwargs)
+#         cache[key] = result
+#         return result
+#     return cached_fn
 
 def fourier_encode(x, max_freq, num_bands = 4):
     x = x.unsqueeze(-1)
@@ -186,13 +186,6 @@ class Perceiver(nn.Module):
 
         self.latents = nn.Parameter(torch.randn(num_latents, latent_dim))
 
-        get_cross_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim)
-        get_cross_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
-        get_latent_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout))
-        get_latent_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
-
-        get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff = map(cache_fn, (get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff))
-
         self.layers = nn.ModuleList([])
         for i in range(depth):
             should_cache = i > 0 and weight_tie_layers
@@ -202,13 +195,13 @@ class Perceiver(nn.Module):
 
             for block_ind in range(self_per_cross_attn):
                 self_attns.append(nn.ModuleList([
-                    get_latent_attn(**cache_args, key = block_ind),
-                    get_latent_ff(**cache_args, key = block_ind)
+                    PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout)),
+                    PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
                 ]))
 
             self.layers.append(nn.ModuleList([
-                get_cross_attn(**cache_args),
-                get_cross_ff(**cache_args),
+                PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim),
+                PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout)),
                 self_attns
             ]))
 
@@ -329,32 +322,21 @@ class TabPerceiver(MLPModelPredictor):
         self.no_double_embedding = no_double_embedding
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
-
-        get_cross_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim)
-        get_cross_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=1))
-        get_latent_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout))
-        get_latent_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=1))
-
-        get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff = map(cache_fn, (get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff))
-
         self.layers = nn.ModuleList([])
         for i in range(depth):
-            should_cache = i > 0 and weight_tie_layers
-            cache_args = {'_cache': should_cache}
-
             self_attns = nn.ModuleList([])
 
             for block_ind in range(self_per_cross_attn):
-                self_attns.append(nn.ModuleList([
-                    get_latent_attn(**cache_args, key = block_ind),
-                    get_latent_ff(**cache_args, key = block_ind)
-                ]))
+                latent_block = nn.Module()
+                latent_block.add_module('latent_attn', PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout)))
+                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=4)))
+                self_attns.append(latent_block)
 
-            self.layers.append(nn.ModuleList([
-                get_cross_attn(**cache_args),
-                get_cross_ff(**cache_args),
-                self_attns
-            ]))
+            cross_attn_layer = nn.Module()
+            cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim))
+            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=4)))
+            cross_attn_layer.add_module('latents', self_attns)
+            self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, nout=n_out, output_attention=output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
@@ -374,13 +356,13 @@ class TabPerceiver(MLPModelPredictor):
         data = rearrange(data, 'n b d -> b n d')
 
         # layers
-        for cross_attn, cross_ff, self_attns in self.layers:
-            x = cross_attn(x, context = data) + x
-            x = cross_ff(x) + x
+        for layer in self.layers:
+            x = layer.cross_attn(x, context = data) + x
+            x = layer.cross_ff(x) + x
 
-            for self_attn, self_ff in self_attns:
-                x = self_attn(x) + x
-                x = self_ff(x) + x
+            for latent in layer.latents:
+                x = latent.latent_attn(x) + x
+                x = latent.latent_ff(x) + x
 
         x = rearrange(x, 'b n d -> n b d')
         return x
