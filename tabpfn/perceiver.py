@@ -196,7 +196,7 @@ class Perceiver(nn.Module):
             for block_ind in range(self_per_cross_attn):
                 self_attns.append(nn.ModuleList([
                     PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout)),
-                    PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
+                    PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, ))
                 ]))
 
             self.layers.append(nn.ModuleList([
@@ -329,12 +329,12 @@ class TabPerceiver(MLPModelPredictor):
             for block_ind in range(self_per_cross_attn):
                 latent_block = nn.Module()
                 latent_block.add_module('latent_attn', PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout)))
-                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=4)))
+                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=1)))
                 self_attns.append(latent_block)
 
             cross_attn_layer = nn.Module()
             cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim))
-            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=4)))
+            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, nout=n_out, output_attention=output_attention,

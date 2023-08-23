@@ -63,26 +63,27 @@ def test_train_tabpfn():
     assert count_parameters(model) == 579850
     assert isinstance(model, TransformerModel)
 
-def test_train_perceiver():
+def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
-    assert loss == 2.1738672256469727
-    assert count_parameters(model) == 2930634
+    assert loss == 2.3633618354797363
+    assert count_parameters(model) == 1744842
     assert isinstance(model, TabPerceiver)
+    print("\n".join([k for k, l in model.layers[0].named_parameters()]))
 
 def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert loss == 2.1443655490875244
-    assert count_parameters(model) == 3467274
+    assert loss == 2.0139236450195312
+    assert count_parameters(model) == 2281482
     assert isinstance(model, TabPerceiver)
 
 def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         loss, model, _ = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16'])
-    assert loss == 2.1738672256469727
-    assert count_parameters(model) == 2930634
+    assert loss == 2.3633618354797363
+    assert count_parameters(model) == 1744842
     assert isinstance(model, TabPerceiver)
