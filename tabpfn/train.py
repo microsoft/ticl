@@ -159,6 +159,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
     total_loss = float('inf')
     increased_batch_size = 0
+    epoch = start_epoch
 
     try:
         for epoch in range(start_epoch, epochs + 1):
@@ -191,7 +192,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 print('-' * 89)
             if new_loss > 1.5 * total_loss:
                 print("LOSS DIVERGED")
-                return total_loss, model.to('cpu'), dl
+                return total_loss, model.to('cpu'), dl, epoch
             if adaptive_batch_size:
                 if increased_batch_size == 0 and total_loss <= .55:
                     aggregate_k_gradients *= 2
@@ -218,4 +219,4 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         pass
 
     if rank == 0: # trivially true for non-parallel training
-        return total_loss, model.to('cpu'), dl
+        return total_loss, model.to('cpu'), dl, epoch

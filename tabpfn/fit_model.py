@@ -109,6 +109,7 @@ def main(argv):
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
+    parser.add_argument('--save-every', default=10, type=int)
 
     args = parser.parse_args(argv)
     if args.gpu_id is not None:
@@ -165,6 +166,8 @@ def main(argv):
     config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
     config['continue_old_config'] = args.continue_run
+    save_every = args.save_every
+
 
     config_sample = evaluate_hypers(config)
         
@@ -209,7 +212,6 @@ def main(argv):
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
         model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-    save_every = 10
 
     def save_callback(model, optimizer, scheduler, epoch):
         if not hasattr(model, 'last_saved_epoch'):
@@ -232,7 +234,7 @@ def main(argv):
         
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
-                file_name = f'models_diff/{model_string}_epoch_{epoch}.cpkt'
+                file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
                 os.makedirs(f"{base_path}/models_diff", exist_ok=True)
                 disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
                 if disk_usage.free < 1024 * 1024 * 1024 * 2:
@@ -240,8 +242,8 @@ def main(argv):
                     print("DISK FULLLLLLL")
                     return
                 with open(log_file, 'a') as f:
-                    f.write(f'Saving model to {base_path}/{file_name}\n')
-                print(f'Saving model to {base_path}/{file_name}')
+                    f.write(f'Saving model to {file_name}\n')
+                print(f'Saving model to {file_name}')
                 config_sample['epoch_in_training'] = epoch
                 config_sample['learning_rates'] = model.learning_rates
                 config_sample['losses'] = model.losses
@@ -282,7 +284,8 @@ def main(argv):
     with mlflow.start_run(**run_args):
         mlflow.log_param('hostname', socket.gethostname())
         mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-        total_loss, model, dl = get_model(config_sample
+        import pdb; pdb.set_trace()
+        total_loss, model, dl, epoch = get_model(config_sample
                             , device
                             , should_train=True
                             , verbose=1
@@ -291,7 +294,7 @@ def main(argv):
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")
-    return total_loss, model, dl
+    return total_loss, model, dl, config, base_path, model_string, epoch
 
 if __name__ == "__main__":
     main(sys.argv[1:])
