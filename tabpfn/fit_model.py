@@ -284,7 +284,6 @@ def main(argv):
     with mlflow.start_run(**run_args):
         mlflow.log_param('hostname', socket.gethostname())
         mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-        import pdb; pdb.set_trace()
         total_loss, model, dl, epoch = get_model(config_sample
                             , device
                             , should_train=True

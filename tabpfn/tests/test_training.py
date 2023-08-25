@@ -32,16 +32,30 @@ def test_train_reload():
         assert epoch == 2
         assert loss == 2.6263158321380615
         assert count_parameters(model) == 1544650
-        # continue training
+        # "continue" training - will stop immediately since we already reached max epochs
         new_loss, new_model, _, new_config, new_base_path, new_model_string, new_epoch = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c'])
-        # epoch 3 didn't actually happen since we're at max epochs already, but going through the training loop raises the counter by one...
+        # epoch 3 didn't actually happen, but going through the training loop raises the counter by one...
         assert new_epoch == 3
         assert new_loss == np.inf
         assert new_base_path == base_path
         assert new_model_string == model_string
         for k, v in config.items():
-            if k not in ['warm_start_from', 'continue_old_config']:
+            # fixme num_classes really shouldn't be a callable in config
+            if k not in ['warm_start_from', 'continue_old_config', 'num_classes', 'num_features_used']:
                 assert new_config[k] == v
+        # strict loading should fail if we change model arch
+        with pytest.raises(RuntimeError):
+            new_loss, new_model, _, new_config, new_base_path, new_model_string, new_epoch = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-L', '2'])
+
+        # strict loading should work if we change learning rate
+        new_loss, new_model, _, new_config, new_base_path, new_model_string, new_epoch = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-l', '1e-3'])
+        assert new_epoch == 2
+        assert new_config['lr'] == 1e-3
+
+        # non-strict loading should allow changing architecture
+        new_loss, new_model, _, new_config, new_base_path, new_model_string, new_epoch = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-L', '2'])
+        assert new_epoch == 2
+        assert new_config['predicted_hidden_layers'] == 2
     
 
 def test_train_double_embedding():

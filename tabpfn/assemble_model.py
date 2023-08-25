@@ -40,6 +40,10 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
                                 )
     if model_state is not None:
+        if not load_model_strict:
+            for k, v in model.state_dict().items():
+                if k in model_state and model_state[k].shape != v.shape:
+                    model_state.pop(k)
         model.load_state_dict(model_state, strict=load_model_strict)
 
     if verbose:
