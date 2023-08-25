@@ -531,7 +531,10 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         return self.base_estimator.device
 
     def predict_proba(self, X):
-        return self.vc_.predict_proba(X)
+        # numeric instabilities propagate and sklearn's metrics don't like it.
+        probs =  self.vc_.predict_proba(X)
+        probs /= probs.sum(axis=1).reshape(-1, 1)
+        return probs
     
     def predict(self, X):
         return self.vc_.predict(X)
