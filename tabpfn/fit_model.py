@@ -104,6 +104,7 @@ def main(argv):
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
+    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', action='store_true')
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', default=0.99, type=float)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
@@ -139,7 +140,7 @@ def main(argv):
     config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
     config['learning_rate_schedule'] = args.learning_rate_schedule
     config['warmup_epochs'] = args.warmup_epochs
-    config['train_mixed_precision'] = False
+    config['train_mixed_precision'] = args.train_mixed_precision
     config['pre_norm'] = args.pre_norm
     config['lr_decay'] = args.lr_decay
     config['perceiver_large_dataset'] = args.perceiver_large_dataset
