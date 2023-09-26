@@ -57,7 +57,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
         with cm:
             time_to_get_batch = time.time() - before_get_batch
             before_forward = time.time()
-            with autocast(enabled=scaler is not None):
+            with autocast(enabled=scaler is not None, dtype=torch.bfloat16):
                 output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
                                 , single_eval_pos=single_eval_pos)
 
