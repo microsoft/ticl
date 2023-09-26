@@ -80,7 +80,7 @@ def main(argv):
     parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
     parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
-    parser.add_argument('-E', '--epochs', type=int, help='embedding size', default=4000)
+    parser.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
     parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024)
     parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
     parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
@@ -202,7 +202,7 @@ def main(argv):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment'] or k not in args_dict:
+                if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
