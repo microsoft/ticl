@@ -275,7 +275,6 @@ class TabPerceiver(MLPModelPredictor):
         n_out = 10,
         attn_dropout = 0.,
         ff_dropout = 0.,
-        weight_tie_layers = False,
         self_per_cross_attn = 1,
         decoder_hidden_size = 512,
         predicted_hidden_layer_size=128,

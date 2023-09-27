@@ -107,6 +107,7 @@ def main(argv):
     parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', action='store_true')
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', default=0.99, type=float)
+    parser.add_argument('--num-latents', default=512, type=int)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
@@ -144,6 +145,7 @@ def main(argv):
     config['pre_norm'] = args.pre_norm
     config['lr_decay'] = args.lr_decay
     config['perceiver_large_dataset'] = args.perceiver_large_dataset
+    config['num_latents'] = args.num_latents
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding

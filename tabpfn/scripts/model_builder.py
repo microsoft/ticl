@@ -43,7 +43,7 @@ def load_model(path, device, verbose=False):
         # workaround for the single model that was saved without y_encoder
         # that happens to be my reference model.
         config_sample['y_encoder'] = 'one_hot'
-    _, model, _ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
+    _, model, *_ = get_model(config_sample, device=device, should_train=False, verbose=verbose)
     module_prefix = 'module.'
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model_state.pop("criterion.weight", None)
@@ -129,7 +129,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
                            output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'],
-                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'],)
+                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'], num_latents=config['num_latents'])
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
