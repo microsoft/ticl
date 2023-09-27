@@ -105,6 +105,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['weight_embedding_rank'] = config.get('weight_embedding_rank', None)
     config['learning_rate_schedule'] = config.get('learning_rate_schedule', 'cosine')
     config['warmup_epochs'] = config.get('warmup_epochs', 20)
+    config['num_latents'] = config.get('num_latents', 512)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
