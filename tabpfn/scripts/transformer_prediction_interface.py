@@ -108,26 +108,13 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, seed=0, verbose=0, temperature=1, model=None):
+                 multiclass_decoder='permutation', feature_shift_decoder=True, seed=0, verbose=0, temperature=1):
         # Model file specification (Model name, Epoch)
         self.epoch = epoch
-        model_key = model_string+'|'+str(device)
-        if model_key in self.models_in_memory:
-            if verbose:
-                print(f"using model {model_key}")
-            model, c, results_file = self.models_in_memory[model_key]
-        else:
-            model, c, results_file = load_model_workflow(epoch, add_name=model_string, base_path=base_path, device=device,
-                                                         eval_addition='')
-            self.models_in_memory[model_key] = (model, c, results_file)
-            if len(self.models_in_memory) == 2:
-                print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
-        #style, temperature = self.load_result_minimal(style_file, i, e)
+
 
         self.verbose = verbose
         self.device = device
-        self.model = model
-        self.c = c
         self.style = None
         self.temperature = temperature
         self.N_ensemble_configurations = N_ensemble_configurations
@@ -135,9 +122,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.base_path = base_path
         self.model_string = model_string
 
-        self.max_num_features = self.c['num_features']
-        self.max_num_classes = self.c['max_num_classes']
-        self.differentiable_hps_as_style = self.c['differentiable_hps_as_style']
 
         self.no_preprocess_mode = no_preprocess_mode
         self.combine_preprocessing = combine_preprocessing
@@ -169,6 +153,27 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         return np.asarray(y, dtype=np.float64, order="C")
 
     def fit(self, X, y, overwrite_warning=False):
+
+        model_key = self.model_string+'|'+str(self.device)
+        if model_key in self.models_in_memory:
+            if self.verbose:
+                print(f"using model {model_key}")
+            model, c, results_file = self.models_in_memory[model_key]
+        else:
+            model, c, results_file = load_model_workflow(self.epoch, add_name=self.model_string, base_path=self.base_path, device=self.device,
+                                                         eval_addition='')
+            self.models_in_memory[model_key] = (model, c, results_file)
+            if len(self.models_in_memory) == 2:
+                print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
+        self.c = c
+        self.max_num_features = self.c['num_features']
+        self.max_num_classes = self.c['max_num_classes']
+        self.differentiable_hps_as_style = self.c['differentiable_hps_as_style']
+
+        #style, temperature = self.load_result_minimal(style_file, i, e)
+        self.model = model
+    
+
         # Check that X and y have correct shape
         X, y = check_X_y(X, y, force_all_finite=False)
         # Store the classes seen during fit
