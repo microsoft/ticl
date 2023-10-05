@@ -504,25 +504,34 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
         return self.predict_proba(X).argmax(axis=1)
 
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator, n_estimators=32, random_state=0):
+    def __init__(self, base_estimator, n_estimators=32, random_state=0, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
+        self.power = power
+        self.label_shift = label_shift
+        self.feature_shift = feature_shift
+        self.n_jobs = n_jobs
     
     def fit(self, X, y):
         self.n_features_ = X.shape[1]
         self.n_classes_ = len(np.unique(y))
-        shifts = list(itertools.product(np.arange(self.n_classes_), np.arange(self.n_features_), [True, False]))
+        use_power_transformer = [True, False] if self.power else [False]
+        feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
+        label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
+        shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer))
         rng = random.Random(self.random_state)
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
+        n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
+            
         for label_shift, feature_shift, use_power_transformer in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             if use_power_transformer:
                 # remove zero-variance features to avoid division by zero
                 estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()), ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
             estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
-        self.vc_ = VotingClassifier(estimators, voting='soft')
+        self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
         self.vc_.fit(X, y)
         return self
     
