@@ -53,7 +53,7 @@ def _encode_y(y):
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None):
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
@@ -64,6 +64,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.layernorm = layernorm
         self.weight_decay = weight_decay
         self.batch_size = batch_size
+        self.epoch_callback = epoch_callback
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
         model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
@@ -88,6 +89,8 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
                 if epoch % 10 == 0 and self.verbose:
                     loss, current = np.mean(losses), (batch + 1) * len(X)
                     print(f"epoch: {epoch}  loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                if self.epoch_callback is not None:
+                    self.epoch_callback(model, epoch, loss)
         except KeyboardInterrupt:
             pass
         self.model_ = model
