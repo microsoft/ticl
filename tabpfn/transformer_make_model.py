@@ -247,6 +247,8 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
                                                    normalize_with_sqrt=False)
+    if X_train.shape[1] > 100:
+        raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
     
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])

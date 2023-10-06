@@ -7,7 +7,7 @@ from torch import nn
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import get_cosine_schedule_with_warmup
+from tabpfn.utils import get_cosine_schedule_with_warmup, ReduceLROnSpike
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import lr_scheduler
@@ -103,7 +103,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
-          learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_splike=False
+          learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -149,6 +149,9 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=1)])
         else:
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
+        
+        if reduce_lr_on_spike:
+            scheduler = lr_scheduler.ChainedScheduler([scheduler, ReduceLROnSpike(optimizer, patience=10, factor=0.5, min_lr=1e-10, verbose=True)])
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1

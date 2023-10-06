@@ -400,7 +400,7 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
     return long_df
 
 
-class ReduceLROnHighError:
+class ReduceLROnSpike:
     """Reduce learning rate when a metric has bounced up.
 
     Args:
@@ -465,9 +465,10 @@ class ReduceLROnHighError:
         
 
         if np.abs(np.mean(self.recent_losses) - current) > np.std(self.recent_losses):
-            print("That loss looks bad!")
-            print("Recent losses:", self.recent_losses)
-            print("Current loss:", current)
+            if self.verbose:
+                print("That loss looks bad!")
+                print("Recent losses:", self.recent_losses)
+                print("Current loss:", current)
             self._reduce_lr(epoch)
             self.recent_losses = []
         else:
