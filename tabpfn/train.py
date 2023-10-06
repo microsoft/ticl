@@ -151,7 +151,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
         
         if reduce_lr_on_spike:
-            scheduler = lr_scheduler.ChainedScheduler([scheduler, ReduceLROnSpike(optimizer, patience=10, factor=0.5, min_lr=1e-10, verbose=True)])
+            scheduler = lr_scheduler.ChainedScheduler([scheduler, ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, verbose=True)])
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1
