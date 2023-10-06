@@ -424,7 +424,7 @@ class ReduceLROnSpike:
     """
 
     def __init__(self, optimizer, mode='min', factor=0.1, smoothing=10,
-                 min_lr=0, verbose=False):
+                 min_lr=0, verbose=False, eps=1e-8):
 
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
@@ -445,6 +445,7 @@ class ReduceLROnSpike:
         self.smoothing = smoothing
         self.verbose = verbose
         self.mode = mode
+        self.eps = eps
         self.last_epoch = 0
         self.recent_losses = []
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
