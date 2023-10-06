@@ -265,22 +265,5 @@ def get_batch(batch_size, seq_len, num_features, get_batch, device, hyperparamet
 
     return x, y, y_
 
-# num_features_used = num_features_used_sampler()
-# prior_outputscale = prior_outputscale_sampler()
-# prior_lengthscale = prior_lengthscale_sampler()
-#
-# x, sample = normalize_data(x), normalize_data(sample)
-#
-# if is_binary_classification:
-#     sample = (sample > torch.median(sample, dim=0)[0]).float()
-#
-# if normalize_by_used_features:
-#     x = normalize_by_used_features_f(x, num_features_used, num_features)
-#
-# # # if is_binary_classification and order_y:
-# # #     x, sample = order_by_y(x, sample)
-# #
-# # Append empty features if enabled
-# x = torch.cat([x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
 DataLoader = get_batch_to_dataloader(get_batch)

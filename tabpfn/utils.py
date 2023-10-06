@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 from scipy.signal import convolve, windows
 
+from torch.optim.optimizer import Optimizer
+
 
 # copied from huggingface
 def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, num_cycles=0.5, last_epoch=-1):
@@ -396,3 +398,96 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
     long_df['time_hours'] = long_df.time / 3600
     long_df['time_days'] = long_df.time_hours / 24
     return long_df
+
+
+class ReduceLROnHighError:
+    """Reduce learning rate when a metric has bounced up.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        mode (str): One of `min`, `max`. In `min` mode, lr will
+            be reduced when the quantity monitored has stopped
+            decreasing; in `max` mode it will be reduced when the
+            quantity monitored has stopped increasing. Default: 'min'.
+        factor (float): Factor by which the learning rate will be
+            reduced. new_lr = lr * factor. Default: 0.1.
+        smoothing (int): Number of epochs with over which to smooth recent performance.
+            Default: 10.
+        min_lr (float or list): A scalar or a list of scalars. A
+            lower bound on the learning rate of all param groups
+            or each group respectively. Default: 0.
+        eps (float): Minimal decay applied to lr. If the difference
+            between new and old lr is smaller than eps, the update is
+            ignored. Default: 1e-8.
+        verbose (bool): If ``True``, prints a message to stdout for
+            each update. Default: ``False``.
+    """
+
+    def __init__(self, optimizer, mode='min', factor=0.1, smoothing=10,
+                 min_lr=0, eps=1e-8, verbose=False):
+
+        if factor >= 1.0:
+            raise ValueError('Factor should be < 1.0.')
+        self.factor = factor
+
+        # Attach optimizer
+        if not isinstance(optimizer, Optimizer):
+            raise TypeError(f'{type(optimizer).__name__} is not an Optimizer')
+        self.optimizer = optimizer
+
+        if isinstance(min_lr, (list, tuple)):
+            if len(min_lr) != len(optimizer.param_groups):
+                raise ValueError(f"expected {len(optimizer.param_groups)} min_lrs, got {len(min_lr)}")
+            self.min_lrs = list(min_lr)
+        else:
+            self.min_lrs = [min_lr] * len(optimizer.param_groups)
+
+        self.smoothing = smoothing
+        self.verbose = verbose
+        self.mode = mode
+        self.threshold = threshold
+        self.threshold_mode = threshold_mode
+        self.eps = eps
+        self.last_epoch = 0
+        self.recent_losses = []
+        self._init_is_better(mode=mode, threshold=threshold,
+                             threshold_mode=threshold_mode)
+        self._reset()
+
+    def step(self, metrics):
+        # convert `metrics` to float, in case it's a zero-dim Tensor
+        current = float(metrics)
+        epoch = self.last_epoch + 1
+        self.last_epoch = epoch
+        if len(self.recent_losses) < self.smoothing:
+            self.recent_losses.append(current)
+            return
+        
+
+        if np.abs(np.mean(self.recent_losses) - current) > np.std(self.recent_losses):
+            print("That loss looks bad!")
+            print("Recent losses:", self.recent_losses)
+            print("Current loss:", current)
+            self._reduce_lr(epoch)
+            self.recent_losses = []
+        else:
+            self.recent_loses = self.recent_losses[1:] + [current]
+
+        self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
+
+    def _reduce_lr(self, epoch):
+        for i, param_group in enumerate(self.optimizer.param_groups):
+            old_lr = float(param_group['lr'])
+            new_lr = max(old_lr * self.factor, self.min_lrs[i])
+            if old_lr - new_lr > self.eps:
+                param_group['lr'] = new_lr
+                if self.verbose:
+                    epoch_str = ("%.2f" if isinstance(epoch, float) else
+                                 "%.5d") % epoch
+                    print(f'Epoch {epoch_str}: reducing learning rate of group {i} to {new_lr:.4e}.')
+
+    def state_dict(self):
+        return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
+
+    def load_state_dict(self, state_dict):
+        self.__dict__.update(state_dict)
