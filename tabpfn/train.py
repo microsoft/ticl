@@ -68,20 +68,12 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
                 loss = loss / aggregate_k_gradients
 
-            #if scaler: loss = scaler.scale(loss)
             loss.backward()
 
             if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
-                #if scaler: scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
-                try:
-                 #   if scaler:
-                 #       scaler.step(optimizer)
-                 #       scaler.update()
-                 #   else:
-                        optimizer.step()
-                except:
-                    print("Invalid optimization step encountered")
+                optimizer.step()
+
                 optimizer.zero_grad()
 
             step_time = time.time() - before_forward
@@ -214,7 +206,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
             scheduler.step()
-            spike_scheduler.step(metrics=total_loss)
+            if spike_scheduler is not None:
+                spike_scheduler.step(metrics=total_loss)
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
                 model.learning_rates.append(last_lr)
