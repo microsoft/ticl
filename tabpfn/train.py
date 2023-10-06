@@ -103,7 +103,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
-          learning_rate_schedule='cosine', lr_decay=0.99
+          learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_splike=False
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -137,7 +137,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
 
     dl.model = model
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, betas=(adam_beta1, 0.999))
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
     if scheduler is None:
@@ -152,6 +152,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1
+
     scaler = GradScaler() if train_mixed_precision else None
 
     # check that everything uses up-to-date APIs

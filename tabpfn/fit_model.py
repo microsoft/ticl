@@ -105,12 +105,14 @@ def main(argv):
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
     parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', action='store_true')
+    parser.add_argument('--adam-beta1', default=0.9, type=float)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', default=0.99, type=float)
     parser.add_argument('--num-latents', default=512, type=int)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
+    parser.add_argument('--reduce-lr-on-spike', action='store_true')
     parser.add_argument('--save-every', default=10, type=int)
 
     args = parser.parse_args(argv)
@@ -146,6 +148,8 @@ def main(argv):
     config['lr_decay'] = args.lr_decay
     config['perceiver_large_dataset'] = args.perceiver_large_dataset
     config['num_latents'] = args.num_latents
+    config['reduce_lr_on_spike'] = args.reduce_lr_on_spike
+    config['adam_beta1'] = args.adam_beta1
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding

@@ -106,6 +106,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['learning_rate_schedule'] = config.get('learning_rate_schedule', 'cosine')
     config['warmup_epochs'] = config.get('warmup_epochs', 20)
     config['num_latents'] = config.get('num_latents', 512)
+    config['reduce_lr_on_splike'] = config.get('reduce_lr_on_splike', False)
+    config['adam_beta1'] = config.get('adam_beta1', 0.9)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -148,6 +150,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   , lr=config['lr']
                   , learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99)
                   , verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
-                  weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False))
+                  weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False),
+                  reduce_lr_on_splike=config['reduce_lr_on_splike'], adam_beta1=config['adam_beta1']
+                  )
 
     return model
