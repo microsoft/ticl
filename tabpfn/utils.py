@@ -424,7 +424,7 @@ class ReduceLROnSpike:
     """
 
     def __init__(self, optimizer, mode='min', factor=0.1, smoothing=10,
-                 min_lr=0, eps=1e-8, verbose=False):
+                 min_lr=0, verbose=False):
 
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
@@ -445,14 +445,8 @@ class ReduceLROnSpike:
         self.smoothing = smoothing
         self.verbose = verbose
         self.mode = mode
-        self.threshold = threshold
-        self.threshold_mode = threshold_mode
-        self.eps = eps
         self.last_epoch = 0
         self.recent_losses = []
-        self._init_is_better(mode=mode, threshold=threshold,
-                             threshold_mode=threshold_mode)
-        self._reset()
 
     def step(self, metrics):
         # convert `metrics` to float, in case it's a zero-dim Tensor
