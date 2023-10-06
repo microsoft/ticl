@@ -140,6 +140,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, betas=(adam_beta1, 0.999))
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
+    spike_scheduler = None
     if scheduler is None:
         if learning_rate_schedule == 'cosine':
             scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
@@ -151,7 +152,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
         
         if reduce_lr_on_spike:
-            scheduler = lr_scheduler.ChainedScheduler([scheduler, ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, verbose=True)])
+            spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, verbose=True)
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1
@@ -180,8 +181,10 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     val_score = dl.validate(model)
             else:
                 val_score = None
-
-            last_lr = scheduler.get_last_lr()[0]
+            if spike_scheduler is not None:
+                last_lr = spike_scheduler.get_last_lr()[0]
+            else:
+                last_lr = scheduler.get_last_lr()[0]
 
             if verbose:
                 print('-' * 89)
@@ -210,7 +213,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     aggregate_k_gradients *= 2
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-            scheduler.step(metrics=total_loss)
+            scheduler.step()
+            spike_scheduler.step(metrics=total_loss
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
                 model.learning_rates.append(last_lr)
