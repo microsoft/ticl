@@ -447,6 +447,8 @@ class ReduceLROnSpike:
         self.mode = mode
         self.last_epoch = 0
         self.recent_losses = []
+        self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
+
 
     def step(self, metrics):
         # convert `metrics` to float, in case it's a zero-dim Tensor
@@ -486,7 +488,7 @@ class ReduceLROnSpike:
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
-        
+
     def get_last_lr(self):
         """ Return last computed learning rate by current scheduler.
         """
