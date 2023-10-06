@@ -210,7 +210,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     aggregate_k_gradients *= 2
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-            scheduler.step()
+            scheduler.step(metrics=total_loss)
             # stepping with wallclock time based scheduler
             if epoch_callback is not None and rank == 0:
                 model.learning_rates.append(last_lr)
