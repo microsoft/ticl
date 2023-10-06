@@ -74,6 +74,14 @@ def test_train_special_token():
     assert count_parameters(model) == 1544650
     assert isinstance(model, TransformerModelMakeMLP)
 
+def test_train_reduce_on_spike():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        loss, model, *_ = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', '-A'])
+    assert loss == 2.4132816791534424
+    assert count_parameters(model) == 1544650
+    assert isinstance(model, TransformerModelMakeMLP)
+
 def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
