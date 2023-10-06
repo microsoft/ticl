@@ -240,9 +240,20 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 import torch
 import random
 from tqdm import tqdm
-def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None):
+def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
     from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+    from sklearn.pipeline import make_pipeline
+    from sklearn.feature_selection import SelectKBest
+    from sklearn.impute import SimpleImputer
 
+    if onehot:
+        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe.fit(x)                        
+        x, test_x = ohe.transform(x), ohe.transform(test_x)
+        if x.shape[1] > 100:
+            skb = SelectKBest(k=100).fit(x, y)
+            x, test_x = skb.transform(x), skb.transform(test_x)
+    
     if classifier is None:
       classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
     tick = time.time()      
