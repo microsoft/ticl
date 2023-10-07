@@ -427,7 +427,7 @@ class ReduceLROnSpike:
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
 
-    #def get_last_lr(self):
-    #    """ Return last computed learning rate by current scheduler.
-    #    """
-    #    return self._last_lr
+    def get_last_lr(self):
+       """ Return last computed learning rate by current scheduler.
+       """
+       return self._last_lr
