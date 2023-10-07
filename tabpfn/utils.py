@@ -394,19 +394,18 @@ class ReduceLROnSpike:
         self.last_epoch = epoch
         if len(self.recent_losses) < self.smoothing:
             self.recent_losses.append(current)
-            return
-        
-        sign = -1 if self.mode == 'min' else 1
-
-        if np.mean(self.recent_losses) < current + sign * np.std(self.recent_losses):
-            if self.verbose:
-                print("That loss looks bad!")
-                print("Recent losses:", self.recent_losses)
-                print("Current loss:", current)
-            self._reduce_lr(epoch)
-            self.recent_losses = []
         else:
-            self.recent_losses = self.recent_losses[1:] + [current]
+            sign = -1 if self.mode == 'min' else 1
+
+            if np.mean(self.recent_losses) < current + sign * np.std(self.recent_losses):
+                if self.verbose:
+                    print("That loss looks bad!")
+                    print("Recent losses:", self.recent_losses)
+                    print("Current loss:", current)
+                self._reduce_lr(epoch)
+                self.recent_losses = []
+            else:
+                self.recent_losses = self.recent_losses[1:] + [current]
 
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
 
