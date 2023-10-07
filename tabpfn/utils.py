@@ -9,77 +9,13 @@ import re
 
 import torch
 from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
+
 import numpy as np
 import pandas as pd
 from scipy.signal import convolve, windows
 
 from torch.optim.optimizer import Optimizer
 
-
-# copied from huggingface
-def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, num_cycles=0.5, last_epoch=-1):
-    """ Create a schedule with a learning rate that decreases following the
-    values of the cosine function between 0 and `pi * cycles` after a warmup
-    period during which it increases linearly between 0 and 1.
-    """
-
-    def lr_lambda(current_step):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-        progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
-
-    return LambdaLR(optimizer, lr_lambda, last_epoch)
-
-# copied from huggingface
-def get_restarting_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, steps_per_restart, num_cycles=0.5, last_epoch=-1):
-    assert num_training_steps % steps_per_restart == 0
-
-    def inner_lr_lambda(current_step, num_warmup_steps, num_training_steps):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-        progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
-
-    def lr_lambda(current_step):
-        inner_step = current_step % steps_per_restart
-        return inner_lr_lambda(inner_step,
-                               num_warmup_steps if current_step < steps_per_restart else 0,
-                               steps_per_restart
-                               )
-
-
-    return LambdaLR(optimizer, lr_lambda, last_epoch)
-
-# copied from huggingface
-def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
-    """
-    Create a schedule with a learning rate that decreases linearly from the initial lr set in the optimizer to 0, after
-    a warmup period during which it increases linearly from 0 to the initial lr set in the optimizer.
-
-    Args:
-        optimizer (:class:`~torch.optim.Optimizer`):
-            The optimizer for which to schedule the learning rate.
-        num_warmup_steps (:obj:`int`):
-            The number of steps for the warmup phase.
-        num_training_steps (:obj:`int`):
-            The total number of training steps.
-        last_epoch (:obj:`int`, `optional`, defaults to -1):
-            The index of the last epoch when resuming training.
-
-    Return:
-        :obj:`torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
-    """
-
-    def lr_lambda(current_step: int):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-        return max(
-            0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
-        )
-
-    return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 def get_openai_lr(transformer_model):
@@ -460,8 +396,9 @@ class ReduceLROnSpike:
             self.recent_losses.append(current)
             return
         
+        sign = -1 if self.mode == 'min' else 1
 
-        if np.abs(np.mean(self.recent_losses) - current) > np.std(self.recent_losses):
+        if np.mean(self.recent_losses) < current + sign * np.std(self.recent_losses):
             if self.verbose:
                 print("That loss looks bad!")
                 print("Recent losses:", self.recent_losses)
@@ -469,7 +406,7 @@ class ReduceLROnSpike:
             self._reduce_lr(epoch)
             self.recent_losses = []
         else:
-            self.recent_loses = self.recent_losses[1:] + [current]
+            self.recent_losses = self.recent_losses[1:] + [current]
 
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
 
@@ -482,7 +419,7 @@ class ReduceLROnSpike:
                 if self.verbose:
                     epoch_str = ("%.2f" if isinstance(epoch, float) else
                                  "%.5d") % epoch
-                    print(f'Epoch {epoch_str}: reducing learning rate of group {i} to {new_lr:.4e}.')
+                    print(f'Epoch {epoch_str}: reducing learning rate of group {i} from {old_lr:.4e} to {new_lr:.4e}.')
 
     def state_dict(self):
         return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
@@ -490,7 +427,7 @@ class ReduceLROnSpike:
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
 
-    def get_last_lr(self):
-        """ Return last computed learning rate by current scheduler.
-        """
-        return self._last_lr
+    #def get_last_lr(self):
+    #    """ Return last computed learning rate by current scheduler.
+    #    """
+    #    return self._last_lr

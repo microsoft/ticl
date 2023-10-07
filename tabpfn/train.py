@@ -7,10 +7,11 @@ from torch import nn
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import get_cosine_schedule_with_warmup, ReduceLROnSpike
+from tabpfn.utils import ReduceLROnSpike
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
 from torch import nn
 
 
@@ -135,14 +136,16 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     spike_scheduler = None
     if scheduler is None:
         if learning_rate_schedule == 'cosine':
-            scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_epochs, epochs)
+            base_scheduler = CosineAnnealingLR(optimizer, T_max=epochs - warmup_epochs)
         elif learning_rate_schedule == 'exponential':
-            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=lr_decay)])
+            base_scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=lr_decay)
         elif learning_rate_schedule == 'constant':
-            scheduler = lr_scheduler.ChainedScheduler([lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs), lr_scheduler.ExponentialLR(optimizer, gamma=1)])
+            base_scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=1)
         else:
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
-        
+        # add linear warmup to scheduler
+        scheduler = SequentialLR(optimizer, [LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs),
+                                             base_scheduler], milestones=[warmup_epochs])
         if reduce_lr_on_spike:
             spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, verbose=True)
         start_epoch = 1
