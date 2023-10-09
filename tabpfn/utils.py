@@ -397,7 +397,7 @@ class ReduceLROnSpike:
         else:
             sign = -1 if self.mode == 'min' else 1
 
-            if np.mean(self.recent_losses) < current + sign * np.std(self.recent_losses):
+            if np.mean(self.recent_losses) < current + 2 * sign * np.std(self.recent_losses):
                 if self.verbose:
                     print("That loss looks bad!")
                     print("Recent losses:", self.recent_losses)
