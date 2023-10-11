@@ -14,7 +14,7 @@ config_space = {
     'hidden-size': lograndint(4, 2048),
     'dropout-rate': uniform(0, 1),
     'weight_decay': loguniform(1e-7, 1e-1),
-    'one-hot': choice([True, False]),
+    'onehot': choice([True, False]),
     'epochs': 10000,
 }
 

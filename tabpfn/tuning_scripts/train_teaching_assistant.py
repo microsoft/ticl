@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float)
     parser.add_argument('--onehot', type=bool)
 
-    args, _ = parser.parse_args()
+    args = parser.parse_args()
     report = Reporter()
 
     #x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
