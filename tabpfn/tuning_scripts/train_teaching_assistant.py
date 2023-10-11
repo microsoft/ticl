@@ -32,16 +32,18 @@ if __name__ == '__main__':
     #z = (x + y) % 7
 
     device = "cpu"
-    torch.set_num_threads(2)
+    torch.set_num_threads(1)
 
     #labels = z
     #data = np.c_[x, y]
-    data, labels = pmlb.fetch_data('satimage', return_X_y=True, local_cache_dir='/tmp/pmlb')
-    labels = LabelEncoder().fit_transform(labels)
+    from sklearn.datasets import fetch_openml
+    df = fetch_openml("teachingAssistant").frame
+    labels = LabelEncoder().fit_transform(df['class'])
+    data = df[['ID']].astype(int)
+
     if args.onehot:
         data = OneHotEncoder(sparse=False).fit_transform(data)
     X_train, X_test, y_train, y_test = train_test_split(data, labels, random_state=0)
-
     X_test_tensor = torch.tensor(X_test, device=device, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test, device=device)
 

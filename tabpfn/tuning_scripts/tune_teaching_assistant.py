@@ -3,7 +3,7 @@ import logging
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.backend import LocalBackend
 from syne_tune.config_space import randint, loguniform, uniform, lograndint, choice
-from syne_tune.optimizer.baselines import ASHA, MOBSTER
+from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -19,8 +19,8 @@ config_space = {
 }
 
 tuner = Tuner(
-    trial_backend=LocalBackend(entry_point='train_parity.py'),
-    scheduler=MOBSTER(
+    trial_backend=LocalBackend(entry_point='train_teaching_assistant.py'),
+    scheduler=HyperTune(
         config_space,
         metric='accuracy',
         resource_attr='epoch',
@@ -29,8 +29,8 @@ tuner = Tuner(
         mode='max',
     ),
     results_update_interval=5,
-    stop_criterion=StoppingCriterion(max_wallclock_time=30 *60),
+    stop_criterion=StoppingCriterion(max_wallclock_time=10 *60),
     n_workers=16,  # how many trials are evaluated in parallel
-    tuner_name="satimage-first-try"
+    tuner_name="teaching-assistant-id-only-hyper-tune"
 )
 tuner.run()
