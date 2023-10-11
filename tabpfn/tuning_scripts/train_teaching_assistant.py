@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout-rate', type=float)
     parser.add_argument('--weight_decay', type=float)
     parser.add_argument('--onehot', type=bool)
+    parser.add_argument('--st_checkpoint_dir', type=str, default=None)
 
     args = parser.parse_args()
     report = Reporter()
