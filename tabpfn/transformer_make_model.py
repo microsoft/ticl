@@ -36,10 +36,10 @@ class MLPModelPredictor(nn.Module):
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         if self.special_token:
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
-        
+
         output = self.inner_forward(train_x)
         (b1, w1), *layers = self.decoder(output)
-        
+
         if self.no_double_embedding:
             x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
             h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
@@ -47,9 +47,9 @@ class MLPModelPredictor(nn.Module):
             h = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
 
         if self.decoder.weight_embedding_rank is not None:
-            h = torch.matmul(h, self.decoder.shared_weights[0]) 
+            h = torch.matmul(h, self.decoder.shared_weights[0])
         h = h + b1
-        
+
         for i, (b, w) in enumerate(layers):
             h = torch.relu(h)
             h = (h.unsqueeze(-1) * w.unsqueeze(0)).sum(2)
@@ -57,7 +57,7 @@ class MLPModelPredictor(nn.Module):
                 # last layer has no shared weights
                 h = torch.matmul(h, self.decoder.shared_weights[i + 1])
             h = h + b
-        
+
         if h.isnan().all():
             print("NAN")
             import pdb; pdb.set_trace()
@@ -176,8 +176,8 @@ class TransformerModelMaker(MLPModelPredictor):
     #     if result.isnan().all():
     #         import pdb; pdb.set_trace()
     #     return result
-    
-    
+
+
 class TransformerModelMakeMLP(TransformerModelMaker):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
@@ -200,7 +200,7 @@ class TransformerModelMakeMLP(TransformerModelMaker):
 
     def inner_forward(self, train_x):
         return self.transformer_encoder(train_x)
-        
+
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
     max_features = 100
@@ -216,7 +216,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
                                                    normalize_with_sqrt=False)
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
-    
+
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
@@ -250,7 +250,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
-    
+
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
@@ -283,7 +283,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
         w1_data_space_prenorm  = torch.matmul(encoder_weight[:, :n_features].T, w1)
         b1_data_space = torch.matmul(encoder_bias, w1) + b1
-    
+
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
 
     if model.decoder.weight_embedding_rank is not None:
@@ -294,20 +294,20 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     for i, (b, w) in enumerate(layers[:-1]):
         if model.decoder.weight_embedding_rank is not None:
             w = torch.matmul(w, model.decoder.shared_weights[i + 1])
-        layers_result.append((b, w))
-    
+        layers_result.append((b.squeeze(), w.squeeze()))
+
     # remove extra classes on output layer
     layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
 
     if inference_device == "cpu":
         def detach(x):
-            return x.squeeze().detach().cpu().numpy()
+            return x.detach().cpu().numpy()
     else:
         def detach(x):
-            return x.squeeze().detach()
-    
+            return x.detach()
+
     return [(detach(b), detach(w)) for (b, w) in layers_result]
-    
+
 def predict_with_linear_model(X_train, X_test, weights, biases):
     mean = X_train.mean(axis=0)
     std = X_train.std(axis=0, ddof=1) + .000001
@@ -332,7 +332,7 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
     eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
                                                    normalize_with_sqrt=False)
     x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((eval_xs.shape[0], 100 - eval_xs.shape[1]))]))
-    
+
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
@@ -344,7 +344,7 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
 
     total_weights = torch.matmul(encoder_weight[:, :n_features].T, linear_model_coefs[0, :-1, :n_classes])
     total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
-                      
+
     pred_simple = torch.matmul(model.encoder(x_all_torch),  linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
     probs =  torch.nn.functional.softmax(pred_simple/ 0.8, dim=1)
     return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy(), probs[eval_position:]
@@ -357,7 +357,7 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu"):
         self.path = path or "models_diff/prior_diff_real_checkpoint_predict_linear_coefficients_nlayer_6_multiclass_04_11_2023_01_26_19_n_0_epoch_94.cpkt"
         self.device = device
-        
+
     def fit(self, X, y):
         self.X_train_ = X
         le = LabelEncoder()
@@ -369,10 +369,10 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         self.biases_ = biases
         self.classes_ = le.classes_
         return self
-        
+
     def predict_proba(self, X):
         return predict_with_linear_model(self.X_train_, X, self.weights_, self.biases_)
-    
+
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
@@ -420,7 +420,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device
-        
+
     def fit(self, X, y):
         self.X_train_ = X
         le = LabelEncoder()
@@ -441,10 +441,10 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
             self.parameters_  = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
         return self
-        
+
     def predict_proba(self, X):
         return predict_with_mlp_model(self.X_train_, X, self.parameters_, inference_device=self.inference_device)
-    
+
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
@@ -452,7 +452,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
 class PermutationsMeta(ClassifierMixin, BaseEstimator):
     def __init__(self, base_estimator):
         self.base_estimator = base_estimator
-    
+
     def fit(self, X, y):
         estimators = []
         for i in range(len(np.unique(y))):
@@ -464,7 +464,7 @@ class PermutationsMeta(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         return self.vc_.predict_proba(X)
-    
+
     def predict(self, X):
         return self.vc_.predict(X)
 
@@ -495,13 +495,13 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
         self.base_estimator_ = clone(self.base_estimator)
         self.base_estimator_.fit(X, np.mod(y + self.label_shift, self.n_classes_))
         return self
-    
+
     def predict_proba(self, X):
         X = self._feature_shift(X)
         if self.transformer is not None:
             X = self.transformer.transform(X)
         return self.base_estimator_.predict_proba(X)[:, self.class_indices_]
-    
+
     def predict(self, X):
         return self.predict_proba(X).argmax(axis=1)
 
@@ -514,7 +514,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.label_shift = label_shift
         self.feature_shift = feature_shift
         self.n_jobs = n_jobs
-    
+
     def fit(self, X, y):
         self.n_features_ = X.shape[1]
         self.n_classes_ = len(np.unique(y))
@@ -526,7 +526,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
         n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
-            
+
         for label_shift, feature_shift, use_power_transformer in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             if use_power_transformer:
@@ -536,7 +536,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
         self.vc_.fit(X, y)
         return self
-    
+
     @property
     def device(self):
         return self.base_estimator.device
@@ -546,7 +546,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         probs =  self.vc_.predict_proba(X)
         probs /= probs.sum(axis=1).reshape(-1, 1)
         return probs
-    
+
     def predict(self, X):
         return self.vc_.predict(X)
 

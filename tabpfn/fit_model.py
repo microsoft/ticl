@@ -302,7 +302,9 @@ def main(argv):
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")
-    return total_loss, model, dl, config, base_path, model_string, epoch
+    return {'loss': total_loss, 'model': model, 'dataloader': dl,
+            'config': config, 'base_path': base_path,
+            'model_string': model_string, 'epoch': epoch}
 
 if __name__ == "__main__":
     main(sys.argv[1:])
