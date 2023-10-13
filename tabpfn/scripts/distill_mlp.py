@@ -14,20 +14,28 @@ from warnings import filterwarnings, catch_warnings
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, n_features=784, n_classes=10, hidden_size=128, n_layers=2, dropout_rate=0.0, layernorm=False):
+    def __init__(self, n_features=784, n_classes=10, hidden_size=128, n_layers=2, dropout_rate=0.0, layernorm=False, nonlinearity='relu'):
         super().__init__()
         self.n_features = n_features
         self.n_classes = n_classes
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.layernorm = layernorm
+        self.nonlinearity = nonlinearity
+        if self.nonlinearity == 'tanh':
+            nl = nn.Tanh
+        elif self.nonlinearity == 'relu':
+            nl = nn.ReLU
+        else:
+            raise ValueError(f"Unknown nonlinearity {self.nonlinearity}")
         # create a list of linear and activation layers
-        layers = [nn.Linear(n_features, hidden_size), nn.ReLU()]
+        layers = [nn.Linear(n_features, hidden_size), nl()]
         # add more hidden layers with optional dropout
+
         for _ in range(n_layers - 1):
             if dropout_rate > 0:
                 layers.append(nn.Dropout(dropout_rate))
-            layers.extend([nn.Linear(hidden_size, hidden_size), nn.ReLU()])
+            layers.extend([nn.Linear(hidden_size, hidden_size), nl()])
             if layernorm:
                 layers.append(nn.LayerNorm(hidden_size))
         # add the output layer
@@ -53,7 +61,7 @@ def _encode_y(y):
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None):
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None, nonlinearity='relu'):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
@@ -65,10 +73,12 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.weight_decay = weight_decay
         self.batch_size = batch_size
         self.epoch_callback = epoch_callback
+        self.nonlinearity = nonlinearity
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
         model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
-                              hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm)
+                              hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm,
+                              nonlinearity=self.nonlinearity)
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
@@ -90,7 +100,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
                     loss, current = np.mean(losses), (batch + 1) * len(X)
                     print(f"epoch: {epoch}  loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
                 if self.epoch_callback is not None:
-                    self.epoch_callback(model, epoch, loss)
+                    self.epoch_callback(model, epoch, np.mean(losses))
         except KeyboardInterrupt:
             pass
         self.model_ = model

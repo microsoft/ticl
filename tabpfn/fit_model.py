@@ -114,6 +114,7 @@ def main(argv):
     parser.add_argument('--pre-norm', action='store_true')
     parser.add_argument('--reduce-lr-on-spike', action='store_true')
     parser.add_argument('--save-every', default=10, type=int)
+    parser.add_argument('--spike-tolerance', default=4, type=int)
 
     args = parser.parse_args(argv)
     if args.gpu_id is not None:
@@ -150,12 +151,13 @@ def main(argv):
     config['num_latents'] = args.num_latents
     config['reduce_lr_on_spike'] = args.reduce_lr_on_spike
     config['adam_beta1'] = args.adam_beta1
+    config['spike_tolerance'] = args.spike_tolerance
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
     config['hid_factor'] = 2
     config['nhead'] = config['emsize'] // 128
-        
+
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
     config['epochs'] = args.epochs
     config['weight_embedding_rank'] = args.weight_embedding_rank
@@ -166,9 +168,9 @@ def main(argv):
     else:
         config['max_eval_pos'] = 1000
         config['bptt'] = 1024+128
-        
+
     config['decoder_embed_dim'] = args.decoder_em_size
-    config['decoder_hidden_size'] = args.decoder_hidden_size 
+    config['decoder_hidden_size'] = args.decoder_hidden_size
     config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
     config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
@@ -177,7 +179,7 @@ def main(argv):
 
 
     config_sample = evaluate_hypers(config)
-        
+
     model_state, optimizer_state, scheduler = None, None, None
     if warm_start_weights is not None:
         model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
@@ -233,12 +235,12 @@ def main(argv):
                 f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
         except Exception as e:
             print(f'Failed to write to log file {log_file}: {e}')
-            
+
         if epoch != "on_exit":
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-        
+
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
                 file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
@@ -272,7 +274,7 @@ def main(argv):
 
     if socket.gethostname() == "amueller-tabpfn-4gpu":
         mlflow.set_tracking_uri("http://localhost:5000")
-    else:            
+    else:
         mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
     mlflow.set_experiment(args.experiment)
@@ -296,7 +298,7 @@ def main(argv):
                             , should_train=True
                             , verbose=1
                             , epoch_callback=save_callback, model_state=model_state, optimizer_state=optimizer_state, scheduler=scheduler,
-                            load_model_strict=args.continue_run or args.load_strict)    
+                            load_model_strict=args.continue_run or args.load_strict)
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")

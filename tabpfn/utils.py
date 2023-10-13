@@ -311,7 +311,7 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
         if pd.api.types.is_scalar(series):
             return series
         return series[skip:-skip-1]
-    
+
     dfs = []
     for name, losses in losses_dict.items():
         if smoother is not None:
@@ -327,7 +327,7 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
                                     "epoch": trim(np.arange(len(losses)), skip)})
         else:
             this_df = pd.DataFrame({"loss": losses, "learning_rate": lr_dict[name], "time": wallclock_dict[name], "epoch": np.arange(len(losses))})
-        
+
         this_df['run'] = name
         dfs.append(this_df)
     long_df = pd.concat(dfs)
@@ -355,12 +355,15 @@ class ReduceLROnSpike:
         eps (float): Minimal decay applied to lr. If the difference
             between new and old lr is smaller than eps, the update is
             ignored. Default: 1e-8.
+        tolerance (int): Multiple of std from recent data to be considered a spike.
         verbose (bool): If ``True``, prints a message to stdout for
             each update. Default: ``False``.
     """
 
     def __init__(self, optimizer, mode='min', factor=0.1, smoothing=10,
-                 min_lr=0, verbose=False, eps=1e-8):
+                 min_lr=0, verbose=False, tolerance=4, eps=1e-8):
+
+        print(f"spike tolerance {tolerance}")
 
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
@@ -382,6 +385,7 @@ class ReduceLROnSpike:
         self.verbose = verbose
         self.mode = mode
         self.eps = eps
+        self.tolerance = tolerance
         self.last_epoch = 0
         self.recent_losses = []
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
@@ -397,7 +401,7 @@ class ReduceLROnSpike:
         else:
             sign = -1 if self.mode == 'min' else 1
 
-            if np.mean(self.recent_losses) < current + 2 * sign * np.std(self.recent_losses):
+            if np.mean(self.recent_losses) < current + self.tolerance * sign * np.std(self.recent_losses):
                 if self.verbose:
                     print("That loss looks bad!")
                     print("Recent losses:", self.recent_losses)

@@ -96,7 +96,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
-          learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False
+          learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
+          spike_tolerance=4,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -147,7 +148,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         scheduler = SequentialLR(optimizer, [LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs),
                                              base_scheduler], milestones=[warmup_epochs])
         if reduce_lr_on_spike:
-            spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, verbose=True)
+            spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, tolerance=spike_tolerance, verbose=True)
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1
@@ -188,7 +189,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
                 print(
                     f' lr {last_lr} data time {time_to_get_batch:5.2f} step time {step_time:5.2f}'
-                    f' forward time {forward_time:5.2f}' 
+                    f' forward time {forward_time:5.2f}'
                     f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
                     + (f'val score {val_score}' if val_score is not None else ''))
                 print('-' * 89)
@@ -217,7 +218,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 model.losses.append(total_loss)
                 model.wallclock_times.append(time.time() - model.start_time)
                 epoch_callback(model, optimizer, scheduler, epoch)
-            
+
 
     except KeyboardInterrupt:
         pass
