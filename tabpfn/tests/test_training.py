@@ -24,6 +24,20 @@ def test_train_defaults():
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
+
+def test_train_synetune():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results= main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
+        assert results['epoch'] == 10
+        assert results['loss'] == 2.4132819175720215
+        assert count_parameters(results['model']) == 1544650
+        assert isinstance(results['model'], TransformerModelMakeMLP)
+        results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
+        assert results['epoch'] == 20
+        assert results['loss'] == 2.4132819175720215
+
+
 def test_train_reload():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

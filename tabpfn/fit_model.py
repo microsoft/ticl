@@ -226,7 +226,7 @@ def main(argv):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
+                if k in ['st_checkpoint_dir', 'run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')

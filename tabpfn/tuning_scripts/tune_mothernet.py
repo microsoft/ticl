@@ -29,7 +29,7 @@ config_space = {
 }
 
 tuner = Tuner(
-    trial_backend=LocalBackend(entry_point='fit_model.py -c'),
+    trial_backend=LocalBackend(entry_point='fit_model.py'),
     scheduler=MOBSTER(
         config_space,
         metric='accuracy',
