@@ -13,8 +13,8 @@ def count_parameters(model):
 
 # really tiny model for smoke tests
 # one step per epoch, no adapting batchsize, CPU, Mothernet
-TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment']
-TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment']
+TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment']
+TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment']
 
 def test_train_defaults():
     L.seed_everything(42)
@@ -33,12 +33,12 @@ def test_train_reload():
         assert results['loss'] == 2.6263158321380615
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
-        results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c'])
+        results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
         # epoch 3 didn't actually happen, but going through the training loop raises the counter by one...
         assert results_new['epoch'] == 3
         assert results_new['loss'] == np.inf
         assert results_new['base_path'] == results['base_path']
-        assert results_new['model_string'] == results['model_string']
+        assert results_new['model_string'].startswith(results['model_string'])
         for k, v in results['config'].items():
             # fixme num_classes really shouldn't be a callable in config
             if k not in ['warm_start_from', 'continue_old_config', 'num_classes', 'num_features_used']:
@@ -77,7 +77,7 @@ def test_train_special_token():
 def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', '-A'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike'])
     assert results['loss'] == 2.4132819175720215
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)

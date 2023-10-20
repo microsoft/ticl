@@ -3,6 +3,8 @@ import os
 import torch
 import mlflow
 import sys
+from pathlib import Path
+
 
 from tabpfn.scripts.model_builder import get_model, save_model
 from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
@@ -115,8 +117,21 @@ def main(argv):
     parser.add_argument('--reduce-lr-on-spike', action='store_true')
     parser.add_argument('--save-every', default=10, type=int)
     parser.add_argument('--spike-tolerance', default=4, type=int)
+    parser.add_argument('--st_checkpoint_dir', type=str, default=None)
+
 
     args = parser.parse_args(argv)
+
+    # handle syne-tune restarts
+    checkpoint_dir = args.st_checkpoint_dir
+    if checkpoint_dir is not None:
+        args.base_path = checkpoint_dir
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
+        if checkpoint_path.exists():
+            args.continue_run = True
+            args.load_file = checkpoint_path
+
     if args.gpu_id is not None:
         if args.use_cpu:
             raise ValueError("Can't use cpu and gpu at the same time")
