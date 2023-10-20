@@ -88,7 +88,7 @@ def main(argv):
     parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
     parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
     parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
-    parser.add_argument('-A', '--no-adaptive-batch-size', help='Wether to progressively increase effective batch size.', action='store_true')
+    parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=bool)
     parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
     parser.add_argument('-f', '--load-file', help='Warm start from this file')
     parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
@@ -137,7 +137,7 @@ def main(argv):
     config['aggregate_k_gradients'] = args.agg_gradients
     config['batch_size'] = args.batch_size
     config['model_maker'] = args.model_maker
-    config['adaptive_batch_size'] = not args.no_adaptive_batch_size
+    config['adaptive_batch_size'] = args.adaptive_batch_size
     config['weight_decay'] = args.weight_decay
     config['special_token'] = args.special_token
     config['device'] = device
