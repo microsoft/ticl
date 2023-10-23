@@ -109,6 +109,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['reduce_lr_on_spike'] = config.get('reduce_lr_on_spike', False)
     config['adam_beta1'] = config.get('adam_beta1', 0.9)
     config['spike_tolerance'] = config.get('spike_tolerance', 4)
+    config['stop_after_epochs'] = config.get('stop_after_epochs', None)
 
     config['eval_positions'] = [int(config['bptt'] * 0.95)]
     model_maker = config.get('model_maker', False)
@@ -143,7 +144,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     model = train(dl,
                   model, criterion=criterion,
                   optimizer_state=optimizer_state, scheduler=scheduler
-                  , epochs=epochs
+
+                  , epochs=epochs, stop_after_epochs=config['stop_after_epochs']
                   , warmup_epochs=config['warmup_epochs']
                   , gpu_device=device
                   , aggregate_k_gradients=config['aggregate_k_gradients']

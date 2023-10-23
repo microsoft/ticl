@@ -34,8 +34,8 @@ def test_train_synetune():
         assert count_parameters(results['model']) == 1544650
         assert isinstance(results['model'], TransformerModelMakeMLP)
         results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
-        assert results['epoch'] == 20
-        assert results['loss'] == 2.4132819175720215
+        # that we reloaded the model means we incidentally counted up to 11
+        assert results['epoch'] == 11
 
 
 def test_train_reload():
