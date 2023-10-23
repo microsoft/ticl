@@ -7,6 +7,9 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
+tuner_name = "mothernet-try-short-steps-time"
+
+
 # hyperparameter search space to consider
 config_space = {
     'em-size': choice([128, 256, 512, 1024]),
@@ -26,17 +29,19 @@ config_space = {
     'reduce-lr-on-spike': choice([True, False]),
     'save-every': 1,
     'spike-tolerance': randint(1, 10),
-    'experiment': 'synetune-mothernet-try-4',
+    'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
+    'num-steps': 128,
+    'stop-after-epochs': 4000,
 }
-tuner_name = "mothernet-try-4"
+
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='../fit_model.py'),
         scheduler=MOBSTER(
         config_space,
         metric='loss',
-        resource_attr='epoch',
-        max_resource_attr="epochs",
+        resource_attr='stop-after-epochs',
+        max_resource_attr="stop-after-epochs",
         search_options={'debug_log': False},
         mode='min',
         type="promotion",
@@ -45,8 +50,8 @@ tuner = Tuner(
     max_failures=1000,
     results_update_interval=60,
     print_update_interval=120,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
-    stop_criterion=StoppingCriterion(max_num_trials_started=36),
+    stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
+    #stop_criterion=StoppingCriterion(max_num_trials_started=36),
     n_workers=4,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,
     trial_backend_path=f"/datadrive/synetune/{tuner_name}/"

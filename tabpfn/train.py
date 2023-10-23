@@ -93,7 +93,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
-          epochs=10, lr=None, weight_decay=0.0, warmup_epochs=10,
+          epochs=10, stop_after_epochs=None, lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
@@ -161,6 +161,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     total_loss = float('inf')
     increased_batch_size = 0
     epoch = start_epoch
+    if stop_after_epochs is not None:
+        epochs = min(epochs, stop_after_epochs)
 
     try:
         for epoch in range(start_epoch, epochs + 1):

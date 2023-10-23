@@ -4,6 +4,7 @@ import torch
 import mlflow
 import sys
 from pathlib import Path
+from syne_tune import Reporter
 
 
 from tabpfn.scripts.model_builder import get_model, save_model
@@ -109,15 +110,16 @@ def main(argv):
     parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=bool)
     parser.add_argument('--adam-beta1', default=0.9, type=float)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
-    parser.add_argument('--lr-decay', default=0.99, type=float)
-    parser.add_argument('--num-latents', default=512, type=int)
+    parser.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
+    parser.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
-    parser.add_argument('--reduce-lr-on-spike', action='store_true')
+    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=True, type=bool)
     parser.add_argument('--save-every', default=10, type=int)
-    parser.add_argument('--spike-tolerance', default=4, type=int)
-    parser.add_argument('--st_checkpoint_dir', type=str, default=None)
+    parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
+    parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
+    parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
 
 
     args = parser.parse_args(argv)
@@ -132,6 +134,7 @@ def main(argv):
             args.continue_run = True
             args.load_file = checkpoint_path
 
+    device = "cuda"
     if args.gpu_id is not None:
         if args.use_cpu:
             raise ValueError("Can't use cpu and gpu at the same time")
@@ -190,6 +193,7 @@ def main(argv):
     config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
     config['continue_old_config'] = args.continue_run
+    config['stop_after_epochs'] = args.stop_after_epochs
     save_every = args.save_every
 
 
@@ -206,16 +210,24 @@ def main(argv):
             config_sample['device'] = device
             config_sample['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
+            config_sample['stop_after_epochs'] = args.stop_after_epochs
             if not args.restart_scheduler:
                 scheduler = old_scheduler
         else:
             print("WARNING warm starting with new settings")
             compare_dicts(config_sample, old_config, all=True)
 
+    report = Reporter()
+
+
     if args.continue_run:
-        model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
-        if args.create_new_run:
-            model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+        if checkpoint_dir is None:
+            model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
+            if args.create_new_run:
+                model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+        else:
+            with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
+                model_string = f.read()   
     else:
         model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
 
@@ -234,7 +246,9 @@ def main(argv):
         gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
         model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-
+        if checkpoint_dir is not None:
+            with open(f"{checkpoint_dir}/model_string.txt", 'w') as f:
+                f.write(model_string)
 
     def save_callback(model, optimizer, scheduler, epoch):
         if not hasattr(model, 'last_saved_epoch'):
@@ -254,10 +268,16 @@ def main(argv):
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+            report(epoch=epoch + 1, loss=model.losses[-1])
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
-                file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+                if checkpoint_dir is not None:
+                    if epoch == "on_exit":
+                        return
+                    file_name = f'{base_path}/checkpoint.mothernet'
+                else:
+                    file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
                 os.makedirs(f"{base_path}/models_diff", exist_ok=True)
                 disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
                 if disk_usage.free < 1024 * 1024 * 1024 * 2:
@@ -271,7 +291,7 @@ def main(argv):
                 config_sample['learning_rates'] = model.learning_rates
                 config_sample['losses'] = model.losses
                 config_sample['wallclock_times'] = model.wallclock_times
-
+                
                 save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
                 # remove last checkpoint
                 if epoch != "on_exit" and epoch - save_every > 0 and model.losses[-1] < 1:
@@ -292,10 +312,9 @@ def main(argv):
         mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
     mlflow.set_experiment(args.experiment)
-
     if args.continue_run and not args.create_new_run:
         # find run id via mlflow
-        run_ids = mlflow.search_runs(filter_string=f"run_name='{model_string}'")['run_id']
+        run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
         if len(run_ids) > 1:
             raise ValueError(f"Found more than one run with name {model_string}")
         run_id = run_ids.iloc[0]
@@ -304,7 +323,7 @@ def main(argv):
     else:
         run_args = {'run_name': model_string}
 
-    with mlflow.start_run(**run_args):
+    with mlflow.start_run(**run_args) as run:
         mlflow.log_param('hostname', socket.gethostname())
         mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         total_loss, model, dl, epoch = get_model(config_sample
