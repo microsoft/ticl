@@ -75,7 +75,7 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
         this_df = loss_df[loss_df[hue] == run]
         smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2  * extra_smoothing).mean().reset_index()
         if 'status' in this_df.columns and (this_df.status != "RUNNING").all():
-            fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1, opacity=.3))
+            fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1, opacity=.3, showlegend=False))
         else:
             fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1))
     fig.update_layout(height=800)
