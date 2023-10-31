@@ -22,16 +22,17 @@ config_space = {
     'num-predicted-hidden-layers': randint(1, 6),
     'weight-embedding-rank': logfinrange(lower=32, upper=512, size=5, cast_int=True),
     'predicted-hidden-layer-size': logfinrange(lower=32, upper=1024, size=6, cast_int=True),
-    'learning-rate-schedule': choice(['cosine', 'constant', 'exponential']),
+    'learning-rate-schedule': choice(['exponential']),
     'adam-beta1': uniform(0.8, 0.999),
-    'lr-decay': uniform(0.5, 1),
-    'reduce-lr-on-spike': choice([True, False]),
+    'lr-decay': uniform(0.90, 0.9999),
+    'reduce-lr-on-spike': choice([True]),
     'save-every': 1,
     'spike-tolerance': randint(1, 10),
     'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
-    'num-steps': 128,
 }
+early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
+
 
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='../fit_model.py'),
@@ -44,14 +45,16 @@ tuner = Tuner(
         mode='min',
         type="promotion",
         grace_period=5,
+        early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
+
     ),
     max_failures=1000,
     results_update_interval=60,
     print_update_interval=120,
     #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
-    n_workers=4,  # how many trials are evaluated in parallel
+    n_workers=2,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,
-    trial_backend_path=f"/datadrive/synetune/{tuner_name}/"
+    trial_backend_path=f"/synetune_checkpoints/{tuner_name}/"
 )
 tuner.run()
