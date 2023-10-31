@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "mothernet-short-steps-long-run"
+tuner_name = "mothernet-delete-checkpoints"
 
 
 # hyperparameter search space to consider
