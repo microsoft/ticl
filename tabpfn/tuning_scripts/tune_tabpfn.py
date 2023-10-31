@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "tabpfn-short-steps-long-run"
+tuner_name = "tabpfn-short-steps-long-run-delete-checkpoints"
 
 
 # hyperparameter search space to consider
@@ -30,6 +30,8 @@ config_space = {
     'num-steps': 128,
 }
 
+early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
+
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='../fit_model.py'),
         scheduler=MOBSTER(
@@ -41,6 +43,7 @@ tuner = Tuner(
         mode='min',
         type="promotion",
         grace_period=10,
+        early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
     ),
     max_failures=1000,
     results_update_interval=60,
@@ -49,6 +52,6 @@ tuner = Tuner(
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
     n_workers=4,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,
-    trial_backend_path=f"/datadrive/synetune/{tuner_name}/"
+    trial_backend_path=f"/synetune_checkpoints/{tuner_name}/"
 )
 tuner.run()

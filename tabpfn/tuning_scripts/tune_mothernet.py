@@ -32,6 +32,7 @@ config_space = {
     'warmup-epochs': randint(0, 30),
     'num-steps': 128,
 }
+
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='../fit_model.py'),
         scheduler=MOBSTER(
