@@ -56,7 +56,7 @@ tuner = Tuner(
     print_update_interval=120,
     #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
-    n_workers=2,  # how many trials are evaluated in parallel
+    n_workers=1,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,
     trial_backend_path=f"/synetune_checkpoints/{tuner_name}/"
 )
