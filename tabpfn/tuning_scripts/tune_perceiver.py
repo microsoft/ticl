@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "perceiver_first_try"
+tuner_name = "perceiver-first-try"
 
 
 # hyperparameter search space to consider
