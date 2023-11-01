@@ -5,6 +5,7 @@ import mlflow
 import sys
 from pathlib import Path
 from syne_tune import Reporter
+import numpy as np
 
 
 from tabpfn.scripts.model_builder import get_model, save_model
@@ -296,14 +297,20 @@ def main(argv):
                 config_sample['wallclock_times'] = model.wallclock_times
                 
                 save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
-                # remove last checkpoint
-                if epoch != "on_exit" and epoch - save_every > 0 and model.losses[-1] < 1:
-                    old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch - save_every}.cpkt'
-                    if os.path.exists(old_file_name):
-                        try:
-                            os.remove(old_file_name)
-                        except Exception as e:
-                            print(f"Failed to remove old model file {old_file_name}: {e}")
+                # remove checkpoints that are worse than current
+                if epoch != "on_exit" and epoch - save_every > 0:
+                    this_loss = model.losses[-1]
+                    for i in range(epoch // save_every):
+                        loss = model.losses[i * save_every]
+                        if loss < this_loss:
+                            old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
+                            if os.path.exists(old_file_name):
+                                try:
+                                    os.remove(old_file_name)
+                                except Exception as e:
+                                    print(f"Failed to remove old model file {old_file_name}: {e}")
+                    else:
+                        print("Not removing old model file because loss is too high")
 
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
