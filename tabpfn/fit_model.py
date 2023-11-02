@@ -302,15 +302,16 @@ def main(argv):
                     this_loss = model.losses[-1]
                     for i in range(epoch // save_every):
                         loss = model.losses[i * save_every]
-                        if loss < this_loss:
-                            old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
-                            if os.path.exists(old_file_name):
-                                try:
-                                    os.remove(old_file_name)
-                                except Exception as e:
-                                    print(f"Failed to remove old model file {old_file_name}: {e}")
-                    else:
-                        print("Not removing old model file because loss is too high")
+                        old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
+                        if os.path.exists(old_file_name):
+                            if loss < this_loss:
+                                    try:
+                                        print("Removing old model file {old_file_name}")
+                                        os.remove(old_file_name)
+                                    except Exception as e:
+                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                            else:
+                                print("Not removing old model file {old_file_name} because loss is too high")
 
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
