@@ -306,12 +306,12 @@ def main(argv):
                         if os.path.exists(old_file_name):
                             if loss < this_loss:
                                     try:
-                                        print("Removing old model file {old_file_name}")
+                                        print(f"Removing old model file {old_file_name}")
                                         os.remove(old_file_name)
                                     except Exception as e:
                                         print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
-                                print("Not removing old model file {old_file_name} because loss is too high")
+                                print(f"Not removing old model file {old_file_name} because loss is too high")
 
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
