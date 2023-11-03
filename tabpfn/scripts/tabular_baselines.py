@@ -157,7 +157,7 @@ def eval_f(params, clf_, x, y, metric_used):
     scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=get_scoring_string(metric_used, usage='sklearn_cv'))
     if get_scoring_string(metric_used, usage='sklearn_cv') == 'r2' or get_scoring_string(metric_used, usage='sklearn_cv') == 'neg_log_loss':
         return np.nanmean(scores)
-    
+
     return -np.nanmean(scores)
 
 def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_tune):
@@ -198,7 +198,7 @@ def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_t
         pred = clf.predict(test_x)
     inference_time = time.time() - start
     metric = metric_used(test_y, pred)
-    
+
     best = {'best': best}
     best['fit_time'] = fit_time
     best['inference_time'] = inference_time
@@ -248,15 +248,15 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     if onehot:
         ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
-        ohe.fit(x)                        
+        ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
             skb = SelectKBest(k=100).fit(x, y)
             x, test_x = skb.transform(x), skb.transform(test_x)
-    
+
     if classifier is None:
       classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
-    tick = time.time()      
+    tick = time.time()
     classifier.fit(x, y)
     fit_time = time.time() - tick
     # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
@@ -982,7 +982,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
 
     def stop(trial):
         return time.time() - start_time > max_time, []
-    
+
     best = fmin(
         fn=lambda params: eval_f(params, clf_, x, y, metric_used, start_time, max_time),
         space=param_grid_hyperopt['ridge'],
@@ -1004,7 +1004,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
 def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from lightautoml.automl.presets.tabular_presets import TabularAutoML, TabularUtilizedAutoML
     from lightautoml.tasks import Task
-    
+
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
                                              , one_hot=False, impute=False, standardize=False
                                              , cat_features=cat_features)
@@ -1281,7 +1281,7 @@ def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     # Nans in categorical features must be encoded as separate class
     x[:, cat_features], test_x[:, cat_features] = np.nan_to_num(x[:, cat_features], -1), np.nan_to_num(
         test_x[:, cat_features], -1)
-    
+
     if gpu_id is not None:
          gpu_params = {'task_type':"GPU", 'devices':gpu_id}
     else:
@@ -1341,7 +1341,7 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     # XGB Documentation:
     # XGB handles categorical data appropriately without using One Hot Encoding, categorical features are experimetal
     # XGB handles missing values appropriately without imputation
-    
+
     if gpu_id is not None:
          gpu_params = {'tree_method':'gpu_hist', 'gpu_id':gpu_id}
     else:
@@ -1371,6 +1371,33 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
                                      )
 
     return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time, no_tune)
+
+
+def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
+    from flaml.default import LGBMClassifier
+
+    x, y, test_x, test_y = x.cpu().numpy(), y.cpu().long().numpy(), test_x.cpu().numpy(), test_y.cpu().long().numpy()
+
+    # x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
+    #                                          , one_hot=False
+    #                                          , cat_features=cat_features
+    #                                          , impute=False
+    #                                          , standardize=False)
+    classifier = LGBMClassifier()
+
+    tick = time.time()
+    classifier.fit(x, y)
+
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
 
 """
 LEGACY UNUSED
