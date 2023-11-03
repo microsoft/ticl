@@ -78,7 +78,7 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
             fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1, opacity=.3, showlegend=False))
         else:
             fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1))
-    fig.update_layout(height=800)
+    fig.update_layout(height=1200)
     if xlog:
         fig.update_xaxes(type="log")
     if ylog:
