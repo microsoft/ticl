@@ -272,7 +272,7 @@ def main(argv):
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-            report(epoch=epoch + 1, loss=model.losses[-1])
+            report(epoch=epoch, loss=model.losses[-1])
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
@@ -301,7 +301,7 @@ def main(argv):
                 if epoch != "on_exit" and epoch - save_every > 0:
                     this_loss = model.losses[-1]
                     for i in range(epoch // save_every):
-                        loss = model.losses[i * save_every]
+                        loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
                         old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
                         if os.path.exists(old_file_name):
                             if loss > this_loss:
