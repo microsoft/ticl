@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "test-timing-17"
+tuner_name = "test-timing-18"
 
 # hyperparameter search space to consider
 config_space = {

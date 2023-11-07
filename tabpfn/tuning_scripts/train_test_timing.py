@@ -21,7 +21,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     report = Reporter()
     start = 1
-    tick = time.time()
     extra_time = 0
     checkpoint_dir = args.st_checkpoint_dir
     if checkpoint_dir is not None:
@@ -30,8 +29,9 @@ if __name__ == '__main__':
         if checkpoint_path.exists():
             with open(checkpoint_path, "rb") as f:
                 state = pickle.load(f)
-                start = state['epoch']
+                start = state['epoch'] + 1
                 extra_time = state['time']
+    tick = time.time()
 
     for i in range(start, args.epochs):
         time.sleep(0.1 * (args.parameter + 1))
