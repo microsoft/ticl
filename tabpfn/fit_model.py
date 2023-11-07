@@ -274,7 +274,7 @@ def main(argv):
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-            report(epoch=epoch, loss=model.losses[-1], wallclock_time=model.wallclock_times[-1])
+            report(epoch=epoch, loss=model.losses[-1], wallclock_time=max(1, int(model.wallclock_times[-1]//(1000 * 60 * 5))))  # every 5 minutes
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:

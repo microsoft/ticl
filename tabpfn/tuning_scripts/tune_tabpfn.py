@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "tabpfn-short-steps-long-run-delete-checkpoints"
+tuner_name = "tabpfn-actually-timed"
 
 
 # hyperparameter search space to consider
@@ -27,7 +27,8 @@ config_space = {
     'spike-tolerance': randint(1, 10),
     'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
-    'num-steps': 128,
+    #'num-steps': 128,
+    'model-maker': 'tabpfn',
 }
 
 early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
@@ -37,12 +38,12 @@ tuner = Tuner(
         scheduler=MOBSTER(
         config_space,
         metric='loss',
-        resource_attr='epoch',
-        max_resource_attr="stop_after_epochs",
+        resource_attr='wallclock_time',
+        max_resource_attr="wallclock_time",
         search_options={'debug_log': False},
         mode='min',
         type="promotion",
-        grace_period=10,
+        grace_period=6,  # each tick is 20 minutes, so this is two hours
         early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
     ),
     max_failures=1000,
