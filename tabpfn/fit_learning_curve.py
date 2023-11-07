@@ -92,7 +92,7 @@ from mlflow import MlflowClient
 from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
 
-def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=True):
+def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=True, return_df=False):
     experiment_id=MlflowClient().get_experiment_by_name(experiment_name).experiment_id
     runs_running = MlflowClient().search_runs(
                 experiment_ids=experiment_id,
@@ -121,4 +121,6 @@ def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=T
     losses_all_df['timestamp_absolute'] -= losses_all_df.timestamp_absolute.min()
     fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy)
     fig.update_layout(showlegend=False)
+    if return_df:
+        return fig, losses_all_df
     return fig
