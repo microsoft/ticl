@@ -7,11 +7,12 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "test_timing"
+tuner_name = "test-timing-10"
 
 # hyperparameter search space to consider
 config_space = {
     'parameter': randint(0, 100),
+    'epochs': 1000,
 }
 
 tuner = Tuner(
@@ -19,12 +20,12 @@ tuner = Tuner(
         scheduler=MOBSTER(
         config_space,
         metric='loss',
-        resource_attr='epochs',
+        resource_attr='epoch',
         max_resource_attr="stop_after_epochs",
         search_options={'debug_log': False},
         mode='min',
         type="promotion",
-        grace_period=10,
+        grace_period=2,
     ),
     max_failures=1000,
     results_update_interval=60,
