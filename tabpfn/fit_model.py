@@ -240,7 +240,7 @@ def main(argv):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['st_checkpoint_dir', 'saveevery', 'run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
+                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
@@ -274,7 +274,7 @@ def main(argv):
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-            report(epoch=epoch, loss=model.losses[-1])
+            report(epoch=epoch, loss=model.losses[-1], wallclock_time=model.wallclock_times[-1])
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
