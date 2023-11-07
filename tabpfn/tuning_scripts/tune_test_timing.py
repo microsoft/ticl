@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "test-timing-18"
+tuner_name = "test-timing-tune-time-7"
 
 # hyperparameter search space to consider
 config_space = {
@@ -20,8 +20,8 @@ tuner = Tuner(
         scheduler=MOBSTER(
         config_space,
         metric='loss',
-        resource_attr='epoch',
-        max_resource_attr="stop_after_epochs",
+        resource_attr='time',
+        max_resource_attr="time",
         search_options={'debug_log': False},
         mode='min',
         type="promotion",

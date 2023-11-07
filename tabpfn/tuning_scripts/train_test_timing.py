@@ -36,7 +36,7 @@ if __name__ == '__main__':
     for i in range(start, args.epochs):
         time.sleep(0.1 * (args.parameter + 1))
         current_time = time.time() - tick + extra_time
-        report(epoch=i, loss=np.exp(-1/1000 *  (np.sqrt(args.parameter + 1) * i)), time=current_time)
+        report(epoch=i, loss=np.exp(-1/1000 *  (np.sqrt(args.parameter + 1) * i)), time=max(1, int(current_time)))
         if checkpoint_dir is not None:
             with open(checkpoint_path, "wb") as f:
                 pickle.dump({'epoch': i, 'time': current_time}, f)
