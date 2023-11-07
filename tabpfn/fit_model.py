@@ -103,7 +103,8 @@ def main(argv):
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', action='store_true')
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
-    parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network. If None, no shared parameters are learned.')
+    parser.add_argument('--low-rank-weights', type=bool, help='Whether to use low-rank weights in mothernet.', default=False)
+    parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
@@ -179,7 +180,8 @@ def main(argv):
 
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
     config['epochs'] = args.epochs
-    config['weight_embedding_rank'] = args.weight_embedding_rank
+    config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
+    config['low_rank_weights'] = args.low_rank_weights
 
     if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
