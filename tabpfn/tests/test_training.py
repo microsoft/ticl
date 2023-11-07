@@ -104,10 +104,19 @@ def test_train_two_hidden_layers():
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
-def test_train_low_rank():
+def test_train_low_rank_ignored():
+    # it boolean flag is not set, -W is ignored for easier hyperparameter search
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16'])
+    assert results['loss'] == 2.4132819175720215
+    assert count_parameters(results['model']) == 1544650
+    assert isinstance(results['model'], TransformerModelMakeMLP)
+
+def test_train_low_rank():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
     assert results['loss'] == 2.3065733909606934
     assert count_parameters(results['model']) == 926474
     assert isinstance(results['model'], TransformerModelMakeMLP)
