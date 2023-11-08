@@ -16,6 +16,7 @@ from tabpfn.decoders import AdditiveModelDecoder
 from tabpfn.scripts.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 class MotherNetAdditive(nn.Module):
@@ -101,29 +102,17 @@ class MotherNetAdditive(nn.Module):
                 nn.init.zeros_(attn.out_proj.weight)
                 nn.init.zeros_(attn.out_proj.bias)
 
-
-    def inner_forward(self, train_x):
-        return self.transformer_encoder(train_x)
-
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src = src
-        # FIXME treat NaN as separate bin
-        x_src_org_nona = torch.nan_to_num(x_src_org, nan=0)
-        self.quantiles = torch.arange(self.n_bins, device=x_src_org.device) / (self.n_bins - 1)
-        bin_edges = torch.quantile(x_src_org_nona, self.quantiles, dim=0)
-        # FIXME extra data copy
-        bin_edges = bin_edges.transpose(0, -1).contiguous()
-        x_src_org = x_src_org.transpose(0, -1).contiguous()
-        X_binned = torch.searchsorted(bin_edges, x_src_org)
-        X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=self.n_bins)
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
         X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
-        output = self.inner_forward(train_x)
+        output = self.transformer_encoder(train_x)
         weights, biases = self.decoder(output)
 
         h = (X_onehot[single_eval_pos:].unsqueeze(-1) * weights.unsqueeze(0)).sum([2, 3])
@@ -135,7 +124,19 @@ class MotherNetAdditive(nn.Module):
         return h
 
 
-def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
+def bin_data(data, n_bins):
+    # FIXME treat NaN as separate bin
+    data_nona = torch.nan_to_num(data, nan=0)
+    quantiles = torch.arange(n_bins, device=data.device) / (n_bins - 1)
+    bin_edges = torch.quantile(data_nona, quantiles, dim=0)
+    # FIXME extra data copy
+    bin_edges = bin_edges.transpose(0, -1).contiguous()
+    data_nona = data_nona.transpose(0, -1).contiguous()
+    X_binned = torch.searchsorted(bin_edges, data_nona)
+    X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
+    return X_onehot, bin_edges
+
+def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     max_features = 100
@@ -154,53 +155,22 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
 
-    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
+    X_onehot = bin_data(x_all_torch, n_bins=self.n_bins)
+    X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
+    # why need :len?
+    x_src = model.encoder(X_onehot_flat.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
-    if hasattr(model, "transformer_encoder"):
-        # tabpfn mlp model maker
-        output = model.transformer_encoder(train_x)
-    else:
-        # perceiver
-        data = rearrange(train_x, 'n b d -> b n d')
-        x = repeat(model.latents, 'n d -> b n d', b = data.shape[0])
+    output = model.transformer_encoder(train_x)
 
-        # layers
-        for cross_attn, cross_ff, self_attns in model.layers:
-            x = cross_attn(x, context = data) + x
-            x = cross_ff(x) + x
-
-            for self_attn, self_ff in self_attns:
-                x = self_attn(x) + x
-                x = self_ff(x) + x
-
-        output = rearrange(x, 'b n d -> n b d')
-    (b1, w1), *layers = model.decoder(output)
-
-    if model.no_double_embedding:
-        w1_data_space_prenorm = w1.squeeze()[:n_features, :]
-        b1_data_space = b1.squeeze()
-    else:
-        encoder_weight = model.encoder.get_parameter("weight")
-        encoder_bias = model.encoder.get_parameter("bias")
-
-        w1_data_space_prenorm  = torch.matmul(encoder_weight[:, :n_features].T, w1)
-        b1_data_space = torch.matmul(encoder_bias, w1) + b1
-
-    w1_data_space = w1_data_space_prenorm / (n_features / max_features)
-
-    if model.decoder.weight_embedding_rank is not None:
-        w1_data_space = torch.matmul(w1_data_space, model.decoder.shared_weights[0])
-
-    layers_result = [(b1_data_space, w1_data_space)]
-
-    for i, (b, w) in enumerate(layers[:-1]):
-        if model.decoder.weight_embedding_rank is not None:
-            w = torch.matmul(w, model.decoder.shared_weights[i + 1])
-        layers_result.append((b.squeeze(), w.squeeze()))
+    weights, biases = model.decoder(output)
+    import pdb; pdb.set_trace()
+    w_data_space_prenorm = weights.squeeze()[:n_features, :]
+    b_data_space = biases.squeeze()
+    w_data_space = w_data_space_prenorm / (n_features / max_features)
 
     # remove extra classes on output layer
-    layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
+    w, b = w_data_space.squeeze()[:, :n_classes], b_data_space.squeeze()[:n_classes]
 
     if inference_device == "cpu":
         def detach(x):
@@ -209,9 +179,8 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         def detach(x):
             return x.detach()
 
-    return [(detach(b), detach(w)) for (b, w) in layers_result]
+    return detach(b), detach(w)
 
-from sklearn.base import BaseEstimator, ClassifierMixin
 
 def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
     if inference_device == "cpu":
