@@ -111,7 +111,7 @@ class MotherNetAdditive(nn.Module):
         _, x_src_org, y_src = src
         # FIXME treat NaN as separate bin
         x_src_org_nona = torch.nan_to_num(x_src_org, nan=0)
-        self.quantiles = torch.arange(n_bins, device=x_src_org.device) / (n_bins - 1)
+        self.quantiles = torch.arange(self.n_bins, device=x_src_org.device) / (self.n_bins - 1)
         bin_edges = torch.quantile(x_src_org_nona, self.quantiles, dim=0)
         # FIXME extra data copy
         bin_edges = bin_edges.transpose(0, -1).contiguous()
