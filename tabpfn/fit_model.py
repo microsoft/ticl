@@ -91,7 +91,7 @@ def main(argv):
     parser.add_argument('-N', '--num-layers', type=int, help='number of transformer layers', default=12)
     parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
     parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
-    parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. MLP for mothernet, Perceiver or False for TabPFN', default='mlp')
+    parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
     parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=bool)
     parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
     parser.add_argument('-f', '--load-file', help='Warm start from this file')

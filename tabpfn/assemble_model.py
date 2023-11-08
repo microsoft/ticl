@@ -11,7 +11,8 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
 
     from tabpfn.transformer import TransformerModel
     from tabpfn.perceiver import TabPerceiver
-    from tabpfn.transformer_make_model import TransformerModelMaker, TransformerModelMakeMLP
+    from tabpfn.mothernet_additive import MotherNetAdditive
+    from tabpfn.transformer_make_model import TransformerModelMakeMLP
 
     if max_num_classes > 2:
         n_out = max_num_classes
@@ -35,6 +36,11 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                                 num_latents=num_latents,
                                 **model_extra_args
                                 )
+    elif model_maker == "additive":
+        model = MotherNetAdditive(
+            n_features=num_features, n_out=n_out, ninp=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
+            input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
+            decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64)
     else:
         model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
                                 y_encoder=y_encoder, input_normalization=input_normalization,

@@ -16,8 +16,6 @@ from tabpfn.decoders import AdditiveModelDecoder
 from tabpfn.scripts.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble._hist_gradient_boosting.binning import _BinMapper
-
 
 
 class MotherNetAdditive(TransformerModelMaker):
@@ -36,7 +34,7 @@ class MotherNetAdditive(TransformerModelMaker):
         self.encoder = Linear(num_features=n_features*n_bins, replace_nan_by_zero=True)
         self.y_encoder = y_encoder
         self.pos_encoder = pos_encoder
-        self.decoder = AdditiveModelDecoder(emsize=ninp, hidden_size=nhid, nout=n_out)
+        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=nhid, nout=n_out)
         self.input_ln = SeqBN(ninp) if input_normalization else None
         self.init_method = init_method
         self.full_attention = full_attention

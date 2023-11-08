@@ -43,6 +43,45 @@ class LinearModelDecoder(nn.Module):
         return self.mlp(x.mean(0)).reshape(-1, self.emsize + 1, self.nout)
 
 
+class AdditiveModelDecoder(nn.Module):
+    def __init__(self, emsize=512, n_features=100, n_bins=64, nout=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
+                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
+        super().__init__()
+        self.emsize = emsize
+        self.n_features = n_features
+        self.n_bins = n_bins
+        self.embed_dim = embed_dim
+        self.no_double_embedding = no_double_embedding
+        self.nout = nout
+        self.hidden_size = hidden_size
+        self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
+        self.in_size = 100 if no_double_embedding else emsize
+        out_size = emsize
+        self.nhead = nhead
+        self.weight_embedding_rank = weight_embedding_rank
+
+        self.predicted_hidden_layers = predicted_hidden_layers
+        self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
+        out_size = embed_dim
+        self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
+        self.num_output_layer_weights = nout * (n_bins * n_features + 1)
+
+        if decoder_two_hidden_layers:
+            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
+                            nn.ReLU(),
+                            nn.Linear(hidden_size, hidden_size),
+                            nn.ReLU(),
+                            nn.Linear(hidden_size, self.num_output_layer_weights))
+        else:
+            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
+                                    nn.ReLU(),
+                                    nn.Linear(hidden_size, self.num_output_layer_weights))
+
+    def forward(self, x):
+        res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
+        assert res.shape[1] == self.num_output_layer_weights
+        return res[:, :self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out), res[:, self.n_out:]
+
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, nout=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
@@ -71,7 +110,7 @@ class MLPModelDecoder(nn.Module):
                 self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
                 out_size = embed_dim
                 self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
-        
+
         if self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * nout + (self.in_size + 1) * self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
