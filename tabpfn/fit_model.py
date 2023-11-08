@@ -232,7 +232,8 @@ def main(argv):
             with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
-        model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
+        mm = config_sample['model_maker']
+        model_maker_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
 
         default_args_dict = vars(parser.parse_args([]))
         args_dict = vars(args)
