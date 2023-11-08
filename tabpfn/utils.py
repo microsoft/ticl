@@ -363,8 +363,6 @@ class ReduceLROnSpike:
     def __init__(self, optimizer, mode='min', factor=0.1, smoothing=10,
                  min_lr=0, verbose=False, tolerance=4, eps=1e-8):
 
-        print(f"spike tolerance {tolerance}")
-
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
         self.factor = factor
