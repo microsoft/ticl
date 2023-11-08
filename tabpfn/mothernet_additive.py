@@ -47,7 +47,6 @@ class MotherNetAdditive(nn.Module):
                                             embed_dim=decoder_embed_dim,
                                             decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
 
-        self.quantiles = torch.arange(n_bins) / (n_bins - 1)
         self.init_weights()
 
     def __setstate__(self, state):
@@ -112,6 +111,7 @@ class MotherNetAdditive(nn.Module):
         _, x_src_org, y_src = src
         # FIXME treat NaN as separate bin
         x_src_org_nona = torch.nan_to_num(x_src_org, nan=0)
+        self.quantiles = torch.arange(n_bins, device=x_src_org.device) / (n_bins - 1)
         bin_edges = torch.quantile(x_src_org_nona, self.quantiles, dim=0)
         # FIXME extra data copy
         bin_edges = bin_edges.transpose(0, -1).contiguous()
