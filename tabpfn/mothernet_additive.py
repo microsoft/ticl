@@ -18,11 +18,11 @@ from tabpfn.scripts.model_builder import load_model
 from sklearn.preprocessing import LabelEncoder
 
 
-class MotherNetAdditive(TransformerModelMaker):
+class MotherNetAdditive(nn.Module):
     def __init__(self, n_features, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder=None,
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=True, decoder_embed_dim=2048,
+                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64):
         super().__init__()
         self.model_type = 'Transformer'
@@ -31,10 +31,10 @@ class MotherNetAdditive(TransformerModelMaker):
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
-        self.encoder = Linear(num_features=n_features*n_bins, replace_nan_by_zero=True)
+        self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
         self.y_encoder = y_encoder
         self.pos_encoder = pos_encoder
-        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=nhid, nout=n_out)
+        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=nhid, n_out=n_out)
         self.input_ln = SeqBN(ninp) if input_normalization else None
         self.init_method = init_method
         self.full_attention = full_attention
@@ -43,8 +43,7 @@ class MotherNetAdditive(TransformerModelMaker):
         self.n_out = n_out
         self.nhid = nhid
 
-        self.output_attention = output_attention
-        self.decoder = AdditiveModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, nout=n_out, output_attention=self.output_attention,
+        self.decoder = AdditiveModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
                                             embed_dim=decoder_embed_dim,
                                             decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
 
@@ -110,14 +109,16 @@ class MotherNetAdditive(TransformerModelMaker):
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        x_src_org, y_src = src
+        _, x_src_org, y_src = src
         # FIXME treat NaN as separate bin
         x_src_org_nona = torch.nan_to_num(x_src_org, nan=0)
         bin_edges = torch.quantile(x_src_org_nona, self.quantiles, dim=0)
-        X_binned = torch.searchsorted(bin_edges.T, x_src_org.T)
-        X_onehot = torch.nn.functional.one_hot(X_binned.T)
-        import pdb; pdb.set_trace()
-        X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-1], -1))
+        # FIXME extra data copy
+        bin_edges = bin_edges.transpose(0, -1).contiguous()
+        x_src_org = x_src_org.transpose(0, -1).contiguous()
+        X_binned = torch.searchsorted(bin_edges, x_src_org)
+        X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1))
+        X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
@@ -125,7 +126,7 @@ class MotherNetAdditive(TransformerModelMaker):
         output = self.inner_forward(train_x)
         weights, biases = self.decoder(output)
 
-        h = (X_onehot_flat[single_eval_pos:].unsqueeze(-1) * weights.unsqueeze(0)).sum(2)
+        h = (X_onehot[single_eval_pos:].unsqueeze(-1) * weights.unsqueeze(0)).sum([2, 3])
         h = h + biases
 
         if h.isnan().all():

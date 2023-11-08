@@ -6,6 +6,7 @@ from tabpfn.fit_model import main
 from tabpfn.transformer_make_model import TransformerModelMakeMLP
 from tabpfn.transformer import TransformerModel
 from tabpfn.perceiver import TabPerceiver
+from tabpfn.mothernet_additive import MotherNetAdditive
 import lightning as L
 
 def count_parameters(model):
@@ -128,6 +129,14 @@ def test_train_tabpfn():
     assert results['loss'] == 2.3345985412597656
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TransformerModel)
+
+def test_train_additive_defaults():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
+    assert results['loss'] == 2.1157679557800293
+    assert count_parameters(results['model']) == 9690634
+    assert isinstance(results['model'], MotherNetAdditive)
 
 def test_train_perceiver_defaults():
     L.seed_everything(42)
