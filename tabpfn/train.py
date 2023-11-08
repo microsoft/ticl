@@ -147,12 +147,14 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         # add linear warmup to scheduler
         scheduler = SequentialLR(optimizer, [LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs),
                                              base_scheduler], milestones=[warmup_epochs])
-        if reduce_lr_on_spike:
-            spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, tolerance=spike_tolerance, verbose=True)
+
         start_epoch = 1
     else:
         start_epoch = scheduler.last_epoch + 1
 
+    if reduce_lr_on_spike:
+        # we're not properly restarting the scheduler when we load a checkpoint, sad
+        spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, tolerance=spike_tolerance, verbose=True)
     scaler = GradScaler() if train_mixed_precision else None
 
     # check that everything uses up-to-date APIs
