@@ -117,7 +117,7 @@ class MotherNetAdditive(nn.Module):
         bin_edges = bin_edges.transpose(0, -1).contiguous()
         x_src_org = x_src_org.transpose(0, -1).contiguous()
         X_binned = torch.searchsorted(bin_edges, x_src_org)
-        X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1))
+        X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=self.n_bins)
         X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
