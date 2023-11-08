@@ -230,7 +230,7 @@ def main(argv):
                 model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
             with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
-                model_string = f.read()   
+                model_string = f.read()
     else:
         model_maker_string = "perceiver" if config_sample['model_maker'] == "perceiver" else ('mn' if config_sample['model_maker'] == "mlp" else "tabpfn")
 
@@ -246,7 +246,7 @@ def main(argv):
                 short_name = arg.option_strings[0].replace('-', '')
                 if v != default_args_dict[k]:
                     if isinstance(v, float):
-                        config_string += f"_{short_name}{v:.4g}"    
+                        config_string += f"_{short_name}{v:.4g}"
                     else:
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
@@ -274,7 +274,9 @@ def main(argv):
             mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
             mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
             mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-            report(epoch=epoch, loss=model.losses[-1], wallclock_time=max(1, int(model.wallclock_times[-1]//(1000 * 60 * 5))))  # every 5 minutes
+            wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
+            mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+            report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
@@ -297,7 +299,7 @@ def main(argv):
                 config_sample['learning_rates'] = model.learning_rates
                 config_sample['losses'] = model.losses
                 config_sample['wallclock_times'] = model.wallclock_times
-                
+
                 save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
                 # remove checkpoints that are worse than current
                 if epoch != "on_exit" and epoch - save_every > 0:
