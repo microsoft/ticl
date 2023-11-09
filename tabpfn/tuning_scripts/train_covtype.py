@@ -23,6 +23,15 @@ def str2bool(v):
     else:
         raise ValueError("Boolean value expected.")
 
+def epoch_callback(model, epoch, loss):
+    # with torch.no_grad():
+    #     pred = model(X_test_tensor)
+    #     acc = (pred.argmax(axis=1) == y_test_tensor).to(torch.float32).mean().item()
+    #     print(acc)
+    # report(epoch=epoch + 1, accuracy=acc)
+    report(epoch=epoch + 1, accuracy=loss)
+    pickle.dump(model, open(checkpoint_path, "wb"))
+
 if __name__ == '__main__':
 
     parser = ArgumentParser()
@@ -58,16 +67,9 @@ if __name__ == '__main__':
     X_test_tensor = torch.tensor(X_test, device=device, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test, device=device)
 
-    def epoch_callback(model, epoch, loss):
-        # with torch.no_grad():
-        #     pred = model(X_test_tensor)
-        #     acc = (pred.argmax(axis=1) == y_test_tensor).to(torch.float32).mean().item()
-        #     print(acc)
-        # report(epoch=epoch + 1, accuracy=acc)
-        report(epoch=epoch + 1, accuracy=loss)
-        pickle.dump(model, open(checkpoint_path, "wb"))
 
     checkpoint_dir = args.st_checkpoint_dir
+    import pdb; pdb.set_trace()
     if checkpoint_dir is not None:
         print(checkpoint_dir)
         os.makedirs(checkpoint_dir, exist_ok=True)

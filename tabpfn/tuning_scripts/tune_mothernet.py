@@ -18,6 +18,7 @@ config_space = {
     'num-layers': randint(2, 24),
     'batch-size': logfinrange(lower=2, upper=32, size=5, cast_int=True),
     'adaptive-batch-size': choice([True, False]),
+    'decoder-two-hidden-layers': choice([True, False]),
     'weight-decay': loguniform(1e-9, 1e-1),
     'num-predicted-hidden-layers': randint(1, 6),
     'low_rank_weights': choice([True, False]),

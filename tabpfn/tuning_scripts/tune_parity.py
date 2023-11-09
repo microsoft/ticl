@@ -15,6 +15,7 @@ config_space = {
     'dropout-rate': uniform(0, 1),
     'weight_decay': loguniform(1e-7, 1e-1),
     'onehot': choice([True, False]),
+    'nonlinearity': choice(['relu', 'tanh']),
     'epochs': 10000,
 }
 

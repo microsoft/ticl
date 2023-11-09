@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "tabpfn-actually-timed"
+tuner_name = "tabpfn-timed"
 
 
 # hyperparameter search space to consider
@@ -43,7 +43,7 @@ tuner = Tuner(
         search_options={'debug_log': False},
         mode='min',
         type="promotion",
-        grace_period=6,  # each tick is 20 minutes, so this is two hours
+        grace_period=10,  # each tick is 5 minutes
         early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
     ),
     max_failures=1000,
