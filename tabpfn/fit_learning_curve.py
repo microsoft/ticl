@@ -73,7 +73,10 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
     fig = go.Figure()
     for run in loss_df[hue].unique():
         this_df = loss_df[loss_df[hue] == run]
-        smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2  * extra_smoothing).mean().reset_index()
+        if extra_smoothing == 0:
+            smoothed = this_df[[y, x]].reset_index()
+        else:
+            smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2  * extra_smoothing).mean().reset_index()
         if 'status' in this_df.columns and (this_df.status != "RUNNING").all():
             fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1, opacity=.3, showlegend=inactive_legend))
         else:
@@ -92,7 +95,7 @@ from mlflow import MlflowClient
 from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
 
-def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=True, return_df=False):
+def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1):
     experiment_id=MlflowClient().get_experiment_by_name(experiment_name).experiment_id
     runs_running = MlflowClient().search_runs(
                 experiment_ids=experiment_id,
@@ -119,7 +122,7 @@ def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=T
                 print(e)
     losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'value':'loss', 'step': 'epoch'})
     losses_all_df['timestamp_absolute'] -= losses_all_df.timestamp_absolute.min()
-    fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy)
+    fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
     fig.update_layout(showlegend=False)
     if return_df:
         return fig, losses_all_df
