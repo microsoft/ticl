@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from syne_tune import Reporter
 import numpy as np
+import time
 
 
 from tabpfn.scripts.model_builder import get_model, save_model
@@ -327,7 +328,16 @@ def main(argv):
     else:
         mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
-    mlflow.set_experiment(args.experiment)
+    tries = 0
+    while tries <5:
+        try:
+            mlflow.set_experiment(args.experiment)
+        except:
+            tries += 1
+            print("Failed to set experiment, retrying")
+            time.sleep(5)
+            continue
+
     if args.continue_run and not args.create_new_run:
         # find run id via mlflow
         run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
