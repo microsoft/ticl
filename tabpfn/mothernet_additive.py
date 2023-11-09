@@ -127,51 +127,40 @@ class MotherNetAdditive(nn.Module):
 def bin_data(data, n_bins):
     # FIXME treat NaN as separate bin
     data_nona = torch.nan_to_num(data, nan=0)
-    quantiles = torch.arange(n_bins, device=data.device) / (n_bins - 1)
-    bin_edges = torch.quantile(data_nona, quantiles, dim=0)
+    quantiles = torch.arange(n_bins + 1, device=data.device) / n_bins
+    bin_edges = torch.quantile(data_nona, quantiles[1:-1], dim=0)
     # FIXME extra data copy
     bin_edges = bin_edges.transpose(0, -1).contiguous()
     data_nona = data_nona.transpose(0, -1).contiguous()
     X_binned = torch.searchsorted(bin_edges, data_nona)
+    # assert X_binned.max() == n_bins - 1
     X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
     return X_onehot, bin_edges
 
 def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
-    max_features = 100
-    eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
 
     ys = torch.Tensor(y_train).to(device)
     xs = torch.Tensor(X_train).to(device)
 
-    eval_xs_ = normalize_data(xs, eval_position)
-
-    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
-                                                   normalize_with_sqrt=False)
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
-    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
-
-    X_onehot = bin_data(x_all_torch, n_bins=self.n_bins)
+    x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
+    X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins)
     X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
     # why need :len?
     x_src = model.encoder(X_onehot_flat.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
     output = model.transformer_encoder(train_x)
-
     weights, biases = model.decoder(output)
-    import pdb; pdb.set_trace()
-    w_data_space_prenorm = weights.squeeze()[:n_features, :]
-    b_data_space = biases.squeeze()
-    w_data_space = w_data_space_prenorm / (n_features / max_features)
-
+    w = weights.squeeze()[:n_features, :, :n_classes]
+    b = biases.squeeze()[:n_classes]
+    bins_data_space = bin_edges[:n_features]
     # remove extra classes on output layer
-    w, b = w_data_space.squeeze()[:, :n_classes], b_data_space.squeeze()[:n_classes]
-
     if inference_device == "cpu":
         def detach(x):
             return x.detach().cpu().numpy()
@@ -179,23 +168,18 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         def detach(x):
             return x.detach()
 
-    return detach(b), detach(w)
+    return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu", n_bins=64):
     if inference_device == "cpu":
-        mean = np.nanmean(X_train, axis=0)
-        std = np.nanstd(X_train, axis=0, ddof=1) + .000001
         # FIXME replacing nan with 0 as in TabPFN
-        X_train = np.nan_to_num(X_train, 0)
         X_test = np.nan_to_num(X_test, 0)
-        std[np.isnan(std)] = 1
-        X_test_scaled = (X_test - mean) / std
-        out = np.clip(X_test_scaled, a_min=-100, a_max=100)
-        for i, (b, w) in enumerate(layers):
-            out = np.dot(out, w) + b
-            if i != len(layers) - 1:
-                out = np.maximum(out, 0)
+        out = np.zeros((X_test.shape[0], weights.shape[-1]))
+        for col, bins, w in zip(X_test.T, bin_edges, weights):
+            binned = np.searchsorted(bins, col)
+            out += w[binned]
+        out += biases
         if np.isnan(out).any():
             print("NAN")
             import pdb; pdb.set_trace()
@@ -210,6 +194,7 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         std[torch.isnan(std)] = 1
         X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
         out = torch.clamp(X_test_scaled, min=-100, max=100)
+        import pdb; pdb.set_trace()
         for i, (b, w) in enumerate(layers):
             out = torch.matmul(out, w) + b
             if i != len(layers) - 1:
@@ -219,11 +204,10 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         raise ValueError(f"Unknown inference_device: {inference_device}")
 
 
-class ForwardMLPModel(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", label_offset=0, inference_device="cpu"):
-        self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
+class ForwardAdditiveModel(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None, device="cpu", inference_device="cpu"):
+        self.path = path
         self.device = device
-        self.label_offset = label_offset
         self.inference_device = inference_device
 
     def fit(self, X, y):
@@ -233,22 +217,18 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         model, config = load_model(self.path, device=self.device)
         if "model_maker" not in config:
             raise ValueError("Cannot load tabpfn weights into ForwardMLPModel")
-        if config['model_maker'] != "mlp":
+        if config['model_maker'] != "additive":
             raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
         model.to(self.device)
-        n_classes = len(le.classes_)
-        indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device)
-        if self.label_offset == 0:
-            self.parameters_ = layers
-        else:
-            *lower_layers, b_last, w_last = layers
-            self.parameters_  = (*lower_layers, (b_last[indices], w_last[:, indices]))
+        w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device)
+        self.w_ = w
+        self.b_ = b
+        self.bin_edges_ = bin_edges
         self.classes_ = le.classes_
         return self
 
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, self.parameters_, inference_device=self.inference_device)
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
