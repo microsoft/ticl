@@ -18,6 +18,14 @@ import argparse
 import socket
 import shutil
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ValueError("Boolean value expected.")
+
 
 def main(argv):
     config = get_prior_config(config_type='causal')
@@ -93,18 +101,18 @@ def main(argv):
     parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
     parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
     parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
-    parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=bool)
+    parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
     parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
     parser.add_argument('-f', '--load-file', help='Warm start from this file')
     parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
     parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
-    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=bool)
-    parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=bool)
+    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=str2bool)
+    parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
-    parser.add_argument('-r', '--low-rank-weights', type=bool, help='Whether to use low-rank weights in mothernet.', default=False)
+    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
@@ -118,7 +126,7 @@ def main(argv):
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
-    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=True, type=bool)
+    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=True, type=str2bool)
     parser.add_argument('--save-every', default=10, type=int)
     parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
