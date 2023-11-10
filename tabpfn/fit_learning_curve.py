@@ -95,33 +95,49 @@ from mlflow import MlflowClient
 from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
 
-def plot_experiment(experiment_name, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1):
-    experiment_id=MlflowClient().get_experiment_by_name(experiment_name).experiment_id
-    runs_running = MlflowClient().search_runs(
-                experiment_ids=experiment_id,
-                run_view_type=ViewType.ACTIVE_ONLY,
-                order_by=["metrics.accuracy DESC"])
+def get_runs(filter_string, experiment_id):
+    return  MlflowClient().search_runs(experiment_ids=experiment_id, filter_string=filter_string,
+                                       run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
+
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running","reference")):
+    if experiment_name is not None and experiment_id is not None:
+        raise ValueError("Please specify either experiment_name or experiment_id, not both.")
+    if experiment_name is not None:
+        experiment_id = MlflowClient().get_experiment_by_name(experiment_name).experiment_id
+    else:
+        experiment_id = experiment_id or "0"
+
+    runs = []
+    if filter_runs == "all":
+        runs = get_runs("", experiment_id)
+    else:
+        if "running" in filter_runs:
+            runs.extend(get_runs("attribute.status='RUNNING'", experiment_id))
+        if "reference" in filter_runs:
+            runs.extend(get_runs('tags.reference = "True"', experiment_id))
 
     losses_all = []
     already_seen = set()
-    for run in runs_running:
+    for run in runs:
         if run.info.run_id in already_seen:
             continue
         already_seen.add(run.info.run_id)
         try:
             losses = MlflowClient().get_metric_history(run.info.run_id, key="loss")
-            losses_df = pd.DataFrame.from_dict([dict(l) for l in losses])
+            adjusted_wallclock = MlflowClient().get_metric_history(run.info.run_id, key="wallclock_time")
+            losses_df = pd.DataFrame.from_dict([dict(l) for l in losses]).rename(columns={'value': 'loss'})
+            clock_df = pd.DataFrame.from_dict([dict(t) for t in adjusted_wallclock]).rename(columns={'value': 'clock'})
+            losses_df = losses_df.merge(clock_df[['step', 'clock']], on='step')
             losses_df['run'] = run.info.run_name
-            losses_df['timestamp_absolute'] = losses_df.timestamp / 1000 / (60 * 60 * 24)
-            losses_df['timestamp'] -= losses_df.timestamp.min()
-            losses_df['time_days'] = losses_df['timestamp'] / 1000 / (60 * 60 * 24)
+            losses_df['timestamp'] = losses_df.timestamp / 1000 / (60 * 60 * 24)
+            losses_df['time_days'] = losses_df['clock'] / (60 * 60 * 24)
             losses_df['status'] = run.info.status
             losses_all.append(losses_df)
         except MlflowException as e:
             if verbose:
                 print(e)
-    losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'value':'loss', 'step': 'epoch'})
-    losses_all_df['timestamp_absolute'] -= losses_all_df.timestamp_absolute.min()
+    losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'step': 'epoch'})
+    losses_all_df['timestamp'] -= losses_all_df.timestamp.min()
     fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
     fig.update_layout(showlegend=False)
     if return_df:
