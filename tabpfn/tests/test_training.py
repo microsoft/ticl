@@ -84,7 +84,7 @@ def test_train_double_embedding():
 def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
     assert results['loss'] == 2.3119990825653076
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
@@ -92,7 +92,7 @@ def test_train_special_token():
 def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
     assert results['loss'] == 2.4132819175720215
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
@@ -157,7 +157,7 @@ def test_train_perceiver_two_hidden_layers():
 def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
     assert results['loss'] == 2.256040334701538
     assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)

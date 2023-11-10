@@ -112,7 +112,7 @@ def main(argv):
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
-    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
+    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=False)
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
