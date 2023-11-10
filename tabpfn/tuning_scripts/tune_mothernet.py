@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "mothernet-big-searchspace-timed2"
+tuner_name = "mothernet-big-searchspace-timed3"
 
 
 # hyperparameter search space to consider
