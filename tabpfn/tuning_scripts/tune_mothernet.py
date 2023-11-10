@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "mothernet-big-searchspace-timed"
+tuner_name = "mothernet-big-searchspace-timed2"
 
 
 # hyperparameter search space to consider
@@ -22,7 +22,7 @@ config_space = {
     'special-token': choice([True, False]),
     'weight-decay': loguniform(1e-9, 1e-1),
     'num-predicted-hidden-layers': randint(1, 6),
-    'low_rank_weights': choice([True, False]),
+    'low-rank-weights': choice([True, False]),
     'weight-embedding-rank': logfinrange(lower=16, upper=512, size=6, cast_int=True),
     'predicted-hidden-layer-size': logfinrange(lower=32, upper=1024, size=6, cast_int=True),
     'learning-rate-schedule': choice(['exponential']),
