@@ -100,7 +100,7 @@ def main(argv):
     parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
-    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', , default=False, type=bool)
+    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=bool)
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=bool)
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
