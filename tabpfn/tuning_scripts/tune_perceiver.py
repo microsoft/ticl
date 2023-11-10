@@ -6,9 +6,7 @@ from syne_tune.config_space import randint, loguniform, uniform, lograndint, cho
 from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
-
-tuner_name = "perceiver-four-workers"
-
+import sys
 
 # hyperparameter search space to consider
 config_space = {
@@ -31,33 +29,38 @@ config_space = {
     'save-every': 1,
     'model-maker': 'perceiver',
     'spike-tolerance': randint(1, 10),
-    'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
 }
 early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
 
 
-tuner = Tuner(
-    trial_backend=LocalBackend(entry_point='../fit_model.py'),
-        scheduler=MOBSTER(
-        config_space,
-        metric='loss',
-        resource_attr='epoch',
-        max_resource_attr="stop_after_epochs",
-        search_options={'debug_log': False},
-        mode='min',
-        type="promotion",
-        grace_period=10,
-        early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python tune_mothernet.py <tuner_name>")
+        exit(1)
+    tuner_name = sys.argv[1]
+    config_space['experiment'] = f'synetune-{tuner_name}'
+    tuner = Tuner(
+        trial_backend=LocalBackend(entry_point='../fit_model.py'),
+            scheduler=MOBSTER(
+            config_space,
+            metric='loss',
+            resource_attr='wallclock_time',
+            max_resource_attr="wallclock_time",
+            search_options={'debug_log': False},
+            mode='min',
+            type="promotion",
+            grace_period=10,
+            early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
 
-    ),
-    max_failures=1000,
-    results_update_interval=60,
-    print_update_interval=120,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
-    stop_criterion=StoppingCriterion(max_num_trials_started=5000),
-    n_workers=4,  # how many trials are evaluated in parallel
-    tuner_name=tuner_name,
-    trial_backend_path=f"/synetune_checkpoints/{tuner_name}/"
-)
-tuner.run()
+        ),
+        max_failures=1000,
+        results_update_interval=60,
+        print_update_interval=120,
+        #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
+        stop_criterion=StoppingCriterion(max_num_trials_started=5000),
+        n_workers=4,  # how many trials are evaluated in parallel
+        tuner_name=tuner_name,
+        trial_backend_path=f"/synetune_checkpoints/{tuner_name}/"
+    )
+    tuner.run()
