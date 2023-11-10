@@ -329,14 +329,14 @@ def main(argv):
         mlflow.set_tracking_uri("http://20.114.249.177:5000")
 
     tries = 0
-    while tries <5:
+    while tries < 5:
         try:
             mlflow.set_experiment(args.experiment)
+            break
         except:
             tries += 1
-            print("Failed to set experiment, retrying")
+            print(f"Failed to set experiment, retrying {tries}/5")
             time.sleep(5)
-            continue
 
     if args.continue_run and not args.create_new_run:
         # find run id via mlflow
