@@ -60,6 +60,7 @@ class MLPModelPredictor(nn.Module):
 
         if h.isnan().all():
             print("NAN")
+            raise ValueError("NAN")
             import pdb; pdb.set_trace()
         return h
 
