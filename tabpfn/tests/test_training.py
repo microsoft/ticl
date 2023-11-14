@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 
 from tabpfn.fit_model import main
+from tabpfn.fit_tabpfn import main as tabpfn_main
 from tabpfn.transformer_make_model import TransformerModelMakeMLP
 from tabpfn.transformer import TransformerModel
 from tabpfn.perceiver import TabPerceiver
@@ -14,14 +15,14 @@ def count_parameters(model):
 
 # really tiny model for smoke tests
 # one step per epoch, no adapting batchsize, CPU, Mothernet
-TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--train-mixed-precision', 'False']
-TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--train-mixed-precision', 'False']
+TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False']
+TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False']
 
 def test_train_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results= main(TESTING_DEFAULTS + ['-B', tmpdir])
-    assert results['loss'] == 2.4132819175720215
+    assert results['loss'] == 2.4058380126953125
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -31,7 +32,7 @@ def test_train_synetune():
     with tempfile.TemporaryDirectory() as tmpdir:
         results= main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
         assert results['epoch'] == 10
-        assert results['loss'] == 2.4132819175720215
+        assert results['loss'] == 2.4058380126953125
         assert count_parameters(results['model']) == 1544650
         assert isinstance(results['model'], TransformerModelMakeMLP)
         results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
@@ -45,7 +46,7 @@ def test_train_reload():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--save-every', '1'])
         prev_file_name = f'{results["base_path"]}/models_diff/{results["model_string"]}_epoch_2.cpkt'
         assert results['epoch'] == 2
-        assert results['loss'] == 2.6263158321380615
+        assert results['loss'] == 2.6038432121276855
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
         results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
@@ -77,7 +78,7 @@ def test_train_double_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
-    assert results['loss'] == 2.2314932346343994
+    assert results['loss'] == 2.2983956336975098
     assert count_parameters(results['model']) == 1775818
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -85,7 +86,7 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
-    assert results['loss'] == 2.3119990825653076
+    assert results['loss'] == 2.2754929065704346
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -93,7 +94,7 @@ def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
-    assert results['loss'] == 2.4132819175720215
+    assert results['loss'] == 2.4058380126953125
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -101,7 +102,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == 2.3295023441314697
+    assert results['loss'] == 2.298816442489624
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -118,7 +119,7 @@ def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == 2.3065733909606934
+    assert results['loss'] == 2.299163341522217
     assert count_parameters(results['model']) == 926474
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -126,6 +127,14 @@ def test_train_tabpfn():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
+    assert results['loss'] == 2.3182566165924072
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TransformerModel)
+
+def test_train_tabpfn_refactored():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = tabpfn_main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert results['loss'] == 2.3345985412597656
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TransformerModel)

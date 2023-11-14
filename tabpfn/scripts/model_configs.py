@@ -283,3 +283,58 @@ def evaluate_hypers(config, sample_diff_hps=False):
     cs = create_configspace_from_hierarchical(config)
     cs_sample = cs.sample_configuration()
     return fill_in_configsample(config, cs_sample)
+
+
+def get_base_config_paper():
+    config = get_prior_config(config_type='causal')
+    config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
+    config['recompute_attn'] = True
+    config['max_num_classes'] = 10
+    config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
+    config['balanced'] = False
+
+    # diff
+    config['output_multiclass_ordered_p'] = 0.
+    del config['differentiable_hyperparameters']['output_multiclass_ordered_p']
+
+    config['multiclass_type'] = 'rank'
+    del config['differentiable_hyperparameters']['multiclass_type']
+
+    config['sampling'] = 'normal' # vielleicht schlecht?
+    del config['differentiable_hyperparameters']['sampling']
+
+    config['pre_sample_causes'] = True
+    # end diff
+
+    config['multiclass_loss_type'] = 'nono' # 'compatible'
+    config['normalize_to_ranking'] = False # False
+
+    config['categorical_feature_p'] = .2 # diff: .0
+
+    # turn this back on in a random search!?
+    config['nan_prob_no_reason'] = .0
+    config['nan_prob_unknown_reason'] = .0 # diff: .0
+    config['set_value_to_nan'] = .1 # diff: 1.
+
+    config['normalize_with_sqrt'] = False
+
+    config['new_mlp_per_example'] = True
+    config['prior_mlp_scale_weights_sqrt'] = True
+    config['batch_size_per_gp_sample'] = None
+
+    config['normalize_ignore_label_too'] = False
+
+    config['differentiable_hps_as_style'] = False
+
+    config['random_feature_rotation'] = True
+    config['rotate_normalized_labels'] = True
+
+    config["mix_activations"] = False # False heisst eig True
+
+    config['output_attention'] = True
+    config['y_encoder'] = "one_hot"
+    config['efficient_eval_masking'] = True
+    config['min_eval_pos'] = 2
+    config['max_eval_pos'] = 1000
+    config['bptt'] = 1024+128
+    return config
