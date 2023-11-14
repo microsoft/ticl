@@ -118,7 +118,7 @@ def main(argv):
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
-    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=bool)
+    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
     parser.add_argument('--adam-beta1', default=0.9, type=float)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
