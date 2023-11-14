@@ -236,7 +236,21 @@ class Linear(nn.Linear):
         super().__setstate__(state)
         self.__dict__.setdefault('replace_nan_by_zero', True)
 
+class BinEmbeddingEncoder(nn.Module):
+    def __init__(self, num_features, emsize, n_bins, rank):
+        super().__init__()
+        self.num_features = num_features
+        self.emsize = emsize
+        self.n_bins = n_bins
+        self.rank = rank
+        self.embedding = nn.Parameter(torch.randn(n_bins, rank))
+        self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
 
+    def forward(self, x):
+        import pdb; pdb.set_trace()
+        x = torch.einsum('bfn,qrn->bqfr', x, self.query)
+        return x.reshape(x.shape[0], self.num_features * self.n_bins * self.rank)
+    
 class OneHotAndLinear(nn.Linear):
     def __init__(self, num_classes, emsize):
         super().__init__(num_classes, emsize)

@@ -131,9 +131,17 @@ def test_train_tabpfn():
     assert isinstance(results['model'], TransformerModel)
 
 def test_train_additive_defaults():
-    L.seed_everything(42)
+    L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
+    assert results['loss'] == 2.0175960063934326
+    assert count_parameters(results['model']) == 9690634
+    assert isinstance(results['model'], MotherNetAdditive)
+
+def test_train_additive_shared_embedding():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--shared-embedding', 'True'])
     assert results['loss'] == 2.110102653503418
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)

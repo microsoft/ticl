@@ -131,7 +131,7 @@ def main(argv):
     parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
-
+    parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
 
     args = parser.parse_args(argv)
 
@@ -160,6 +160,7 @@ def main(argv):
     torch.set_num_threads(24)
     config['num_gpus'] = 1
 
+    config['shared_embedding'] = args.shared_embedding
     config['lr'] = args.learning_rate
     config['nlayers'] = args.num_layers
     config['emsize'] = args.em_size
