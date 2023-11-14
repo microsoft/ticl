@@ -118,7 +118,7 @@ def main(argv):
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
-    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=bool)
+    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
     parser.add_argument('--adam-beta1', default=0.9, type=float)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
@@ -132,6 +132,7 @@ def main(argv):
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
     parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
 
     args = parser.parse_args(argv)
 
@@ -282,11 +283,12 @@ def main(argv):
             print(f'Failed to write to log file {log_file}: {e}')
 
         if epoch != "on_exit":
-            mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-            mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-            mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
             wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-            mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+            if not args.no_mlflow:
+                mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+                mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+                mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+                mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
             report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
         try:
@@ -332,41 +334,44 @@ def main(argv):
             print("WRITING TO MODEL FILE FAILED")
             print(e)
 
-    if socket.gethostname() == "amueller-tabpfn-4gpu":
-        mlflow.set_tracking_uri("http://localhost:5000")
+    if not args.no_mlflow:
+        if socket.gethostname() == "amueller-tabpfn-4gpu":
+            mlflow.set_tracking_uri("http://localhost:5000")
+        else:
+            mlflow.set_tracking_uri("http://20.114.249.177:5000")
+
+        tries = 0
+        while tries < 5:
+            try:
+                mlflow.set_experiment(args.experiment)
+                break
+            except:
+                tries += 1
+                print(f"Failed to set experiment, retrying {tries}/5")
+                time.sleep(5)
+
+        if args.continue_run and not args.create_new_run:
+            # find run id via mlflow
+            run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
+            if len(run_ids) > 1:
+                raise ValueError(f"Found more than one run with name {model_string}")
+            run_id = run_ids.iloc[0]
+            run_args = {'run_id': run_id}
+
+        else:
+            run_args = {'run_name': model_string}
+
+        with mlflow.start_run(**run_args) as run:
+            mlflow.log_param('hostname', socket.gethostname())
+            mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+            total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
+                                                     optimizer_state=optimizer_state, scheduler=scheduler,
+                                                     load_model_strict=args.continue_run or args.load_strict)
+            
     else:
-        mlflow.set_tracking_uri("http://20.114.249.177:5000")
-
-    tries = 0
-    while tries < 5:
-        try:
-            mlflow.set_experiment(args.experiment)
-            break
-        except:
-            tries += 1
-            print(f"Failed to set experiment, retrying {tries}/5")
-            time.sleep(5)
-
-    if args.continue_run and not args.create_new_run:
-        # find run id via mlflow
-        run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
-        if len(run_ids) > 1:
-            raise ValueError(f"Found more than one run with name {model_string}")
-        run_id = run_ids.iloc[0]
-        run_args = {'run_id': run_id}
-
-    else:
-        run_args = {'run_name': model_string}
-
-    with mlflow.start_run(**run_args) as run:
-        mlflow.log_param('hostname', socket.gethostname())
-        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-        total_loss, model, dl, epoch = get_model(config_sample
-                            , device
-                            , should_train=True
-                            , verbose=1
-                            , epoch_callback=save_callback, model_state=model_state, optimizer_state=optimizer_state, scheduler=scheduler,
-                            load_model_strict=args.continue_run or args.load_strict)
+        total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
+                                                 optimizer_state=optimizer_state, scheduler=scheduler,
+                                                 load_model_strict=args.continue_run or args.load_strict)
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")

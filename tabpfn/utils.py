@@ -469,7 +469,8 @@ def make_base_parser(description):
     parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
-
+    parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    return parser
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -539,70 +540,72 @@ def get_model_string(config, args, parser):
                 f.write(model_string)
 
 
-def save_callback(model, optimizer, scheduler, epoch):
-    if not hasattr(model, 'last_saved_epoch'):
-        model.last_saved_epoch = 0
-    log_file = f'{base_path}/log/{model_string}.log'
-    if epoch == "start":
-        print(f"Starting training of model {model_string}")
-        return
-    try:
-        os.makedirs(f"{base_path}/log", exist_ok=True)
-        with open(log_file, 'a') as f:
-            f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
-    except Exception as e:
-        print(f'Failed to write to log file {log_file}: {e}')
-
-    if epoch != "on_exit":
-        mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-        mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-        mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-        wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-        mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
-        report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
-
-    try:
-        if (epoch == "on_exit") or epoch % save_every == 0:
-            if checkpoint_dir is not None:
-                if epoch == "on_exit":
-                    return
-                file_name = f'{base_path}/checkpoint.mothernet'
-            else:
-                file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
-            os.makedirs(f"{base_path}/models_diff", exist_ok=True)
-            disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
-            if disk_usage.free < 1024 * 1024 * 1024 * 2:
-                print("Not saving model, not enough disk space")
-                print("DISK FULLLLLLL")
-                return
+def make_training_callback(save_every, model_string, base_path, report):
+    def save_callback(model, optimizer, scheduler, epoch):
+        if not hasattr(model, 'last_saved_epoch'):
+            model.last_saved_epoch = 0
+        log_file = f'{base_path}/log/{model_string}.log'
+        if epoch == "start":
+            print(f"Starting training of model {model_string}")
+            return
+        try:
+            os.makedirs(f"{base_path}/log", exist_ok=True)
             with open(log_file, 'a') as f:
-                f.write(f'Saving model to {file_name}\n')
-            print(f'Saving model to {file_name}')
-            config_sample['epoch_in_training'] = epoch
-            config_sample['learning_rates'] = model.learning_rates
-            config_sample['losses'] = model.losses
-            config_sample['wallclock_times'] = model.wallclock_times
+                f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
+        except Exception as e:
+            print(f'Failed to write to log file {log_file}: {e}')
 
-            save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
-            # remove checkpoints that are worse than current
-            if epoch != "on_exit" and epoch - save_every > 0:
-                this_loss = model.losses[-1]
-                for i in range(epoch // save_every):
-                    loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
-                    old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
-                    if os.path.exists(old_file_name):
-                        if loss > this_loss:
-                                try:
-                                    print(f"Removing old model file {old_file_name}")
-                                    os.remove(old_file_name)
-                                except Exception as e:
-                                    print(f"Failed to remove old model file {old_file_name}: {e}")
-                        else:
-                            print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
-    
-    except Exception as e:
-        print("WRITING TO MODEL FILE FAILED")
-        print(e)
+        if epoch != "on_exit":
+            mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+            mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+            mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+            wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
+            mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+            report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
+
+        try:
+            if (epoch == "on_exit") or epoch % save_every == 0:
+                if checkpoint_dir is not None:
+                    if epoch == "on_exit":
+                        return
+                    file_name = f'{base_path}/checkpoint.mothernet'
+                else:
+                    file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+                os.makedirs(f"{base_path}/models_diff", exist_ok=True)
+                disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
+                if disk_usage.free < 1024 * 1024 * 1024 * 2:
+                    print("Not saving model, not enough disk space")
+                    print("DISK FULLLLLLL")
+                    return
+                with open(log_file, 'a') as f:
+                    f.write(f'Saving model to {file_name}\n')
+                print(f'Saving model to {file_name}')
+                config_sample['epoch_in_training'] = epoch
+                config_sample['learning_rates'] = model.learning_rates
+                config_sample['losses'] = model.losses
+                config_sample['wallclock_times'] = model.wallclock_times
+
+                save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+                # remove checkpoints that are worse than current
+                if epoch != "on_exit" and epoch - save_every > 0:
+                    this_loss = model.losses[-1]
+                    for i in range(epoch // save_every):
+                        loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
+                        old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
+                        if os.path.exists(old_file_name):
+                            if loss > this_loss:
+                                    try:
+                                        print(f"Removing old model file {old_file_name}")
+                                        os.remove(old_file_name)
+                                    except Exception as e:
+                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                            else:
+                                print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+        
+        except Exception as e:
+            print("WRITING TO MODEL FILE FAILED")
+            print(e)
+    return save_callback
 
 def load_model_state(load_path, config):
     model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
@@ -649,3 +652,15 @@ def init_mlflow(experiment_name, model_string, continue_run):
 
     else:
         run_args = {'run_name': model_string}
+
+
+def synetune_handle_checkpoint(args):
+    # handle syne-tune restarts
+    checkpoint_dir = args.st_checkpoint_dir
+    if checkpoint_dir is not None:
+        args.base_path = checkpoint_dir
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
+        if checkpoint_path.exists():
+            args.continue_run = True
+            args.load_file = checkpoint_path
