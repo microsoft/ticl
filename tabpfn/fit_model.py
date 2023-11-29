@@ -12,6 +12,7 @@ import time
 from tabpfn.scripts.model_builder import get_model, save_model
 from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
 from tabpfn.utils import compare_dicts
+from tabpfn.mlflow import MLFLOW_HOSTNAME
 
 from tabpfn.priors.utils import uniform_int_sampler_f
 import argparse
@@ -335,10 +336,7 @@ def main(argv):
             print(e)
 
     if not args.no_mlflow:
-        if socket.gethostname() == "amueller-tabpfn-4gpu":
-            mlflow.set_tracking_uri("http://localhost:5000")
-        else:
-            mlflow.set_tracking_uri("http://20.114.249.177:5000")
+        mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")
 
         tries = 0
         while tries < 5:
