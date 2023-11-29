@@ -12,7 +12,7 @@ import time
 from tabpfn.scripts.model_builder import get_model, save_model
 from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
 from tabpfn.utils import compare_dicts
-from tabpfn.mlflow import MLFLOW_HOSTNAME
+from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 
 from tabpfn.priors.utils import uniform_int_sampler_f
 import argparse
