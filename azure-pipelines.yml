@@ -5,7 +5,7 @@
 
 trigger:
 - main
-- clean-code
+- clean_code
 
 pool:
   vmImage: ubuntu-latest
