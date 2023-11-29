@@ -21,7 +21,6 @@ steps:
     echo "Activating Conda environment..."
     source $HOME/miniconda/bin/activate
     conda activate tabpfn_testing_environment
-  displayName: 'Activate Conda environment'
-
-- script: pytest -sv tests/
-  displayName: 'running tests'
+    echo "Running tests..."
+    pytest -sv tests/
+  displayName: 'Run tests'
