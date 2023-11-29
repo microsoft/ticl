@@ -24,7 +24,6 @@ import os
 import pickle
 import io
 from tqdm import tqdm
-from annoy import AnnoyIndex
 
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
@@ -248,6 +247,7 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
         self.n_trees = n_trees
 
     def fit(self, X, y):
+        from annoy import AnnoyIndex
         self.classes_ = np.unique(y)
         self.X_ = np.array(X)
         self.y_ = np.array(y)

@@ -1,8 +1,3 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - main
 - clean_code
@@ -11,10 +6,22 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- script: |
+    echo "Installing Miniconda..."
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    bash miniconda.sh -b -p $HOME/miniconda
+  displayName: 'Install Miniconda'
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    echo "Creating Conda environment..."
+    $HOME/miniconda/bin/conda env create -f testing_environment.yml
+  displayName: 'Create Conda environment'
+
+- script: |
+    echo "Activating Conda environment..."
+    source $HOME/miniconda/bin/activate
+    conda activate tabpfn_testing_environment
+  displayName: 'Activate Conda environment'
+
+- script: pytest -sv tests/
+  displayName: 'running tests'
