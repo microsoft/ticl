@@ -134,6 +134,8 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
         already_seen.add(run.info.run_id)
         try:
             losses = MlflowClient().get_metric_history(run.info.run_id, key="loss")
+            if not len(losses):
+                continue
             adjusted_wallclock = MlflowClient().get_metric_history(run.info.run_id, key="wallclock_time")
             losses_df = pd.DataFrame.from_dict([dict(l) for l in losses]).rename(columns={'value': 'loss'})
             clock_df = pd.DataFrame.from_dict([dict(t) for t in adjusted_wallclock]).rename(columns={'value': 'clock'})
