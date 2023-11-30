@@ -1,6 +1,14 @@
 from sklearn.base import BaseEstimator, RegressorMixin
 import numpy as np
 from itertools import cycle
+from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
+
+
+import pandas as pd
+from mlflow import MlflowClient
+import mlflow
+from mlflow.entities import ViewType
+from mlflow.exceptions import MlflowException
 
 from scipy.optimize import minimize
 def exp_curve(x, params):
@@ -94,16 +102,14 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
     return fig
 
 
-import pandas as pd
-from mlflow import MlflowClient
-from mlflow.entities import ViewType
-from mlflow.exceptions import MlflowException
-
 def get_runs(filter_string, experiment_id):
     return  MlflowClient().search_runs(experiment_ids=experiment_id, filter_string=filter_string,
                                        run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
-def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running","reference")):
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running","reference"), mlflow_host=None):
+    if mlflow_host is None:
+        mlflow_host = MLFLOW_HOSTNAME
+    mlflow.set_tracking_uri(f"http://{mlflow_host}:5000")
     if experiment_name is not None and experiment_id is not None:
         raise ValueError("Please specify either experiment_name or experiment_id, not both.")
     if experiment_name is not None:
