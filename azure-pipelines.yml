@@ -23,5 +23,5 @@ steps:
     conda activate tabpfn_testing_environment
     echo "Running tests..."
     ls
-    pytest -sv tabpfn_training_amueller/tabpfn/tests/
+    pytest -sv tabpfn/tests/
   displayName: 'Run tests'
