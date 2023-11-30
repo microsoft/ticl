@@ -22,5 +22,6 @@ steps:
     source $HOME/miniconda/bin/activate
     conda activate tabpfn_testing_environment
     echo "Running tests..."
-    pytest -sv tests/
+    ls
+    pytest -sv tabpfn_training_amueller/tabpfn/tests/
   displayName: 'Run tests'
