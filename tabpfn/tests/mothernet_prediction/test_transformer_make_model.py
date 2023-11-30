@@ -13,6 +13,8 @@ TABPFN_MODEL_PATH = "models_diff/download_epoch_100.cpkt"
 @pytest.mark.parametrize("ensemble", [ShiftClassifier, EnsembleMeta, None])
 @pytest.mark.parametrize("class_offset", [0, 4])
 def test_basic_iris(ensemble, class_offset):
+    pytest.skip("haven't checked in model checkpoints yet")
+
     if class_offset == 4 and ensemble in [None, ShiftClassifier]:
         raise pytest.skip("Skip this test because the ensemble is None and class_offset is 4")
     iris = load_iris()
@@ -28,6 +30,7 @@ def test_basic_iris(ensemble, class_offset):
     assert mothernet.score(X_test, y_test + class_offset) > 0.9
 
 def test_predict_new_training_code_iris():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = ForwardMLPModel(path=MOTHERNET_NEW_CODE, device='cpu')
@@ -40,6 +43,7 @@ def test_predict_new_training_code_iris():
 
 
 def test_two_layers_iris():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = ForwardMLPModel(path=MOTHERNET_L2_PATH, device='cpu')
@@ -51,6 +55,7 @@ def test_two_layers_iris():
     assert mothernet.score(X_test, y_test) > 0.9
 
 def test_two_layers_iris_tabpfn_logic():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = TabPFNClassifier(model_string="mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33", epoch=780, device='cpu', N_ensemble_configurations=1)
@@ -63,6 +68,7 @@ def test_two_layers_iris_tabpfn_logic():
 
 
 def test_low_rank_iris():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = ForwardMLPModel(path=MOTHERNET_LOW_RANK_PATH, device='cpu')
@@ -74,6 +80,7 @@ def test_low_rank_iris():
     assert mothernet.score(X_test, y_test) > 0.9
 
 def test_low_rank_iris_tabpfn_logic():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     mothernet = TabPFNClassifier(model_string="mn_n1024_L2_W128_P512_1_gpu_08_03_2023_03_48_19", epoch="on_exit", device='cpu')
@@ -85,6 +92,7 @@ def test_low_rank_iris_tabpfn_logic():
     assert mothernet.score(X_test, y_test) > 0.9
 
 def test_tabpfn_load_error():
+    pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     # test that we get a good error if we try to load tabpfn weights in ForwardMLPModel
     mothernet = ForwardMLPModel(path=TABPFN_MODEL_PATH, device='cpu')
