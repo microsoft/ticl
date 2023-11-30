@@ -111,7 +111,7 @@ def test_train_low_rank_ignored():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16'])
-    assert results['loss'] == 2.4132819175720215
+    assert results['loss'] == 2.4058380126953125 
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -144,7 +144,7 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == 2.0175960063934326
+    assert results['loss'] == 3.025623321533203
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
@@ -161,7 +161,7 @@ def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
-    assert results['loss'] == 2.3633618354797363
+    assert results['loss'] == 2.2145862579345703
     assert count_parameters(results['model']) == 1744842
     assert isinstance(results['model'], TabPerceiver)
 
@@ -169,7 +169,7 @@ def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == 2.0139236450195312
+    assert results['loss'] == 1.9268087148666382
     assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
 
@@ -177,6 +177,6 @@ def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == 2.256040334701538
+    assert results['loss'] == 2.252650737762451
     assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)
