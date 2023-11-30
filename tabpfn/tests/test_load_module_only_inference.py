@@ -4,8 +4,7 @@ from tabpfn.datasets import load_openml_list, open_cc_dids
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 
-
-def test_main(self):
+def test_main():
     pytest.skip("This is not working yet")
     test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids[:1], multiclass=True,
                                                                         shuffled=True,

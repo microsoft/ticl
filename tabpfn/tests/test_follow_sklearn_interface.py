@@ -8,7 +8,7 @@ from tabpfn import TabPFNClassifier
 
 
 
-def test_main(self):
+def test_main():
     pytest.skip("This is not working yet")
     xs = np.random.rand(100, 99)
     ys = np.random.randint(0, 3, 100)
