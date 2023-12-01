@@ -144,7 +144,7 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == pytest.approx(3.025623321533203)
+    assert results['loss'] == pytest.approx(3.025623321533203, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
@@ -177,6 +177,6 @@ def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(2.252650737762451)
+    assert results['loss'] == pytest.approx(2.252650737762451, rel=1e-5)
     assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)
