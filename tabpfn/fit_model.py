@@ -124,6 +124,7 @@ def main(argv):
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
     parser.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
+    parser.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
@@ -179,6 +180,7 @@ def main(argv):
     config['train_mixed_precision'] = args.train_mixed_precision
     config['pre_norm'] = args.pre_norm
     config['lr_decay'] = args.lr_decay
+    config['min_lr'] = args.min_lr
     config['perceiver_large_dataset'] = args.perceiver_large_dataset
     config['num_latents'] = args.num_latents
     config['reduce_lr_on_spike'] = args.reduce_lr_on_spike

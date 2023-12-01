@@ -7,7 +7,7 @@ from torch import nn
 
 import tabpfn.utils as utils
 
-from tabpfn.utils import ReduceLROnSpike
+from tabpfn.utils import ReduceLROnSpike, ExponentialLR
 from tabpfn.utils import init_dist
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import lr_scheduler
@@ -93,7 +93,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
-          epochs=10, stop_after_epochs=None, lr=None, weight_decay=0.0, warmup_epochs=10,
+          epochs=10, stop_after_epochs=None, lr=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
@@ -137,11 +137,11 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     spike_scheduler = None
     if scheduler is None:
         if learning_rate_schedule == 'cosine':
-            base_scheduler = CosineAnnealingLR(optimizer, T_max=epochs - warmup_epochs)
+            base_scheduler = CosineAnnealingLR(optimizer, T_max=epochs - warmup_epochs, eta_min=min_lr)
         elif learning_rate_schedule == 'exponential':
-            base_scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=lr_decay)
+            base_scheduler = ExponentialLR(optimizer, gamma=lr_decay, min_lr=min_lr)
         elif learning_rate_schedule == 'constant':
-            base_scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=1)
+            base_scheduler = ExponentialLR(optimizer, gamma=1, min_lr=min_lr)
         else:
             raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
         # add linear warmup to scheduler
@@ -154,7 +154,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
     if reduce_lr_on_spike:
         # we're not properly restarting the scheduler when we load a checkpoint, sad
-        spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=1e-10, tolerance=spike_tolerance, verbose=True)
+        spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=min_lr, tolerance=spike_tolerance, verbose=True)
     scaler = GradScaler() if train_mixed_precision else None
 
     # check that everything uses up-to-date APIs

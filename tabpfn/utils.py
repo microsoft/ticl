@@ -14,6 +14,7 @@ from torch import nn
 import numpy as np
 import pandas as pd
 from scipy.signal import convolve, windows
+from torch.optim.lr_scheduler import LRScheduler
 
 from torch.optim.optimizer import Optimizer
 
@@ -338,6 +339,40 @@ def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
     long_df['time_hours'] = long_df.time / 3600
     long_df['time_days'] = long_df.time_hours / 24
     return long_df
+
+
+class ExponentialLR(LRScheduler):
+    """Decays the learning rate of each parameter group by gamma every epoch.
+    When last_epoch=-1, sets initial lr as lr.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        gamma (float): Multiplicative factor of learning rate decay.
+        last_epoch (int): The index of last epoch. Default: -1.
+        verbose (bool): If ``True``, prints a message to stdout for
+            each update. Default: ``False``.
+    """
+
+    def __init__(self, optimizer, gamma, last_epoch=-1, min_lr=None, verbose=False):
+        self.gamma = gamma
+        self.min_lr = min_lr
+        super().__init__(optimizer, last_epoch, verbose)
+
+    def get_lr(self):
+        if not self._get_lr_called_within_step:
+            warnings.warn("To get the last learning rate computed by the scheduler, "
+                          "please use `get_last_lr()`.", UserWarning)
+
+        if self.last_epoch == 0:
+            return [group['lr'] for group in self.optimizer.param_groups]
+        return [max(group['lr'] * self.gamma, self.min_lr)
+                for group in self.optimizer.param_groups]
+
+    def _get_closed_form_lr(self):
+        return [max(base_lr * self.gamma ** self.last_epoch, self.min_lr)
+                for base_lr in self.base_lrs]
+
+
 
 
 class ReduceLROnSpike:
