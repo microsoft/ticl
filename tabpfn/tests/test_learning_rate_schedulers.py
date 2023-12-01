@@ -54,3 +54,15 @@ def test_min_lr(learning_rate_schedule, min_lr, base_lr):
     assert lrs[0] == pytest.approx(max_lr, rel=1e-5)
     if learning_rate_schedule != 'constant':
         assert lrs.min() == pytest.approx(min_lr)
+
+
+TESTING_DEFAULTS = ['-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'True', '-e', '128', '-N', '2', '-S', 'True', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000']
+
+def test_train_defaults():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir])
+    assert results['model'].learning_rates[-1] == pytest.approx(2.653183702398928e-07)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--min-lr', '1e-5'])
+    assert results['model'].learning_rates[-1] == pytest.approx(1e-5)

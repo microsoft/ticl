@@ -151,8 +151,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                   , gpu_device=device
                   , aggregate_k_gradients=config['aggregate_k_gradients']
                   , epoch_callback=epoch_callback
-                  , lr=config['lr']
-                  , learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99)
+                  , lr=config['lr'], min_lr=config['min_lr'],
+                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99)
                   , verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
                   weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False),
                   reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'],
