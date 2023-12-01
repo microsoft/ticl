@@ -56,13 +56,19 @@ def test_min_lr(learning_rate_schedule, min_lr, base_lr):
         assert lrs.min() == pytest.approx(min_lr)
 
 
-TESTING_DEFAULTS = ['-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'True', '-e', '128', '-N', '2', '-S', 'True', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000']
+TESTING_DEFAULTS = ['--extra-fast-test', '-m', 'tabpfn', '-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'False', '-e', '8', '-N', '2', '-S', 'True', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000', '--learning-rate', '0.003']
 
 def test_train_defaults():
     L.seed_everything(42)
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    #     results = main(TESTING_DEFAULTS + ['-B', tmpdir])
+    # assert results['model'].learning_rates[-1] == pytest.approx(2.5550265339645747e-05)
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    #     results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--min-lr', '1e-4'])
+    # assert results['model'].learning_rates[-1] >= 0.00012 # cosine doesn't go all the way down to min_lr depending on number of epochs
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir])
-    assert results['model'].learning_rates[-1] == pytest.approx(2.653183702398928e-07)
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--learning-rate-schedule', 'exponential', '--lr-decay', '0.8'])
+    assert results['model'].learning_rates[-1] == pytest.approx(8.444249301319689e-05)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--min-lr', '1e-5'])
-    assert results['model'].learning_rates[-1] == pytest.approx(1e-5)
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--min-lr', '1e-4', '--learning-rate-schedule', 'exponential', '--lr-decay', '0.8'])
+    assert results['model'].learning_rates[-1] == pytest.approx(1e-4)

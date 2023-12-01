@@ -135,6 +135,8 @@ def main(argv):
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
     parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
+
 
     args = parser.parse_args(argv)
 
@@ -186,6 +188,7 @@ def main(argv):
     config['reduce_lr_on_spike'] = args.reduce_lr_on_spike
     config['adam_beta1'] = args.adam_beta1
     config['spike_tolerance'] = args.spike_tolerance
+    config['extra_fast_test'] = args.extra_fast_test
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
@@ -203,6 +206,11 @@ def main(argv):
     else:
         config['max_eval_pos'] = 1000
         config['bptt'] = 1024+128
+
+    if config['extra_fast_test']:
+        config['max_eval_pos'] = 16
+        config['bptt'] = 2 * 16
+        config['nhead'] = 1
 
     config['decoder_embed_dim'] = args.decoder_em_size
     config['decoder_hidden_size'] = args.decoder_hidden_size
