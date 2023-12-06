@@ -6,13 +6,6 @@ def get_mlp_prior_hyperparameters(config):
     if 'random_feature_rotation' not in config:
         config['random_feature_rotation'] = True
 
-    if "prior_sigma_gamma_k" in config:
-        sigma_sampler = gamma_sampler_f(config["prior_sigma_gamma_k"], config["prior_sigma_gamma_theta"])
-        config['init_std'] = sigma_sampler
-    if "prior_noise_std_gamma_k" in config:
-        noise_std_sampler = gamma_sampler_f(config["prior_noise_std_gamma_k"], config["prior_noise_std_gamma_theta"])
-        config['noise_std'] = noise_std_sampler
-
     return config
 
 
