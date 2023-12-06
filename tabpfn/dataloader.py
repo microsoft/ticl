@@ -6,24 +6,8 @@ def get_mlp_prior_hyperparameters(config):
     if 'random_feature_rotation' not in config:
         config['random_feature_rotation'] = True
 
-    if "prior_sigma_gamma_k" in config:
-        sigma_sampler = gamma_sampler_f(config["prior_sigma_gamma_k"], config["prior_sigma_gamma_theta"])
-        config['init_std'] = sigma_sampler
-    if "prior_noise_std_gamma_k" in config:
-        noise_std_sampler = gamma_sampler_f(config["prior_noise_std_gamma_k"], config["prior_noise_std_gamma_theta"])
-        config['noise_std'] = noise_std_sampler
-
     return config
 
-
-def get_gp_mix_prior_hyperparameters(config):
-    return {'lengthscale_concentration': config["prior_lengthscale_concentration"],
-            'nu': config["prior_nu"],
-            'outputscale_concentration': config["prior_outputscale_concentration"],
-            'categorical_data': config["prior_y_minmax_norm"],
-            'y_minmax_norm': config["prior_lengthscale_concentration"],
-            'noise_concentration': config["prior_noise_concentration"],
-            'noise_rate': config["prior_noise_rate"]}
 
 def get_gp_prior_hyperparameters(config):
     return {hp: (list(config[hp].values())[0]) if type(config[hp]) is dict else config[hp] for hp in config}
