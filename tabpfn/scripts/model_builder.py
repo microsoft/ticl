@@ -109,6 +109,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['reduce_lr_on_spike'] = config.get('reduce_lr_on_spike', False)
     config['adam_beta1'] = config.get('adam_beta1', 0.9)
     config['spike_tolerance'] = config.get('spike_tolerance', 4)
+    config['min_lr'] = config.get('min_lr', None)
     config['stop_after_epochs'] = config.get('stop_after_epochs', None)
     config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
 
