@@ -7,7 +7,7 @@ from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
-tuner_name = "tabpfn-timed"
+tuner_name = "tabpfn-timed-minlr"
 
 
 # hyperparameter search space to consider
@@ -22,9 +22,10 @@ config_space = {
     'learning-rate-schedule': choice(['cosine', 'constant', 'exponential']),
     'adam-beta1': uniform(0.8, 0.999),
     'lr-decay': uniform(0.5, 1),
-    'reduce-lr-on-spike': choice([True, False]),
+    'reduce-lr-on-spike': choice([False]),
+    'min-lr': loguniform(1e-8, 1e-2),
     'save-every': 1,
-    'spike-tolerance': randint(1, 10),
+    #'spike-tolerance': randint(1, 10),
     'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
     #'num-steps': 128,
@@ -43,7 +44,7 @@ tuner = Tuner(
         search_options={'debug_log': False},
         mode='min',
         type="promotion",
-        grace_period=10,  # each tick is 5 minutes
+        grace_period=50,  # each tick is 5 minutes
         early_checkpoint_removal_kwargs=early_checkpoint_removal_kwargs,
     ),
     max_failures=1000,
