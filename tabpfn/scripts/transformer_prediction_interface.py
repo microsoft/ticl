@@ -120,8 +120,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.base__path = base_path
         self.base_path = base_path
         self.model_string = model_string
-
-
         self.no_preprocess_mode = no_preprocess_mode
         self.combine_preprocessing = combine_preprocessing
         self.feature_shift_decoder = feature_shift_decoder
@@ -171,7 +169,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         #style, temperature = self.load_result_minimal(style_file, i, e)
         self.model = model
-    
+
 
         # Check that X and y have correct shape
         X, y = check_X_y(X, y, force_all_finite=False)
@@ -189,7 +187,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
             raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable. We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN). Please confirm you want to run by passing overwrite_warning=True to the fit function.")
-            
+
 
         # Return the classifier
         return self
@@ -256,7 +254,7 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
             v = self.X_[i]
             self.ann_index.add_item(i, v)
         self.ann_index.build(self.n_trees)
-        try: 
+        try:
             self.y_onehot_  = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
         except TypeError:  # old sklearn
             self.y_onehot_  = OneHotEncoder(sparse=False).fit_transform(y.reshape(-1, 1))
@@ -271,7 +269,7 @@ class ApproxNNClassifier(ClassifierMixin, BaseEstimator):
             pred_probs.append(this_y_train.mean(axis=0))
         y_pred_prob = np.c_[pred_probs]
         return y_pred_prob
-    
+
     def predict(self, X):
         p = self.predict_proba(X)
         y = np.argmax(p, axis=-1)
@@ -287,7 +285,7 @@ class NeighborsMetaClassifier(ClassifierMixin, BaseEstimator):
         self.verbose = verbose
         self.overwrite_warning = overwrite_warning
         self.n_trees_annoy = n_trees_annoy
-    
+
     def fit(self, X, y):
         self.X_ = np.array(X)
         self.y_ = np.array(y)
@@ -317,7 +315,7 @@ class NeighborsMetaClassifier(ClassifierMixin, BaseEstimator):
             for row in this_X_test:
                 closest.extend(self.ann_index.get_nns_by_vector(row, self.n_neighbors))
             closest = np.unique(closest)
-            
+
             this_X_train = self.X_[closest]
             this_y_train = self.y_[closest]
             if len(np.unique(this_y_train)) > 1:
@@ -404,7 +402,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
     def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits):
         # Initialize results array size S, B, Classes
-
         inference_mode_call = torch.inference_mode() if inference_mode else NOP()
         with inference_mode_call:
             start = time.time()
@@ -444,7 +441,8 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         # Removing empty features
         eval_xs = eval_xs[:, 0, :]
-        sel = eval_xs[0:eval_ys.shape[0]].var(dim=0) > 0
+        sel = [len(torch.unique(eval_xs[0:eval_ys.shape[0], col])) > 1 for col in range(eval_xs.shape[1])]
+        # sel = eval_xs[0:eval_ys.shape[0]].var(dim=0) > 0
         eval_xs = eval_xs[:, sel]
 
         warnings.simplefilter('error')
@@ -518,7 +516,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     #    ensemble_configurations = [default_ensemble_config]
 
     output = None
-
     eval_xs_transformed = {}
     inputs, labels = [], []
     start = time.time()
