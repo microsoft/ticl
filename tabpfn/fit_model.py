@@ -109,11 +109,11 @@ def main(argv):
     parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
-    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=str2bool)
+    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=True, type=str2bool)
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
-    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=False)
+    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
@@ -128,7 +128,7 @@ def main(argv):
     parser.add_argument('--perceiver-large-dataset', action='store_true')
     parser.add_argument('-B', '--base-path', default='.')
     parser.add_argument('--pre-norm', action='store_true')
-    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=True, type=str2bool)
+    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
     parser.add_argument('--save-every', default=10, type=int)
     parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
@@ -375,7 +375,7 @@ def main(argv):
             total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=args.continue_run or args.load_strict)
-            
+
     else:
         total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                  optimizer_state=optimizer_state, scheduler=scheduler,
