@@ -1,30 +1,23 @@
-import time
-import torch
-import random
+import io
+import os
 import pathlib
-
-from torch.utils.checkpoint import checkpoint
-
-from tabpfn.utils import normalize_data, to_ranking_low_mem, remove_outliers
-from tabpfn.utils import NOP, normalize_by_used_features_f
-
-from sklearn.preprocessing import PowerTransformer, QuantileTransformer, RobustScaler
+import pickle
+import random
+import time
+from pathlib import Path
 
 import numpy as np
+import torch
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
-from sklearn.utils.multiclass import unique_labels
-from sklearn.utils.multiclass import check_classification_targets
-from sklearn.utils import column_or_1d
-from sklearn.utils import gen_batches
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-
-from pathlib import Path
-from tabpfn.model_builder import load_model
-import os
-import pickle
-import io
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, PowerTransformer, QuantileTransformer, RobustScaler
+from sklearn.utils import column_or_1d, gen_batches
+from sklearn.utils.multiclass import check_classification_targets, unique_labels
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from torch.utils.checkpoint import checkpoint
 from tqdm import tqdm
+
+from tabpfn.model_builder import load_model
+from tabpfn.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers, to_ranking_low_mem
 
 
 def _get_file(e, base_path, add_name, eval_addition):

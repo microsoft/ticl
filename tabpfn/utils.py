@@ -1,26 +1,23 @@
-import os
-import math
 import argparse
-import random
 import datetime
-import itertools
 import glob
+import itertools
+import math
+import os
+import random
 import re
+import shutil
+import socket
 import time
 
-import torch
-from torch import nn
-
+import mlflow
 import numpy as np
 import pandas as pd
+import torch
 from scipy.signal import convolve, windows
+from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
-
 from torch.optim.optimizer import Optimizer
-
-import socket
-import shutil
-import mlflow
 
 
 def get_openai_lr(transformer_model):

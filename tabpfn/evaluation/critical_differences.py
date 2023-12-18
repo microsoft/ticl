@@ -1,16 +1,13 @@
 
+import math
+import operator
+
+import matplotlib
+import matplotlib.pyplot as plt
+import networkx
 import numpy as np
 import pandas as pd
-import matplotlib
-
-import matplotlib.pyplot as plt
-
-
-import operator
-import math
-from scipy.stats import wilcoxon
-from scipy.stats import friedmanchisquare
-import networkx
+from scipy.stats import friedmanchisquare, wilcoxon
 
 # inspired from orange3 https://docs.orange.biolab.si/3/data-mining-library/reference/evaluation.cd.html
 

@@ -1,38 +1,35 @@
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials, space_eval, rand
-from sklearn.linear_model import RidgeClassifier
-from lightgbm import LGBMClassifier
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-import time
-from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LogisticRegression, Ridge
-from tabpfn.utils import remove_outliers
-from tqdm import tqdm
-import pandas as pd
-from tabpfn.evaluation import tabular_metrics
 import itertools
-import torch
-import numpy as np
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn import neighbors
-import xgboost as xgb
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.impute import SimpleImputer
-from sklearn.metrics import make_scorer
-from torch import nn
-from sklearn import preprocessing
-import os
-import sklearn
 import math
+import os
 import random
-import tempfile
-from sklearn.model_selection import ParameterGrid
-from sklearn.model_selection import KFold
-from sklearn.model_selection import GridSearchCV
-import pandas
 import sys
+import tempfile
+import time
+
+import numpy as np
+import pandas
+import pandas as pd
+import sklearn
+import torch
+import xgboost as xgb
+from hyperopt import STATUS_OK, Trials, fmin, hp, rand, space_eval, tpe
+from lightgbm import LGBMClassifier
+from sklearn import neighbors, preprocessing
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.compose import ColumnTransformer
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression, Ridge, RidgeClassifier
+from sklearn.metrics import make_scorer
+from sklearn.model_selection import GridSearchCV, KFold, ParameterGrid, cross_val_score
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from torch import nn
+from tqdm import tqdm
+
+from tabpfn.evaluation import tabular_metrics
+from tabpfn.utils import remove_outliers
+
 tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
 
@@ -245,10 +242,11 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 
 
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
-    from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
-    from sklearn.pipeline import make_pipeline
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import make_pipeline
+
+    from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 
     if onehot:
         ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
@@ -326,8 +324,9 @@ def get_updates_for_regularization_cocktails(
             The search space updates like setting different hps to different values or ranges.
             Lastly include updates, which can be used to include different features.
     """
-    from autoPyTorch.utils.hyperparameter_search_space_update import HyperparameterSearchSpaceUpdates
     import argparse
+
+    from autoPyTorch.utils.hyperparameter_search_space_update import HyperparameterSearchSpaceUpdates
 
     augmentation_names_to_trainers = {
         'mixup': 'MixUpTrainer',
@@ -678,10 +677,11 @@ def get_smac_object(
     Returns:
         (SMAC4AC): sequential model algorithm configuration object
     """
+    from smac.facade.smac_ac_facade import SMAC4AC
     from smac.intensification.simple_intensifier import SimpleIntensifier
     from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
     from smac.scenario.scenario import Scenario
-    from smac.facade.smac_ac_facade import SMAC4AC
+
     # multi-fidelity is disabled, that is why initial_budget and max_budget
     # are not used.
     rh2EPM = RunHistory2EPM4LogCost
@@ -746,11 +746,12 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
     # os.environ.get('SLURM_JOBID', '')
     categorical_indicator = np.array([i in categorical_indicator for i in range(X_train.shape[1])])
     with tempfile.TemporaryDirectory(prefix=f"{len(X_train)}_{len(X_test)}_{max_time}") as temp_dir:
-        from autoPyTorch.api.tabular_classification import TabularClassificationTask
-        from autoPyTorch.datasets.resampling_strategy import HoldoutValTypes, NoResamplingStrategyTypes
-        from autoPyTorch.data.tabular_validator import TabularInputValidator
-        from autoPyTorch.datasets.tabular_dataset import TabularDataset
         from autoPyTorch import metrics
+        from autoPyTorch.api.tabular_classification import TabularClassificationTask
+        from autoPyTorch.data.tabular_validator import TabularInputValidator
+        from autoPyTorch.datasets.resampling_strategy import HoldoutValTypes, NoResamplingStrategyTypes
+        from autoPyTorch.datasets.tabular_dataset import TabularDataset
+
         # append random folder to temp_dir to avoid collisions
         rand_int = str(random.randint(1, 1000))
         temp_dir = os.path.join(temp_dir, 'temp_'+rand_int)
@@ -917,8 +918,8 @@ def autosklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
 
 def autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, version=2):
-    from autosklearn.experimental.askl2 import AutoSklearn2Classifier
     from autosklearn.classification import AutoSklearnClassifier
+    from autosklearn.experimental.askl2 import AutoSklearn2Classifier
     from autosklearn.regression import AutoSklearnRegressor
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
 
@@ -1191,6 +1192,7 @@ param_grid_hyperopt['tabnet'] = {
 
 def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from pytorch_tabnet.tab_model import TabNetClassifier
+
     # TabNet inputs raw tabular data without any preprocessing and is trained using gradient descent-based optimisation.
     # However Tabnet cannot handle nans so we impute with mean
 
@@ -1330,6 +1332,7 @@ param_grid_hyperopt['xgb'] = {
 
 def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
     import xgboost as xgb
+
     # XGB Documentation:
     # XGB handles categorical data appropriately without using One Hot Encoding, categorical features are experimetal
     # XGB handles missing values appropriately without imputation

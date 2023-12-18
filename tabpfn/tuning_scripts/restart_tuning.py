@@ -1,7 +1,9 @@
-import pdb
-from syne_tune.experiments import load_experiment
-import sys
 import logging
+import pdb
+import sys
+
+from syne_tune.experiments import load_experiment
+
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 

@@ -1,12 +1,12 @@
-import torch
-from torch import nn
 import math
 
-from .utils import get_batch_to_dataloader
-from tabpfn.utils import default_device, normalize_by_used_features_f
-from .utils import order_by_y
+import torch
+from torch import nn
 
-from .utils import trunc_norm_sampler_f, beta_sampler_f, gamma_sampler_f, uniform_sampler_f, zipf_sampler_f, scaled_beta_sampler_f, uniform_int_sampler_f
+from tabpfn.utils import default_device, normalize_by_used_features_f
+
+from .utils import (beta_sampler_f, gamma_sampler_f, get_batch_to_dataloader, order_by_y, scaled_beta_sampler_f,
+                    trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f, zipf_sampler_f)
 
 
 def unpack_dict_of_tuples(d):

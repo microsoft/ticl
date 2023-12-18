@@ -8,10 +8,11 @@ Includes a few metric as well as functions composing metrics on results files.
 
 
 import numpy as np
-import torch
-from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score, average_precision_score, mean_squared_error, mean_absolute_error, r2_score
-from scipy.stats import rankdata
 import pandas as pd
+import torch
+from scipy.stats import rankdata
+from sklearn.metrics import (accuracy_score, average_precision_score, balanced_accuracy_score, mean_absolute_error,
+                             mean_squared_error, r2_score, roc_auc_score)
 
 
 def root_mean_squared_error_metric(target, pred):

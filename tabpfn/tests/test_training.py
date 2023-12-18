@@ -1,14 +1,15 @@
 import tempfile
-import pytest
+
+import lightning as L
 import numpy as np
+import pytest
 
 from tabpfn.fit_model import main
 from tabpfn.fit_tabpfn import main as tabpfn_main
-from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
-from tabpfn.models.transformer import TransformerModel
-from tabpfn.models.perceiver import TabPerceiver
 from tabpfn.models.mothernet_additive import MotherNetAdditive
-import lightning as L
+from tabpfn.models.perceiver import TabPerceiver
+from tabpfn.models.transformer import TransformerModel
+from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
 
 
 def count_parameters(model):

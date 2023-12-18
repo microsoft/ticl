@@ -1,12 +1,10 @@
-from sklearn.base import ClassifierMixin, BaseEstimator
-import torch
-from torch.utils.data import TensorDataset
-
 import numpy as np
-from torch import nn
-from torch.utils.data import DataLoader
-from sklearn.preprocessing import LabelEncoder
 import pandas as pd
+import torch
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.preprocessing import LabelEncoder
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
 
 from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 

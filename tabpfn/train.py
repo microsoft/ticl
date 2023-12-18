@@ -1,18 +1,14 @@
 import time
 from contextlib import nullcontext
 
-
 import torch
 from torch import nn
+from torch.cuda.amp import GradScaler, autocast
+from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 import tabpfn.utils as utils
-
-from tabpfn.utils import ReduceLROnSpike, ExponentialLR
-from tabpfn.utils import init_dist
-from torch.cuda.amp import autocast, GradScaler
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
-from torch import nn
+from tabpfn.utils import ExponentialLR, ReduceLROnSpike, init_dist
 
 
 def get_criterion(max_num_classes):

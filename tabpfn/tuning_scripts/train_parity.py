@@ -1,16 +1,15 @@
 import logging
 import time
-import torch
-
-from syne_tune import Reporter
 from argparse import ArgumentParser
 
-from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-from sklearn.model_selection import train_test_split
-
 import pmlb
+import torch
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from syne_tune import Reporter
+
+from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
 
 if __name__ == '__main__':
 

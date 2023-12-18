@@ -1,21 +1,16 @@
 import numpy as np
-
-
 import torch
 import torch.nn as nn
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.preprocessing import LabelEncoder
 from torch.nn import TransformerEncoder
 
-from tabpfn.models.layer import TransformerEncoderLayer
-from tabpfn.utils import SeqBN, bool_mask_to_att_mask
-from tabpfn.utils import normalize_by_used_features_f, normalize_data
-
-from tabpfn.models.transformer import TransformerEncoderDiffInit
-from tabpfn.models.encoders import Linear, BinEmbeddingEncoder
-from tabpfn.models.decoders import AdditiveModelDecoder
 from tabpfn.model_builder import load_model
-
-from sklearn.preprocessing import LabelEncoder
-from sklearn.base import BaseEstimator, ClassifierMixin
+from tabpfn.models.decoders import AdditiveModelDecoder
+from tabpfn.models.encoders import BinEmbeddingEncoder, Linear
+from tabpfn.models.layer import TransformerEncoderLayer
+from tabpfn.models.transformer import TransformerEncoderDiffInit
+from tabpfn.utils import SeqBN, bool_mask_to_att_mask, normalize_by_used_features_f, normalize_data
 
 
 class MotherNetAdditive(nn.Module):

@@ -1,13 +1,12 @@
 import logging
-import time
 import os
-import numpy as np
-from pathlib import Path
-import time
-
-from syne_tune import Reporter
-from argparse import ArgumentParser
 import pickle
+import time
+from argparse import ArgumentParser
+from pathlib import Path
+
+import numpy as np
+from syne_tune import Reporter
 
 if __name__ == '__main__':
 

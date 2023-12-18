@@ -1,28 +1,22 @@
-from sklearn.base import BaseEstimator, ClassifierMixin
-import numpy as np
 import itertools
 import random
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PowerTransformer, StandardScaler
-from sklearn.feature_selection import VarianceThreshold
 
+import numpy as np
 import torch
 import torch.nn as nn
+from einops import rearrange, repeat
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.ensemble import VotingClassifier
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler
 from torch.nn import TransformerEncoder
 
-from tabpfn.models.layer import TransformerEncoderLayer
-from tabpfn.utils import SeqBN, bool_mask_to_att_mask
-from tabpfn.utils import normalize_by_used_features_f, normalize_data
-
-from tabpfn.models.transformer import TransformerEncoderDiffInit
-from tabpfn.models.decoders import LinearModelDecoder, MLPModelDecoder
 from tabpfn.model_builder import load_model
-
-from sklearn.preprocessing import LabelEncoder
-from sklearn.base import clone
-from sklearn.ensemble import VotingClassifier
-
-from einops import rearrange, repeat
+from tabpfn.models.decoders import LinearModelDecoder, MLPModelDecoder
+from tabpfn.models.layer import TransformerEncoderLayer
+from tabpfn.models.transformer import TransformerEncoderDiffInit
+from tabpfn.utils import SeqBN, bool_mask_to_att_mask, normalize_by_used_features_f, normalize_data
 
 
 class MLPModelPredictor(nn.Module):

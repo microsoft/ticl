@@ -1,17 +1,16 @@
+import math
+import os
+import subprocess as sp
 from functools import partial
-import tabpfn.models.encoders as encoders
-
-from tabpfn.models.transformer import TransformerModel
-from tabpfn.utils import get_uniform_single_eval_pos_sampler
-from tabpfn.dataloader import get_dataloader
-from tabpfn.assemble_model import assemble_model
-from tabpfn.train import train, get_criterion
 
 import torch
 
-import subprocess as sp
-import os
-import math
+import tabpfn.models.encoders as encoders
+from tabpfn.assemble_model import assemble_model
+from tabpfn.dataloader import get_dataloader
+from tabpfn.models.transformer import TransformerModel
+from tabpfn.train import get_criterion, train
+from tabpfn.utils import get_uniform_single_eval_pos_sampler
 
 try:
     from functools import cache

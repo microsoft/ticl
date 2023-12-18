@@ -1,9 +1,9 @@
 import os
 import pathlib
+import sys
 from argparse import Namespace
 
 from sklearn.model_selection import GridSearchCV
-import sys
 
 CV = 5
 param_grid = {}
@@ -39,9 +39,9 @@ def saint_metric(x, y, test_x, test_y, cat_features, metric_used):
     sys.chdir(dest_wd)
 
     try:
-        from models.saint import SAINT
-
         import warnings
+
+        from models.saint import SAINT
 
         def warn(*args, **kwargs):
             pass

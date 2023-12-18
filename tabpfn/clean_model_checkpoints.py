@@ -1,7 +1,8 @@
 import glob
-import re
 import os
+import re
 from collections import defaultdict
+
 import torch
 
 file_dict = defaultdict(list)

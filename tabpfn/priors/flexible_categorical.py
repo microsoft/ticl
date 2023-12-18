@@ -1,14 +1,15 @@
-import torch.cuda as cutorch
-import time
 import random
+import time
 
 import torch
+import torch.cuda as cutorch
 from torch import nn
 
-from .utils import get_batch_to_dataloader
-from tabpfn.utils import normalize_data, nan_handling_missing_for_unknown_reason_value, nan_handling_missing_for_no_reason_value, nan_handling_missing_for_a_reason_value, to_ranking_low_mem, remove_outliers, normalize_by_used_features_f
-from .utils import randomize_classes, CategoricalActivation
-from .utils import uniform_int_sampler_f
+from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
+                          nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
+                          remove_outliers, to_ranking_low_mem)
+
+from .utils import CategoricalActivation, get_batch_to_dataloader, randomize_classes, uniform_int_sampler_f
 
 time_it = False
 

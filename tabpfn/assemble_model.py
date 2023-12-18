@@ -8,9 +8,9 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     encoder = encoder_generator(num_features, emsize)
     decoder_hidden_size = decoder_hidden_size or nhid
 
-    from tabpfn.models.transformer import TransformerModel
-    from tabpfn.models.perceiver import TabPerceiver
     from tabpfn.models.mothernet_additive import MotherNetAdditive
+    from tabpfn.models.perceiver import TabPerceiver
+    from tabpfn.models.transformer import TransformerModel
     from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
 
     if max_num_classes > 2:

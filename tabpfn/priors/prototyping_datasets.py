@@ -1,9 +1,9 @@
-import torch
 import numpy as np
-from sklearn.metrics import pairwise_distances
-from joblib import Parallel, delayed
 import pandas as pd
 import seaborn as sns
+import torch
+from joblib import Parallel, delayed
+from sklearn.metrics import pairwise_distances
 
 
 def make_data(n_classes, n_samples, n_steps):

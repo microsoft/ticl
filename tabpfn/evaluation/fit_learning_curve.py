@@ -1,16 +1,15 @@
-from sklearn.base import BaseEstimator, RegressorMixin
-import numpy as np
 from itertools import cycle
-from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 
-
+import mlflow
+import numpy as np
 import pandas as pd
 from mlflow import MlflowClient
-import mlflow
 from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
-
 from scipy.optimize import minimize
+from sklearn.base import BaseEstimator, RegressorMixin
+
+from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 
 
 def exp_curve(x, params):

@@ -1,12 +1,11 @@
-from math import pi, log
 from functools import wraps
+from math import log, pi
 
 import torch
-from torch import nn, einsum
 import torch.nn.functional as F
-
 from einops import rearrange, repeat
 from einops.layers.torch import Reduce
+from torch import einsum, nn
 
 from tabpfn.models.decoders import MLPModelDecoder
 from tabpfn.models.transformer_make_model import MLPModelPredictor

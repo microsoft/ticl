@@ -1,9 +1,10 @@
 import logging
 
-from syne_tune import Tuner, StoppingCriterion
+from syne_tune import StoppingCriterion, Tuner
 from syne_tune.backend import LocalBackend
-from syne_tune.config_space import randint, loguniform, uniform, lograndint, choice
+from syne_tune.config_space import choice, lograndint, loguniform, randint, uniform
 from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
+
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 

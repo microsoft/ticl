@@ -1,13 +1,14 @@
+import math
 import random
 
-import torch
-
-from tabpfn.utils import set_locals_in_self
-from .prior import PriorDataLoader
-from torch import nn
 import numpy as np
 import scipy.stats as stats
-import math
+import torch
+from torch import nn
+
+from tabpfn.utils import set_locals_in_self
+
+from .prior import PriorDataLoader
 
 
 def get_batch_to_dataloader(get_batch_method_):
@@ -49,9 +50,9 @@ def get_batch_to_dataloader(get_batch_method_):
 
 
 def plot_features(data, targets, fig=None, categorical=True):
-    import seaborn as sns
-    import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     if torch.is_tensor(data):
         data = data.detach().cpu().numpy()
         targets = targets.detach().cpu().numpy()

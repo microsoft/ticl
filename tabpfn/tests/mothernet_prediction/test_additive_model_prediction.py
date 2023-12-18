@@ -1,8 +1,9 @@
-from tabpfn.models.transformer_make_model import ShiftClassifier, EnsembleMeta
-from tabpfn.models.mothernet_additive import ForwardAdditiveModel
+import pytest
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-import pytest
+
+from tabpfn.models.mothernet_additive import ForwardAdditiveModel
+from tabpfn.models.transformer_make_model import EnsembleMeta, ShiftClassifier
 
 ADDITIVE_MOTHERNET_PATH = "models_diff/additive_for_testing.cpkt"
 

@@ -1,11 +1,12 @@
-import random
 import math
+import random
 
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
 
 from tabpfn.utils import default_device
+
 from .utils import get_batch_to_dataloader
 
 

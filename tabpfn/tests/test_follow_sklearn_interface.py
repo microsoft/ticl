@@ -1,7 +1,7 @@
-import pytest
+import pickle
 
 import numpy as np
-import pickle
+import pytest
 
 from tabpfn import TabPFNClassifier
 

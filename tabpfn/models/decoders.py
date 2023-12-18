@@ -1,6 +1,7 @@
+import random
+
 import torch
 from torch import nn
-import random
 
 
 class LinearModelDecoder(nn.Module):

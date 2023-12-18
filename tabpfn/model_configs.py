@@ -1,11 +1,11 @@
 from copy import deepcopy
-from tabpfn.priors.utils import uniform_int_sampler_f
-from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter
-from ConfigSpace import hyperparameters as CSH
-import torch
-from tabpfn.priors.differentiable_prior import replace_differentiable_distributions
 
 import ConfigSpace as CS
+import torch
+from ConfigSpace import hyperparameters as CSH
+
+from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter, replace_differentiable_distributions
+from tabpfn.priors.utils import uniform_int_sampler_f
 
 
 def get_general_config(max_features, bptt, eval_positions=None):

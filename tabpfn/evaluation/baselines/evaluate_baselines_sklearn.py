@@ -1,19 +1,19 @@
 import numpy as np
 import pandas as pd
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
-from sklearn.impute import SimpleImputer
 from sklearn.compose import make_column_transformer
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_validate
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
-
-from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
-from tabpfn.evaluation.baselines.distill_mlp import TorchMLP, DistilledTabPFNMLP
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from tqdm import tqdm
+
 from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
+from tabpfn.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
+
 
 def make_logreg(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())

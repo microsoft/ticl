@@ -1,18 +1,18 @@
 import logging
-import time
-import torch
 import os
-
-from syne_tune import Reporter
+import pickle
+import time
 from argparse import ArgumentParser
+from pathlib import Path
+
+import numpy as np
+import torch
+from sklearn.datasets import fetch_covtype
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from syne_tune import Reporter
 
 from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
-import numpy as np
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
-from pathlib import Path
-import pickle
-from sklearn.datasets import fetch_covtype
 
 
 def str2bool(v):
