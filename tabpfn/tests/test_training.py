@@ -9,7 +9,7 @@ from tabpfn.fit_tabpfn import main as tabpfn_main
 from tabpfn.models.mothernet_additive import MotherNetAdditive
 from tabpfn.models.perceiver import TabPerceiver
 from tabpfn.models.transformer import TransformerModel
-from tabpfn.models.mothernet import TransformerModelMakeMLP
+from tabpfn.models.mothernet import MotherNet
 
 
 def count_parameters(model):
@@ -30,7 +30,7 @@ def test_train_defaults():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert results['loss'] == pytest.approx(2.4058380126953125)
     assert count_parameters(results['model']) == 1544650
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_synetune():
@@ -40,7 +40,7 @@ def test_train_synetune():
         assert results['epoch'] == 10
         assert results['loss'] == pytest.approx(2.4058380126953125)
         assert count_parameters(results['model']) == 1544650
-        assert isinstance(results['model'], TransformerModelMakeMLP)
+        assert isinstance(results['model'], MotherNet)
         results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
         # that we reloaded the model means we incidentally counted up to 11
         assert results['epoch'] == 11
@@ -86,7 +86,7 @@ def test_train_double_embedding():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
     assert results['loss'] == pytest.approx(2.2983956336975098)
     assert count_parameters(results['model']) == 1775818
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_special_token():
@@ -95,7 +95,7 @@ def test_train_special_token():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
     assert results['loss'] == pytest.approx(2.2754929065704346)
     assert count_parameters(results['model']) == 1544650
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_reduce_on_spike():
@@ -104,7 +104,7 @@ def test_train_reduce_on_spike():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
     assert results['loss'] == pytest.approx(2.4058380126953125)
     assert count_parameters(results['model']) == 1544650
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_two_hidden_layers():
@@ -113,7 +113,7 @@ def test_train_two_hidden_layers():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
     assert results['loss'] == pytest.approx(2.298816442489624)
     assert count_parameters(results['model']) == 2081290
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_low_rank_ignored():
@@ -123,7 +123,7 @@ def test_train_low_rank_ignored():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'False'])
     assert results['loss'] == pytest.approx(2.4058380126953125)
     assert count_parameters(results['model']) == 1544650
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_low_rank():
@@ -134,7 +134,7 @@ def test_train_low_rank():
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
     assert results['loss'] == pytest.approx(2.299163341522217)
     assert count_parameters(results['model']) == 926474
-    assert isinstance(results['model'], TransformerModelMakeMLP)
+    assert isinstance(results['model'], MotherNet)
 
 
 def test_train_tabpfn():

@@ -11,14 +11,14 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     from tabpfn.models.mothernet_additive import MotherNetAdditive
     from tabpfn.models.perceiver import TabPerceiver
     from tabpfn.models.transformer import TransformerModel
-    from tabpfn.models.mothernet import TransformerModelMakeMLP
+    from tabpfn.models.mothernet import MotherNet
 
     if max_num_classes > 2:
         n_out = max_num_classes
     else:
         n_out = 1
     if model_maker == "mlp":
-        model = TransformerModelMakeMLP(
+        model = MotherNet(
             encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
             y_encoder=y_encoder, input_normalization=input_normalization,
             efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
