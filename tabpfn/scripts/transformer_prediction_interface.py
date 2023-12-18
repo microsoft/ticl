@@ -25,21 +25,6 @@ import pickle
 import io
 from tqdm import tqdm
 
-class CustomUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if name == 'Manager':
-            from settings import Manager
-            return Manager
-        try:
-            return self.find_class_cpu(module, name)
-        except:
-            return None
-
-    def find_class_cpu(self, module, name):
-        if module == 'torch.storage' and name == '_load_from_bytes':
-            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
-        else:
-            return super().find_class(module, name)
 
 def _get_file(e, base_path, add_name, eval_addition):
     """
@@ -157,11 +142,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
     def remove_models_from_memory(self):
         self.models_in_memory = {}
 
-    def load_result_minimal(self, path, i, e):
-        with open(path, 'rb') as output:
-            _, _, _, style, temperature, optimization_route = CustomUnpickler(output).load()
-
-            return style, temperature
 
     def _validate_targets(self, y):
         y_ = column_or_1d(y, warn=True)
@@ -195,7 +175,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.max_num_classes = self.c['max_num_classes']
         self.differentiable_hps_as_style = self.c['differentiable_hps_as_style']
 
-        #style, temperature = self.load_result_minimal(style_file, i, e)
         self.model = model
         if self.no_grad:
             # Check that X and y have correct shape
