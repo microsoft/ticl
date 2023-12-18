@@ -17,7 +17,7 @@ config_space = {
 
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='train_test_timing.py'),
-        scheduler=MOBSTER(
+    scheduler=MOBSTER(
         config_space,
         metric='loss',
         resource_attr='time',
@@ -30,7 +30,7 @@ tuner = Tuner(
     max_failures=1000,
     results_update_interval=60,
     print_update_interval=120,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60 * 60),
+    # stop_criterion=StoppingCriterion(max_wallclock_time=60 *60 * 60),
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
     n_workers=4,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,

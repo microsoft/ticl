@@ -30,7 +30,7 @@ tuner = Tuner(
         mode='max',
     ),
     results_update_interval=5,
-    stop_criterion=StoppingCriterion(max_wallclock_time=30 *60),
+    stop_criterion=StoppingCriterion(max_wallclock_time=30 * 60),
     n_workers=16,  # how many trials are evaluated in parallel
     tuner_name="satimage-first-try"
 )

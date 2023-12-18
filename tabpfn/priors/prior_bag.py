@@ -3,11 +3,12 @@ import torch
 from .utils import get_batch_to_dataloader
 from tabpfn.utils import default_device
 
-def get_batch(batch_size, seq_len, num_features, device=default_device
-              , hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
+
+def get_batch(batch_size, seq_len, num_features, device=default_device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
-    assert num_models * batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+    assert num_models * \
+        batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
 
     args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample}
 
@@ -23,9 +24,8 @@ def get_batch(batch_size, seq_len, num_features, device=default_device
     sample = [prior_bag_priors_get_batch[int(prior_idx)](hyperparameters=hyperparameters, **args, **kwargs) for prior_idx in batch_assignments]
 
     x, y, y_ = zip(*sample)
-    x, y, y_ = (torch.cat(x, 1).detach()
-                                        , torch.cat(y, 1).detach()
-                                        , torch.cat(y_, 1).detach())
+    x, y, y_ = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach())
     return x, y, y_
+
 
 DataLoader = get_batch_to_dataloader(get_batch)

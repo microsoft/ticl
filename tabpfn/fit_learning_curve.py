@@ -11,6 +11,8 @@ from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
 
 from scipy.optimize import minimize
+
+
 def exp_curve(x, params):
     if len(params) == 2:
         a, b, c = *params, 0
@@ -18,8 +20,9 @@ def exp_curve(x, params):
         a, b, c = params
     else:
         raise ValueError(f"Invalid parameter length: {len(params)}")
-        
+
     return a * (x + 1e-5) ** b + c
+
 
 def fit_exp_curve(x, y, include_offset=False, alpha=0):
     def exp_loss(params):
@@ -37,17 +40,17 @@ class ExponentialRegression(RegressorMixin, BaseEstimator):
     def __init__(self, include_offset=False, alpha=0):
         self.include_offset = include_offset
         self.alpha = alpha
-        
+
     def fit(self, X, y):
         assert X.ndim == 1 or X.shape[1] == 1
         X = np.array(X).ravel()
         self.optimization_result_ = fit_exp_curve(X, y, include_offset=self.include_offset, alpha=self.alpha)
         self.fitted_func_ = lambda x: exp_curve(x, self.optimization_result_.x)
         return self
-        
+
     def predict(self, X):
         return self.fitted_func_(np.array(X).ravel())
-    
+
 
 def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run', extrapolation_factor=3, verbose=0, er=None):
     import plotly.graph_objects as go
@@ -70,11 +73,15 @@ def plot_exponential_regression(loss_df, x='epoch', y='loss', hue='run', extrapo
         # start of extrapolation is per-run, end is the same for all runs
         extrapolate = np.linspace(this_X[x].max(), loss_df[x].max() * extrapolation_factor, num=100)
         pred_extrapolation = er.predict(extrapolate.reshape(-1, 1))
-        fig.add_trace(go.Scatter(x=this_X[x], y=this_y, mode="markers", name=run, marker_color=color, opacity=.3, legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
-        fig.add_trace(go.Scatter(x=this_X[x], y=pred_train, mode="lines", name=run, marker_color=color, legendgroup=run, showlegend=True, hoverinfo="name", hoverlabel_namelength=-1))
-        fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color, line_dash="dash", legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
+        fig.add_trace(go.Scatter(x=this_X[x], y=this_y, mode="markers", name=run, marker_color=color,
+                      opacity=.3, legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
+        fig.add_trace(go.Scatter(x=this_X[x], y=pred_train, mode="lines", name=run, marker_color=color,
+                      legendgroup=run, showlegend=True, hoverinfo="name", hoverlabel_namelength=-1))
+        fig.add_trace(go.Scatter(x=extrapolate, y=pred_extrapolation, mode="lines", name=run, marker_color=color,
+                      line_dash="dash", legendgroup=run, showlegend=False, hoverinfo="name", hoverlabel_namelength=-1))
     fig.update_layout(xaxis_title=x, yaxis_title=y, height=800)
     return fig
+
 
 def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extra_smoothing=1, logx=True, logy=True, inactive_legend=False):
     import plotly.graph_objects as go
@@ -85,12 +92,13 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
             smoothed = this_df[[y, x]].reset_index()
         else:
             try:
-                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2  * extra_smoothing).mean().reset_index()
+                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2 * extra_smoothing).mean().reset_index()
             except ValueError as e:
                 print(e)
                 continue
         if 'status' in this_df.columns and (this_df.status != "RUNNING").all():
-            fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1, opacity=.3, showlegend=inactive_legend))
+            fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name",
+                          hoverlabel_namelength=-1, opacity=.3, showlegend=inactive_legend))
         else:
             fig.add_trace(go.Scatter(x=smoothed[x], y=smoothed[y], mode='lines', name=run, hoverinfo="name", hoverlabel_namelength=-1))
     fig.update_layout(height=1200)
@@ -103,10 +111,12 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
 
 
 def get_runs(filter_string, experiment_id):
-    return  MlflowClient().search_runs(experiment_ids=experiment_id, filter_string=filter_string,
-                                       run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
+    return MlflowClient().search_runs(
+        experiment_ids=experiment_id, filter_string=filter_string,
+                                      run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
-def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running","reference"), mlflow_host=None):
+
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running", "reference"), mlflow_host=None):
     if mlflow_host is None:
         mlflow_host = MLFLOW_HOSTNAME
     mlflow.set_tracking_uri(f"http://{mlflow_host}:5000")

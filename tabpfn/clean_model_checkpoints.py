@@ -22,7 +22,7 @@ for canonical_name, files in file_dict.items():
         if epoch > last_epoch:
             last_epoch = epoch
             canonical_file[canonical_name] = f
-            
+
 for canonical_name, files in file_dict.items():
     if canonical_name not in canonical_file:
         # we only have "on exit" because we cleaned up before

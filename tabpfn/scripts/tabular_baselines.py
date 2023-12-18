@@ -1,52 +1,51 @@
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials, space_eval, rand
+from sklearn.linear_model import RidgeClassifier
+from lightgbm import LGBMClassifier
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+import time
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LogisticRegression, Ridge
+from tabpfn.utils import remove_outliers
+from tqdm import tqdm
+import pandas as pd
+from tabpfn.scripts import tabular_metrics
+import itertools
+import torch
+import numpy as np
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn import neighbors
+import xgboost as xgb
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import make_scorer
+from torch import nn
+from sklearn import preprocessing
+import os
+import sklearn
+import math
+import random
+import tempfile
+from sklearn.model_selection import ParameterGrid
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+import pandas
 import sys
 tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
 
-import pandas
 # from catboost import CatBoostClassifier, Pool
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import KFold
-from sklearn.model_selection import ParameterGrid
 
-import tempfile
-import random
-import math
-import sklearn
-import os
-#from pytorch_tabnet.tab_model import TabNetClassifier, TabNetRegressor
-from sklearn import preprocessing
-from torch import nn
-from sklearn.metrics import make_scorer
-from sklearn.impute import SimpleImputer
+# from pytorch_tabnet.tab_model import TabNetClassifier, TabNetRegressor
 
-
-from sklearn.base import BaseEstimator, ClassifierMixin
-import xgboost as xgb
-from sklearn import neighbors
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
-import numpy as np
-
-import torch
-import itertools
-from tabpfn.scripts import tabular_metrics
-import pandas as pd
-from tqdm import tqdm
-from tabpfn.utils import remove_outliers
-
-from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.model_selection import cross_val_score
-import time
-
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials , space_eval, rand
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import MinMaxScaler
 
 CV = 5
 # MULTITHREAD = -1 # Number of threads baselines are able to use at most
-MULTITHREAD = 4 # Number of threads baselines are able to use at most
+MULTITHREAD = 4  # Number of threads baselines are able to use at most
 param_grid, param_grid_hyperopt = {}, {}
+
 
 def get_scoring_direction(metric_used):
     # Not needed
@@ -57,6 +56,7 @@ def get_scoring_direction(metric_used):
     else:
         raise Exception('No scoring string found for metric')
 
+
 def is_classification(metric_used):
     if metric_used.__name__ == tabular_metrics.auc_metric.__name__ or metric_used.__name__ == tabular_metrics.cross_entropy.__name__:
         return 'classification'
@@ -65,14 +65,15 @@ def is_classification(metric_used):
 
 # Loss
 
+
 def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
     if metric_used.__name__ == tabular_metrics.auc_metric.__name__:
         if usage == 'sklearn_cv':
             return 'roc_auc_ovo'
         elif usage == 'autogluon':
-            #return 'log_loss' # Autogluon crashes when using 'roc_auc' with some datasets usning logloss gives better scores;
-                              # We might be able to fix this, but doesn't work out of box.
-                              # File bug report? Error happens with dataset robert and fabert
+            # return 'log_loss' # Autogluon crashes when using 'roc_auc' with some datasets usning logloss gives better scores;
+            # We might be able to fix this, but doesn't work out of box.
+            # File bug report? Error happens with dataset robert and fabert
             if multiclass:
                 return 'roc_auc_ovo_macro'
             else:
@@ -82,11 +83,11 @@ def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
         elif usage == 'autosklearn':
             import autosklearn.classification
             if multiclass:
-                return autosklearn.metrics.log_loss # roc_auc only works for binary, use logloss instead
+                return autosklearn.metrics.log_loss  # roc_auc only works for binary, use logloss instead
             else:
                 return autosklearn.metrics.roc_auc
         elif usage == 'catboost':
-            return 'MultiClass' # Effectively LogLoss, ROC not available
+            return 'MultiClass'  # Effectively LogLoss, ROC not available
         elif usage == 'xgb':
             return 'logloss'
         elif usage == 'lightgbm':
@@ -106,19 +107,19 @@ def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
             import autosklearn.classification
             return autosklearn.metrics.log_loss
         elif usage == 'catboost':
-            return 'MultiClass' # Effectively LogLoss
+            return 'MultiClass'  # Effectively LogLoss
         return 'logloss'
     elif metric_used.__name__ == tabular_metrics.r2_metric.__name__:
         if usage == 'autosklearn':
             import autosklearn.classification
             return autosklearn.metrics.r2
         elif usage == 'sklearn_cv':
-            return 'r2' # tabular_metrics.neg_r2
+            return 'r2'  # tabular_metrics.neg_r2
         elif usage == 'autogluon':
             return 'r2'
-        elif usage == 'xgb': # XGB cannot directly optimize r2
+        elif usage == 'xgb':  # XGB cannot directly optimize r2
             return 'rmse'
-        elif usage == 'catboost': # Catboost cannot directly optimize r2 ("Can't be used for optimization." - docu)
+        elif usage == 'catboost':  # Catboost cannot directly optimize r2 ("Can't be used for optimization." - docu)
             return 'RMSE'
         else:
             return 'r2'
@@ -127,7 +128,7 @@ def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
             import autosklearn.classification
             return autosklearn.metrics.root_mean_squared_error
         elif usage == 'sklearn_cv':
-            return 'neg_root_mean_squared_error' # tabular_metrics.neg_r2
+            return 'neg_root_mean_squared_error'  # tabular_metrics.neg_r2
         elif usage == 'autogluon':
             return 'rmse'
         elif usage == 'xgb':
@@ -141,7 +142,7 @@ def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
             import autosklearn.classification
             return autosklearn.metrics.mean_absolute_error
         elif usage == 'sklearn_cv':
-            return 'neg_mean_absolute_error' # tabular_metrics.neg_r2
+            return 'neg_mean_absolute_error'  # tabular_metrics.neg_r2
         elif usage == 'autogluon':
             return 'mae'
         elif usage == 'xgb':
@@ -153,6 +154,7 @@ def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
     else:
         raise Exception('No scoring string found for metric')
 
+
 def eval_f(params, clf_, x, y, metric_used):
     scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=get_scoring_string(metric_used, usage='sklearn_cv'))
     if get_scoring_string(metric_used, usage='sklearn_cv') == 'r2' or get_scoring_string(metric_used, usage='sklearn_cv') == 'neg_log_loss':
@@ -160,32 +162,34 @@ def eval_f(params, clf_, x, y, metric_used):
 
     return -np.nanmean(scores)
 
+
 def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_tune):
     start_time = time.time()
+
     def stop(trial):
         return time.time() - start_time > max_time, []
 
     if no_tune is None:
-      default = eval_f({}, clf_, x, y, metric_used)
-      trials = Trials()
-      best = fmin(
-          fn=lambda params: eval_f(params, clf_, x, y, metric_used),
-          space=param_grid_hyperopt[key],
-          algo=rand.suggest,
-          rstate=np.random.default_rng(int(y[:].sum()) % 10000),
-          early_stop_fn=stop,
-          trials=trials,
-          catch_eval_exceptions=True,
-          verbose=False,
-          # The seed is deterministic but varies for each dataset and each split of it
-          max_evals=1000)
-      best_score = np.min([t['result']['loss'] for t in trials.trials])
-      if best_score < default:
-        best = space_eval(param_grid_hyperopt[key], best)
-      else:
-        best = {}
+        default = eval_f({}, clf_, x, y, metric_used)
+        trials = Trials()
+        best = fmin(
+            fn=lambda params: eval_f(params, clf_, x, y, metric_used),
+            space=param_grid_hyperopt[key],
+            algo=rand.suggest,
+            rstate=np.random.default_rng(int(y[:].sum()) % 10000),
+            early_stop_fn=stop,
+            trials=trials,
+            catch_eval_exceptions=True,
+            verbose=False,
+            # The seed is deterministic but varies for each dataset and each split of it
+            max_evals=1000)
+        best_score = np.min([t['result']['loss'] for t in trials.trials])
+        if best_score < default:
+            best = space_eval(param_grid_hyperopt[key], best)
+        else:
+            best = {}
     else:
-      best = no_tune.copy()
+        best = no_tune.copy()
 
     start = time.time()
     clf = clf_(**best)
@@ -203,10 +207,12 @@ def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_t
     best['fit_time'] = fit_time
     best['inference_time'] = inference_time
 
-    return metric, pred, best#, times
+    return metric, pred, best  # , times
+
 
 def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_features=[]):
     import warnings
+
     def warn(*args, **kwargs):
         pass
 
@@ -237,9 +243,7 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 
     return x, y, test_x, test_y
 
-import torch
-import random
-from tqdm import tqdm
+
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
     from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
     from sklearn.pipeline import make_pipeline
@@ -247,7 +251,8 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
     from sklearn.impute import SimpleImputer
 
     if onehot:
-        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                sparse=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
@@ -255,7 +260,7 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
             x, test_x = skb.transform(x), skb.transform(test_x)
 
     if classifier is None:
-      classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
+        classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
     tick = time.time()
     classifier.fit(x, y)
     fit_time = time.time() - tick
@@ -268,15 +273,13 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     return metric, pred, times
 
-## Auto Gluon
+# Auto Gluon
 # WARNING: Crashes for some predictors for regression
+
+
 def autogluon_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from autogluon.tabular import TabularPredictor
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False
-                                             , cat_features=cat_features
-                                             , impute=False
-                                             , standardize=False)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
     train_data = pd.DataFrame(np.concatenate([x, y[:, np.newaxis]], 1))
     test_data = pd.DataFrame(np.concatenate([test_x, test_y[:, np.newaxis]], 1))
     if is_classification(metric_used):
@@ -288,7 +291,7 @@ def autogluon_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
         label=train_data.columns[-1],
         eval_metric=get_scoring_string(metric_used, usage='autogluon', multiclass=(len(np.unique(y)) > 2)),
         problem_type=problem_type
-        ## seed=int(y[:].sum()) doesn't accept seed
+        # seed=int(y[:].sum()) doesn't accept seed
     ).fit(
         train_data=train_data,
         time_limit=max_time,
@@ -305,8 +308,9 @@ def autogluon_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
 
     return metric, pred, predictor.fit_summary()
 
+
 def get_updates_for_regularization_cocktails(
-    categorical_indicator: np.ndarray):
+        categorical_indicator: np.ndarray):
     """
     These updates replicate the regularization cocktail paper search space.
     Args:
@@ -500,7 +504,6 @@ def get_updates_for_regularization_cocktails(
         default_value=0.999,
     )
 
-
     parser = argparse.ArgumentParser(
         description='Run AutoPyTorch on a benchmark.',
     )
@@ -631,13 +634,10 @@ def get_updates_for_regularization_cocktails(
         default='standard',
     )
 
-    args = parser.parse_args([]) # just get default values
-
-
+    args = parser.parse_args([])  # just get default values
 
     # if the cash formulation of the cocktail is not activated,
     # otherwise the methods activation will be chosen by the SMBO optimizer.
-
 
     # No early stopping and train on gpu
     pipeline_update = {
@@ -648,6 +648,7 @@ def get_updates_for_regularization_cocktails(
     }
 
     return pipeline_update, search_space_updates, include_updates
+
 
 def get_smac_object(
     scenario_dict,
@@ -742,7 +743,7 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
     pip install -r requirements.txt (I checked looks like nothing should break functionality of our project not sure about baselines, thus a copied env is likely good :))
     pip install -e .
     """
-    #os.environ.get('SLURM_JOBID', '')
+    # os.environ.get('SLURM_JOBID', '')
     categorical_indicator = np.array([i in categorical_indicator for i in range(X_train.shape[1])])
     with tempfile.TemporaryDirectory(prefix=f"{len(X_train)}_{len(X_test)}_{max_time}") as temp_dir:
         from autoPyTorch.api.tabular_classification import TabularClassificationTask
@@ -751,7 +752,7 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         from autoPyTorch.datasets.tabular_dataset import TabularDataset
         from autoPyTorch import metrics
         # append random folder to temp_dir to avoid collisions
-        rand_int = str(random.randint(1,1000))
+        rand_int = str(random.randint(1, 1000))
         temp_dir = os.path.join(temp_dir, 'temp_'+rand_int)
         out_dir = os.path.join(temp_dir, 'out_'+rand_int)
 
@@ -760,23 +761,21 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         X_train, y_train, X_test, y_test = X_train.cpu().numpy(), y_train.cpu().long().numpy(), X_test.cpu().numpy(), y_test.cpu().long().numpy()
 
         def safe_int(x):
-            assert np.all(x.astype('int64') == x) or np.any(x != x), np.unique(x) # second condition for ignoring nans
+            assert np.all(x.astype('int64') == x) or np.any(x != x), np.unique(x)  # second condition for ignoring nans
             return pd.Series(x, dtype='category')
 
-        X_train = pd.DataFrame({i: safe_int(X_train[:,i]) if c else X_train[:,i] for i, c in enumerate(categorical_indicator)})
-        X_test = pd.DataFrame({i: safe_int(X_test[:,i]) if c else X_test[:,i] for i, c in enumerate(categorical_indicator)})
-
+        X_train = pd.DataFrame({i: safe_int(X_train[:, i]) if c else X_train[:, i] for i, c in enumerate(categorical_indicator)})
+        X_test = pd.DataFrame({i: safe_int(X_test[:, i]) if c else X_test[:, i] for i, c in enumerate(categorical_indicator)})
 
         if isinstance(y_train[1], bool):
             y_train = y_train.astype('bool')
         if isinstance(y_test[1], bool):
             y_test = y_test.astype('bool')
 
-        number_of_configurations_limit = 840 # hard coded in the paper
+        number_of_configurations_limit = 840  # hard coded in the paper
         epochs = 105
         func_eval_time = min(1000, max_time/2)
         seed = int(y_train[:].sum())
-
 
         resampling_strategy_args = {
             'val_share': len(y_test)/(len(y_test)+len(y_train)),
@@ -786,8 +785,6 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
             categorical_indicator,
         )
         print(search_space_updates)
-
-
 
         ############################################################################
         # Build and fit a classifier
@@ -820,7 +817,7 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         # We search for the best hp configuration only in the case of a cocktail ingredient
         # that has hyperparameters.
         print(X_train, X_test)
-        print('temp_dir',temp_dir)
+        print('temp_dir', temp_dir)
         print(max_time, min(func_eval_time, max_time, number_of_configurations_limit))
 
         if number_of_configurations_limit != 0:
@@ -902,7 +899,6 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         if fitted_pipeline is None:
             api.get_incumbent_config
 
-
         train_predictions = fitted_pipeline.predict(X_train)
         test_predictions = fitted_pipeline.predict(X_test)
 
@@ -914,21 +910,17 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         return metric, test_predictions, None
 
 
-
-## AUTO Sklearn
+# AUTO Sklearn
 def autosklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     import autosklearn.classification
     return autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=max_time, version=1)
+
 
 def autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, version=2):
     from autosklearn.experimental.askl2 import AutoSklearn2Classifier
     from autosklearn.classification import AutoSklearnClassifier
     from autosklearn.regression import AutoSklearnRegressor
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False
-                                             , cat_features=cat_features
-                                             , impute=False
-                                             , standardize=False)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
 
     def make_pd_from_np(x):
         data = pd.DataFrame(x)
@@ -946,10 +938,10 @@ def autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_tim
             raise Exception("AutoSklearn 2 doesn't do regression.")
         clf_ = AutoSklearnRegressor
     clf = clf_(time_left_for_this_task=max_time,
-                                                           memory_limit=4000,
-                                                           n_jobs=MULTITHREAD,
+               memory_limit=4000,
+               n_jobs=MULTITHREAD,
                seed=int(y[:].sum()),
-        # The seed is deterministic but varies for each dataset and each split of it
+               # The seed is deterministic but varies for each dataset and each split of it
                metric=get_scoring_string(metric_used, usage='autosklearn', multiclass=len(np.unique(y)) > 2))
 
     # fit model to data
@@ -963,18 +955,17 @@ def autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_tim
 
     return metric, pred, clf.leaderboard()
 
+
 param_grid_hyperopt['ridge'] = {
-    'max_iter': hp.randint('max_iter', 50, 500)
-    , 'fit_intercept': hp.choice('fit_intercept', [True, False])
-    , 'alpha': hp.loguniform('alpha', -5, math.log(5.0))}  # 'normalize': [False],
+    'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'alpha': hp.loguniform('alpha', -5, math.log(5.0))}  # 'normalize': [False],
+
 
 def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     if is_classification(metric_used):
         raise Exception("Ridge is only applicable to pointwise Regression.")
 
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=True, impute=True, standardize=True
-                                             , cat_features=cat_features)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=True, impute=True, standardize=True, cat_features=cat_features)
+
     def clf_(**params):
         return Ridge(tol=1e-4, **params)
 
@@ -1001,21 +992,20 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
 
     return metric, pred, best
 
+
 def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from lightautoml.automl.presets.tabular_presets import TabularAutoML, TabularUtilizedAutoML
     from lightautoml.tasks import Task
 
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False, impute=False, standardize=False
-                                             , cat_features=cat_features)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, impute=False, standardize=False, cat_features=cat_features)
 
     roles = {'target': str(x.shape[-1])}
-    task = Task('multiclass', metric = lambda x, y : metric_used(x, y, numpy=True))
+    task = Task('multiclass', metric=lambda x, y: metric_used(x, y, numpy=True))
     automl = TabularUtilizedAutoML(task=task,
-                           timeout=max_time,
-                           cpu_limit=4,  # Optimal for Kaggle kernels
-                           general_params={'use_algos': [['linear_l2',
-                                                          'lgb', 'lgb_tuned']]})
+                                   timeout=max_time,
+                                   cpu_limit=4,  # Optimal for Kaggle kernels
+                                   general_params={'use_algos': [['linear_l2',
+                                                                  'lgb', 'lgb_tuned']]})
 
     tr_data = np.concatenate([x, np.expand_dims(y, -1)], -1)
     tr_data = pd.DataFrame(tr_data, columns=[str(k) for k in range(0, x.shape[-1] + 1)])
@@ -1035,44 +1025,29 @@ def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     return metric, probabilities_mapped, None
 
+
 param_grid_hyperopt['lightgbm'] = {
-    'num_leaves': hp.randint('num_leaves', 5, 50)
-    , 'max_depth': hp.randint('max_depth', 3, 20)
-    , 'learning_rate': hp.loguniform('learning_rate', -3, math.log(1.0))
-    , 'n_estimators': hp.randint('n_estimators', 50, 2000)
-    #, 'feature_fraction': 0.8,
-    #, 'subsample': 0.2
-    , 'min_child_weight': hp.choice('min_child_weight', [1e-5, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4])
-    , 'subsample': hp.uniform('subsample', 0.2, 0.8)
-    , 'colsample_bytree': hp.uniform('colsample_bytree', 0.2, 0.8)
-    , 'reg_alpha': hp.choice('reg_alpha', [0, 1e-1, 1, 2, 5, 7, 10, 50, 100])
-    , 'reg_lambda': hp.choice('reg_lambda', [0, 1e-1, 1, 5, 10, 20, 50, 100])
+    # , 'feature_fraction': 0.8,
+    # , 'subsample': 0.2
+    'num_leaves': hp.randint('num_leaves', 5, 50), 'max_depth': hp.randint('max_depth', 3, 20), 'learning_rate': hp.loguniform('learning_rate', -3, math.log(1.0)), 'n_estimators': hp.randint('n_estimators', 50, 2000), 'min_child_weight': hp.choice('min_child_weight', [1e-5, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4]), 'subsample': hp.uniform('subsample', 0.2, 0.8), 'colsample_bytree': hp.uniform('colsample_bytree', 0.2, 0.8), 'reg_alpha': hp.choice('reg_alpha', [0, 1e-1, 1, 2, 5, 7, 10, 50, 100]), 'reg_lambda': hp.choice('reg_lambda', [0, 1e-1, 1, 5, 10, 20, 50, 100])
 }  # 'normalize': [False],
 
-from lightgbm import LGBMClassifier
 
 def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False, impute=False, standardize=False
-                                             , cat_features=cat_features)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, impute=False, standardize=False, cat_features=cat_features)
 
     def clf_(**params):
-        return LGBMClassifier(categorical_feature=cat_features, use_missing=True
-                              , objective=get_scoring_string(metric_used, usage='lightgbm', multiclass=len(np.unique(y)) > 2), **params)
+        return LGBMClassifier(categorical_feature=cat_features, use_missing=True, objective=get_scoring_string(metric_used, usage='lightgbm', multiclass=len(np.unique(y)) > 2), **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'lightgbm', clf_, metric_used, max_time, no_tune)
 
+
 param_grid_hyperopt['logistic'] = {
-    'penalty': hp.choice('penalty', ['l1', 'l2', 'none'])
-    , 'max_iter': hp.randint('max_iter', 50, 500)
-    , 'fit_intercept': hp.choice('fit_intercept', [True, False])
-    , 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
+    'penalty': hp.choice('penalty', ['l1', 'l2', 'none']), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
 
 
 def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=True, impute=True, standardize=True
-                                             , cat_features=cat_features)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=True, impute=True, standardize=True, cat_features=cat_features)
 
     def clf_(**params):
         return LogisticRegression(solver='saga', tol=1e-4, n_jobs=1, **params)
@@ -1080,13 +1055,15 @@ def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     return eval_complete_f(x, y, test_x, test_y, 'logistic', clf_, metric_used, max_time, no_tune)
 
 
-## Random Forest
+# Random Forest
 # Search space from
 # https://www.kaggle.com/code/emanueleamcappella/random-forest-hyperparameters-tuning/notebook
 param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators', 20, 200),
-               'max_features': hp.choice('max_features', [None, 'sqrt', 'log2']),
-               'max_depth': hp.randint('max_depth', 1, 45),
-               'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
+                                        'max_features': hp.choice('max_features', [None, 'sqrt', 'log2']),
+                                        'max_depth': hp.randint('max_depth', 1, 45),
+                                        'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
+
+
 def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     from sklearn.ensemble import RandomForestClassifier
 
@@ -1101,8 +1078,11 @@ def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_ti
 
     return eval_complete_f(x, y, test_x, test_y, 'random_forest', clf_, metric_used, max_time, no_tune)
 
-## Gradient Boosting
+
+# Gradient Boosting
 param_grid_hyperopt['gradient_boosting'] = {}
+
+
 def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     from sklearn import ensemble
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
@@ -1116,8 +1096,12 @@ def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, ma
 
     return eval_complete_f(x, y, test_x, test_y, 'gradient_boosting', clf_, metric_used, max_time, no_tune)
 
-## SVM
-param_grid_hyperopt['svm'] = {'C': hp.choice('C', [0.1,1, 10, 100]), 'gamma': hp.choice('gamma', ['auto', 'scale']),'kernel': hp.choice('kernel', ['rbf', 'poly', 'sigmoid'])}
+
+# SVM
+param_grid_hyperopt['svm'] = {'C': hp.choice('C', [0.1, 1, 10, 100]), 'gamma': hp.choice(
+    'gamma', ['auto', 'scale']), 'kernel': hp.choice('kernel', ['rbf', 'poly', 'sigmoid'])}
+
+
 def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
@@ -1131,11 +1115,13 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time, no_tune)
 
 
-## MLP
+# MLP
 param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256, 512]), 'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
                               'n_epochs': hp.choice('n_epochs', [10, 100, 1000]), 'dropout_rate': hp.choice('dropout_rate', [0, 0.1, 0.3]), 'n_layers': hp.choice('n_layers', [1, 2, 3]),
                               'weight_decay': hp.loguniform('weight_decay', math.log(0.00001), math.log(0.01))
                               }
+
+
 def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
@@ -1149,9 +1135,11 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time, no_tune)
 
 
-## KNN
-param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1,16)
+# KNN
+param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1, 16)
                               }
+
+
 def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
@@ -1164,17 +1152,20 @@ def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
 
     return eval_complete_f(x, y, test_x, test_y, 'knn', clf_, metric_used, max_time, no_tune)
 
-## GP
+
+# GP
 param_grid_hyperopt['gp'] = {
     'params_y_scale': hp.loguniform('params_y_scale', math.log(0.05), math.log(5.0)),
     'params_length_scale': hp.loguniform('params_length_scale', math.log(0.1), math.log(1.0))
 }
+
+
 def gp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
 
-    def clf_(params_y_scale=None,params_length_scale=None, **params):
+    def clf_(params_y_scale=None, params_length_scale=None, **params):
         kernel = params_y_scale * RBF(params_length_scale) if params_length_scale is not None else None
         if is_classification(metric_used):
             return GaussianProcessClassifier(kernel=kernel, **params)
@@ -1183,9 +1174,10 @@ def gp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_
 
     return eval_complete_f(x, y, test_x, test_y, 'gp', clf_, metric_used, max_time, no_tune)
 
-## Tabnet
+# Tabnet
 # https://github.com/dreamquark-ai/tabnet
-#param_grid['tabnet'] = {'n_d': [2, 4], 'n_steps': [2,4,6], 'gamma': [1.3], 'optimizer_params': [{'lr': 2e-2}, {'lr': 2e-1}]}
+# param_grid['tabnet'] = {'n_d': [2, 4], 'n_steps': [2,4,6], 'gamma': [1.3], 'optimizer_params': [{'lr': 2e-2}, {'lr': 2e-1}]}
+
 
 # Hyperparameter space from dreamquarks implementation recommendations
 param_grid_hyperopt['tabnet'] = {
@@ -1195,6 +1187,7 @@ param_grid_hyperopt['tabnet'] = {
     'gamma': hp.uniform('relax', 1.0, 2.0),
     'momentum': hp.uniform('momentum', 0.01, 0.4),
 }
+
 
 def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from pytorch_tabnet.tab_model import TabNetClassifier
@@ -1234,6 +1227,7 @@ def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300)
         return -np.nanmean(np.array(metrics))
 
     start_time = time.time()
+
     def stop(trial):
         return time.time() - start_time > max_time, []
 
@@ -1249,7 +1243,7 @@ def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300)
     del best['max_epochs']
 
     clf = clf_(**best)
-    clf.fit(x, y, max_epochs=max_epochs) # , max_epochs=mean_best_epochs[best_idx]
+    clf.fit(x, y, max_epochs=max_epochs)  # , max_epochs=mean_best_epochs[best_idx]
 
     pred = clf.predict_proba(test_x)
     metric = metric_used(test_y, pred)
@@ -1268,22 +1262,19 @@ param_grid_hyperopt['catboost'] = {
     'l2_leaf_reg': hp.loguniform('l2_leaf_reg', math.log(1), math.log(10)),
     'bagging_temperature': hp.uniform('bagging_temperature', 0., 1),
     'leaf_estimation_iterations': hp.randint('leaf_estimation_iterations', 1, 20),
-    'iterations': hp.randint('iterations', 100, 4000), # This is smaller than in paper, 4000 leads to ram overusage
+    'iterations': hp.randint('iterations', 100, 4000),  # This is smaller than in paper, 4000 leads to ram overusage
 }
 
+
 def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False
-                                             , cat_features=cat_features
-                                             , impute=False
-                                             , standardize=False)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
 
     # Nans in categorical features must be encoded as separate class
     x[:, cat_features], test_x[:, cat_features] = np.nan_to_num(x[:, cat_features], -1), np.nan_to_num(
         test_x[:, cat_features], -1)
 
     if gpu_id is not None:
-         gpu_params = {'task_type':"GPU", 'devices':gpu_id}
+        gpu_params = {'task_type': "GPU", 'devices': gpu_id}
     else:
         gpu_params = {}
 
@@ -1299,14 +1290,14 @@ def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     def clf_(**params):
         if is_classification(metric_used):
             return CatBoostClassifier(
-                                   loss_function=get_scoring_string(metric_used, usage='catboost'),
-                                   thread_count = MULTITHREAD,
-                                   used_ram_limit='4gb',
+                loss_function=get_scoring_string(metric_used, usage='catboost'),
+                thread_count=MULTITHREAD,
+                used_ram_limit='4gb',
                 random_seed=int(y[:].sum()),
-                                   logging_level='Silent',
-                                    cat_features=cat_features,
+                logging_level='Silent',
+                cat_features=cat_features,
                 **gpu_params,
-                                      **params)
+                **params)
         else:
             return CatBoostRegressor(
                 loss_function=get_scoring_string(metric_used, usage='catboost'),
@@ -1333,8 +1324,9 @@ param_grid_hyperopt['xgb'] = {
     'alpha': hp.loguniform('alpha', -16, 2),
     'lambda': hp.loguniform('lambda', -16, 2),
     'gamma': hp.loguniform('gamma', -16, 2),
-    'n_estimators': hp.randint('n_estimators', 100, 4000), # This is smaller than in paper
+    'n_estimators': hp.randint('n_estimators', 100, 4000),  # This is smaller than in paper
 }
+
 
 def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
     import xgboost as xgb
@@ -1343,32 +1335,19 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     # XGB handles missing values appropriately without imputation
 
     if gpu_id is not None:
-         gpu_params = {'tree_method':'gpu_hist', 'gpu_id':gpu_id}
+        gpu_params = {'tree_method': 'gpu_hist', 'gpu_id': gpu_id}
     else:
         gpu_params = {}
 
-
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y
-                                             , one_hot=False
-                                             , cat_features=cat_features
-                                             , impute=False
-                                             , standardize=False)
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
 
     def clf_(**params):
         if is_classification(metric_used):
-            return xgb.XGBClassifier(use_label_encoder=False
-                                     , nthread=MULTITHREAD
-                                     , **params
-                                     , **gpu_params
-                                     , eval_metric=get_scoring_string(metric_used, usage='xgb') # AUC not implemented
-            )
-        else:
-            return xgb.XGBRegressor(use_label_encoder=False
-                                     , nthread=MULTITHREAD
-                                     , **params
-                                    , **gpu_params
-                                     , eval_metric=get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
+            return xgb.XGBClassifier(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
                                      )
+        else:
+            return xgb.XGBRegressor(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
+                                    )
 
     return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time, no_tune)
 
@@ -1399,15 +1378,18 @@ def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=
 
     return metric, pred, times
 
+
 """
 LEGACY UNUSED
 """
 
-## Ridge
-from sklearn.linear_model import RidgeClassifier
-param_grid['ridge'] = {'alpha': [0, 0.1, .5, 1.0, 2.0], 'fit_intercept': [True, False]} # 'normalize': [False],
+# Ridge
+param_grid['ridge'] = {'alpha': [0, 0.1, .5, 1.0, 2.0], 'fit_intercept': [True, False]}  # 'normalize': [False],
+
+
 def ridge_metric(x, y, test_x, test_y, cat_features, metric_used):
     import warnings
+
     def warn(*args, **kwargs):
         pass
 
@@ -1420,9 +1402,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used):
 
     # create a dictionary of all values we want to test for n_neighbors
     # use gridsearch to test all values for n_neighbors
-    clf = GridSearchCV(clf, param_grid['ridge'], cv=min(CV, x.shape[0]//2)
-                       , scoring=get_scoring_string(metric_used)
-                       , n_jobs=MULTITHREAD)
+    clf = GridSearchCV(clf, param_grid['ridge'], cv=min(CV, x.shape[0]//2), scoring=get_scoring_string(metric_used), n_jobs=MULTITHREAD)
     # fit model to data
     clf.fit(x, y.long())
 
@@ -1430,6 +1410,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used):
     metric = metric_used(test_y, pred)
 
     return metric, pred
+
 
 def mlp_acc(x, y, test_x, test_y, hyperparameters):
     num_layers, hidden_dim, activation_module, fixed_dropout_prob, is_binary_classification, epochs, lr, weight_decay = hyperparameters
@@ -1474,17 +1455,6 @@ def mlp_acc(x, y, test_x, test_y, hyperparameters):
     acc = (pred_y == test_y).float().mean()
     return acc
 
-clf_dict = {'gp': gp_metric
-, 'transformer': transformer_metric
-, 'random_forest': random_forest_metric
-                , 'knn': knn_metric
-                , 'catboost': catboost_metric
-                , 'tabnet': tabnet_metric
-                , 'xgb': xgb_metric
-                , 'lightgbm': lightgbm_metric
-            , 'ridge': ridge_metric
-                , 'logistic': logistic_metric
-           , 'autosklearn': autosklearn_metric
-             , 'autosklearn2': autosklearn2_metric
-            , 'autogluon': autogluon_metric,
+
+clf_dict = {'gp': gp_metric, 'transformer': transformer_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric, 'xgb': xgb_metric, 'lightgbm': lightgbm_metric, 'ridge': ridge_metric, 'logistic': logistic_metric, 'autosklearn': autosklearn_metric, 'autosklearn2': autosklearn2_metric, 'autogluon': autogluon_metric,
             'cocktail': well_tuned_simple_nets_metric}

@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class CrossEntropyForMulticlassLoss(torch.nn.CrossEntropyLoss):
     # This loss applies cross entropy after reducing the number of prediction
     # dimensions to the number of classes in the target
@@ -18,13 +19,14 @@ class CrossEntropyForMulticlassLoss(torch.nn.CrossEntropyLoss):
             loss[:, b] += l
         return loss.flatten()
 
+
 def JointBCELossWithLogits(output, target):
     # output shape: (S, B, NS) with NS = Number of sequences
     # target shape: (S, B, SL)
     # Loss = -log(mean_NS(prod_SL(p(target_SL, output_NS))))
     # Here at the moment NS = SL
-    output = output.unsqueeze(-1).repeat(1, 1, 1, target.shape[-1]) # (S, B, NS, SL)
-    output = output.permute(2, 0, 1, 3) # (NS, S, B, SL)
+    output = output.unsqueeze(-1).repeat(1, 1, 1, target.shape[-1])  # (S, B, NS, SL)
+    output = output.permute(2, 0, 1, 3)  # (NS, S, B, SL)
     print(target.shape, output.shape)
     loss = (target * torch.sigmoid(output)) + ((1-target) * (1-torch.sigmoid(output)))
     loss = loss.prod(-1)
@@ -32,6 +34,7 @@ def JointBCELossWithLogits(output, target):
     loss = -torch.log(loss)
     loss = loss.mean()
     return loss
+
 
 class ScaledSoftmaxCE(nn.Module):
     def forward(self, x, label):

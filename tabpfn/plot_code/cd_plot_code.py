@@ -88,9 +88,9 @@ def _custom_cd_diagram(result, reverse, ax, width, linewidth=0.7, linewidth_bar=
         begin, end = rankpos(highv), rankpos(highv - cd)
     distanceh += 0.15
     bigtick /= 2
-    #plot_line([(begin, distanceh), (end, distanceh)], linewidth=linewidth)
-    #plot_line([(begin, distanceh + bigtick / 2), (begin, distanceh - bigtick / 2)], linewidth=linewidth)
-    #plot_line([(end, distanceh + bigtick / 2), (end, distanceh - bigtick / 2)], linewidth=linewidth)
+    # plot_line([(begin, distanceh), (end, distanceh)], linewidth=linewidth)
+    # plot_line([(begin, distanceh + bigtick / 2), (begin, distanceh - bigtick / 2)], linewidth=linewidth)
+    # plot_line([(end, distanceh + bigtick / 2), (end, distanceh - bigtick / 2)], linewidth=linewidth)
     # plot_text((begin + end) / 2, distanceh - 0.05, "CD", ha="center", va="bottom")
 
     # no-significance lines

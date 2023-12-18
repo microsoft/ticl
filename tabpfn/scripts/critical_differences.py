@@ -13,6 +13,8 @@ from scipy.stats import friedmanchisquare
 import networkx
 
 # inspired from orange3 https://docs.orange.biolab.si/3/data-mining-library/reference/evaluation.cd.html
+
+
 def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, highv=None,
                 width=6, textspace=1, reverse=False, filename=None, labels=False, verbose=0, **kwargs):
     """
@@ -277,9 +279,8 @@ def draw_cd_diagram(df_perf=None, alpha=0.05, dataset_column="dataset_name", cla
         for p in p_values:
             print(p)
 
-
     return graph_ranks(average_ranks.values, average_ranks.keys(), p_values,
-                cd=None, reverse=True, width=9, textspace=1.5, labels=labels)
+                       cd=None, reverse=True, width=9, textspace=1.5, labels=labels)
 
 
 def wilcoxon_holm(alpha=0.05, df_perf=None, dataset_column="dataset_name", classifier_column="classifier_name", metric_column="accuracy", verbose=0):
@@ -304,7 +305,7 @@ def wilcoxon_holm(alpha=0.05, df_perf=None, dataset_column="dataset_name", class
     if friedman_p_value >= alpha:
         # then the null hypothesis over the entire classifiers cannot be rejected
         raise RuntimeError('the null hypothesis over the entire classifiers cannot be rejected')
-    
+
     # get the number of classifiers
     m = len(classifiers)
     # init array that contains the p-values calculated by the Wilcoxon signed rank test
@@ -314,8 +315,7 @@ def wilcoxon_holm(alpha=0.05, df_perf=None, dataset_column="dataset_name", class
         # get the name of classifier one
         classifier_1 = classifiers[i]
         # get the performance of classifier one
-        perf_1 = np.array(df_perf.loc[df_perf[classifier_column] == classifier_1][metric_column]
-                          , dtype=np.float64)
+        perf_1 = np.array(df_perf.loc[df_perf[classifier_column] == classifier_1][metric_column], dtype=np.float64)
         for j in range(i + 1, m):
             # get the name of the second classifier
             classifier_2 = classifiers[j]
@@ -349,8 +349,7 @@ def wilcoxon_holm(alpha=0.05, df_perf=None, dataset_column="dataset_name", class
     rank_data = np.array(sorted_df_perf[metric_column]).reshape(m, max_nb_datasets)
 
     # create the data frame containg the accuracies
-    df_ranks = pd.DataFrame(data=rank_data, index=np.sort(classifiers), columns=
-    np.unique(sorted_df_perf[dataset_column]))
+    df_ranks = pd.DataFrame(data=rank_data, index=np.sort(classifiers), columns=np.unique(sorted_df_perf[dataset_column]))
 
     # number of wins
     dfff = df_ranks.rank(ascending=False)

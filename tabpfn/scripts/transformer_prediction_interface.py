@@ -1,3 +1,4 @@
+import time
 import torch
 import random
 import pathlib
@@ -36,6 +37,7 @@ def _get_file(e, base_path, add_name, eval_addition):
                                 f'models_diff/prior_diff_real_results_{add_name}_n_0_epoch_{e}_{eval_addition}.pkl')
     return model_path, results_file
 
+
 def _check_file(e, base_path, add_name, eval_addition, verbose):
     model_path, results_file = _get_file(e, base_path, add_name, eval_addition)
     if not Path(model_path).is_file():
@@ -53,7 +55,7 @@ def _check_file(e, base_path, add_name, eval_addition, verbose):
         if verbose:
             print(f"loading model from file {model_path}")
     return model_path, results_file
-    
+
 
 def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', verbose=0):
     """
@@ -90,12 +92,12 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         Initializes the classifier and loads the model. 
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the 
         repository if no model is found.
-        
+
         Can also be used to compute gradients with respect to the inputs X_train and X_test. Therefore no_grad has to be 
         set to False and no_preprocessing_mode must be True. Furthermore, X_train and X_test need to be given as 
         torch.Tensors and their requires_grad parameter must be set to True.
-        
-        
+
+
         :param device: If the model should run on cuda or cpu.
         :param base_path: Base path of the directory, from which the folders like models_diff can be accessed.
         :param model_string: Name of the model. Used first to check if the model is already in memory, and if not, 
@@ -141,7 +143,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def remove_models_from_memory(self):
         self.models_in_memory = {}
-
 
     def _validate_targets(self, y):
         y_ = column_or_1d(y, warn=True)
@@ -196,7 +197,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
             raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable. We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN). Please confirm you want to run by passing overwrite_warning=True to the fit function.")
-
 
         # Return the classifier
         return self
@@ -257,7 +257,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             return y, p.max(axis=-1)
         return y
 
-import time
+
 def transformer_predict(model, eval_xs, eval_ys, eval_position,
                         device='cpu',
                         max_features=100,
@@ -317,20 +317,20 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         with inference_mode_call:
             start = time.time()
             output = model(
-                    (used_style.repeat(eval_xs.shape[1], 1) if used_style is not None else None, eval_xs, eval_ys.float()),
-                    single_eval_pos=eval_position)[:, :, 0:num_classes]
+                (used_style.repeat(eval_xs.shape[1], 1) if used_style is not None else None, eval_xs, eval_ys.float()),
+                single_eval_pos=eval_position)[:, :, 0:num_classes]
 
             output = output[:, :, 0:num_classes] / torch.exp(softmax_temperature)
             if not return_logits:
                 output = torch.nn.functional.softmax(output, dim=-1)
-            #else:
+            # else:
             #    output[:, :, 1] = model((style.repeat(eval_xs.shape[1], 1) if style is not None else None, eval_xs, eval_ys.float()),
             #               single_eval_pos=eval_position)
 
             #    output[:, :, 1] = torch.sigmoid(output[:, :, 1]).squeeze(-1)
             #    output[:, :, 0] = 1 - output[:, :, 1]
 
-        #print('RESULTS', eval_ys.shape, torch.unique(eval_ys, return_counts=True), output.mean(axis=0))
+        # print('RESULTS', eval_ys.shape, torch.unique(eval_ys, return_counts=True), output.mean(axis=0))
 
         return output
 
@@ -380,7 +380,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         # TODO: Caution there is information leakage when to_ranking is used, we should not use it
         eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position) \
-                if not normalize_to_ranking else normalize_data(to_ranking_low_mem(eval_xs))
+            if not normalize_to_ranking else normalize_data(to_ranking_low_mem(eval_xs))
         # Rescale X
         eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features,
                                                normalize_with_sqrt=normalize_with_sqrt)
@@ -422,13 +422,13 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     class_shift_configurations = torch.randperm(len(torch.unique(eval_ys))) if multiclass_decoder == 'permutation' else [0]
 
     ensemble_configurations = list(itertools.product(class_shift_configurations, feature_shift_configurations))
-    #default_ensemble_config = ensemble_configurations[0]
+    # default_ensemble_config = ensemble_configurations[0]
 
     rng = random.Random(seed)
     rng.shuffle(ensemble_configurations)
     ensemble_configurations = list(itertools.product(ensemble_configurations, preprocess_transform_configurations, styles_configurations))
     ensemble_configurations = ensemble_configurations[0:N_ensemble_configurations]
-    #if N_ensemble_configurations == 1:
+    # if N_ensemble_configurations == 1:
     #    ensemble_configurations = [default_ensemble_config]
 
     output = None
@@ -453,7 +453,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         eval_ys_ = ((eval_ys_ + class_shift_configuration) % num_classes).float()
 
-        eval_xs_ = torch.cat([eval_xs_[..., feature_shift_configuration:],eval_xs_[..., :feature_shift_configuration]],dim=-1)
+        eval_xs_ = torch.cat([eval_xs_[..., feature_shift_configuration:], eval_xs_[..., :feature_shift_configuration]], dim=-1)
 
         # Extend X
         if extend_features:
@@ -467,11 +467,11 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     inputs = torch.split(inputs, batch_size_inference, dim=1)
     labels = torch.cat(labels, 1)
     labels = torch.split(labels, batch_size_inference, dim=1)
-    #print('PREPROCESSING TIME', str(time.time() - start))
+    # print('PREPROCESSING TIME', str(time.time() - start))
     outputs = []
     start = time.time()
     for batch_input, batch_label in zip(inputs, labels):
-        #preprocess_transform_ = preprocess_transform if styles_configuration % 2 == 0 else 'none'
+        # preprocess_transform_ = preprocess_transform if styles_configuration % 2 == 0 else 'none'
         import warnings
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
@@ -484,15 +484,15 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
                 with torch.cuda.amp.autocast(enabled=fp16_inference):
                     output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_, True)
         outputs += [output_batch]
-    #print('MODEL INFERENCE TIME ('+str(batch_input.device)+' vs '+device+', '+str(fp16_inference)+')', str(time.time()-start))
+    # print('MODEL INFERENCE TIME ('+str(batch_input.device)+' vs '+device+', '+str(fp16_inference)+')', str(time.time()-start))
 
     outputs = torch.cat(outputs, 1)
     for i, ensemble_configuration in enumerate(ensemble_configurations):
         (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration, styles_configuration = ensemble_configuration
         output_ = outputs[:, i:i+1, :]
-        output_ = torch.cat([output_[..., class_shift_configuration:],output_[..., :class_shift_configuration]],dim=-1)
+        output_ = torch.cat([output_[..., class_shift_configuration:], output_[..., :class_shift_configuration]], dim=-1)
 
-        #output_ = predict(eval_xs, eval_ys, style_, preprocess_transform_)
+        # output_ = predict(eval_xs, eval_ys, style_, preprocess_transform_)
         if not average_logits and not return_logits:
             # transforms every ensemble_configuration into a probability -> equal contribution of every configuration
             output_ = torch.nn.functional.softmax(output_, dim=-1)
@@ -506,9 +506,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
     return output
 
+
 def get_params_from_config(c):
-    return {'max_features': c['num_features']
-        , 'rescale_features': c["normalize_by_used_features"]
-        , 'normalize_to_ranking': c["normalize_to_ranking"]
-        , 'normalize_with_sqrt': c.get("normalize_with_sqrt", False)
+    return {'max_features': c['num_features'], 'rescale_features': c["normalize_by_used_features"], 'normalize_to_ranking': c["normalize_to_ranking"], 'normalize_with_sqrt': c.get("normalize_with_sqrt", False)
             }

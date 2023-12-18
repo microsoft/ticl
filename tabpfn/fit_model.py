@@ -19,6 +19,7 @@ import argparse
 import socket
 import shutil
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -43,21 +44,21 @@ def main(argv):
     config['multiclass_type'] = 'rank'
     del config['differentiable_hyperparameters']['multiclass_type']
 
-    config['sampling'] = 'normal' # vielleicht schlecht?
+    config['sampling'] = 'normal'  # vielleicht schlecht?
     del config['differentiable_hyperparameters']['sampling']
 
     config['pre_sample_causes'] = True
     # end diff
 
-    config['multiclass_loss_type'] = 'nono' # 'compatible'
-    config['normalize_to_ranking'] = False # False
+    config['multiclass_loss_type'] = 'nono'  # 'compatible'
+    config['normalize_to_ranking'] = False  # False
 
-    config['categorical_feature_p'] = .2 # diff: .0
+    config['categorical_feature_p'] = .2  # diff: .0
 
     # turn this back on in a random search!?
     config['nan_prob_no_reason'] = .0
-    config['nan_prob_unknown_reason'] = .0 # diff: .0
-    config['set_value_to_nan'] = .1 # diff: 1.
+    config['nan_prob_unknown_reason'] = .0  # diff: .0
+    config['set_value_to_nan'] = .1  # diff: 1.
 
     config['normalize_with_sqrt'] = False
 
@@ -72,13 +73,12 @@ def main(argv):
     config['random_feature_rotation'] = True
     config['rotate_normalized_labels'] = True
 
-    config["mix_activations"] = False # False heisst eig True
+    config["mix_activations"] = False  # False heisst eig True
 
     config['output_attention'] = True
     config['y_encoder'] = "one_hot"
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
-
 
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
@@ -109,7 +109,8 @@ def main(argv):
     parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
-    parser.add_argument('-S', '--special-token', help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=True, type=str2bool)
+    parser.add_argument('-S', '--special-token',
+                        help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=True, type=str2bool)
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
@@ -136,7 +137,6 @@ def main(argv):
     parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
-
 
     args = parser.parse_args(argv)
 
@@ -221,7 +221,6 @@ def main(argv):
     config['stop_after_epochs'] = args.stop_after_epochs
     save_every = args.save_every
 
-
     config_sample = evaluate_hypers(config)
 
     model_state, optimizer_state, scheduler = None, None, None
@@ -243,7 +242,6 @@ def main(argv):
             compare_dicts(config_sample, old_config, all=True)
 
     report = Reporter()
-
 
     if args.continue_run:
         if checkpoint_dir is None:
@@ -333,11 +331,11 @@ def main(argv):
                         old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
                         if os.path.exists(old_file_name):
                             if loss > this_loss:
-                                    try:
-                                        print(f"Removing old model file {old_file_name}")
-                                        os.remove(old_file_name)
-                                    except Exception as e:
-                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                                try:
+                                    print(f"Removing old model file {old_file_name}")
+                                    os.remove(old_file_name)
+                                except Exception as e:
+                                    print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
                                 print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
 
@@ -371,7 +369,7 @@ def main(argv):
 
         with mlflow.start_run(**run_args) as run:
             mlflow.log_param('hostname', socket.gethostname())
-            mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+            mlflow.log_params({k: v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
             total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=args.continue_run or args.load_strict)
@@ -386,6 +384,7 @@ def main(argv):
     return {'loss': total_loss, 'model': model, 'dataloader': dl,
             'config': config, 'base_path': base_path,
             'model_string': model_string, 'epoch': epoch}
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

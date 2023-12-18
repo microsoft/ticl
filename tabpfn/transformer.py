@@ -10,7 +10,6 @@ from tabpfn.layer import TransformerEncoderLayer, _get_activation_fn
 from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
-
 class TransformerModel(nn.Module):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, decoder=None, input_normalization=False, init_method=None, pre_norm=False,
@@ -18,8 +17,8 @@ class TransformerModel(nn.Module):
                  all_layers_same_init=False, efficient_eval_masking=True):
         super().__init__()
         self.model_type = 'Transformer'
-        encoder_layer_creator = lambda: TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
-                                                                pre_norm=pre_norm, recompute_attn=recompute_attn)
+        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
@@ -53,8 +52,8 @@ class TransformerModel(nn.Module):
     @staticmethod
     def generate_D_q_matrix(sz, query_size):
         train_size = sz-query_size
-        mask = torch.zeros(sz,sz) == 0
-        mask[:,train_size:].zero_()
+        mask = torch.zeros(sz, sz) == 0
+        mask[:, train_size:].zero_()
         mask |= torch.eye(sz) == 1
         return bool_mask_to_att_mask(mask)
 
@@ -63,8 +62,8 @@ class TransformerModel(nn.Module):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         sz = seq_len + num_global_att_tokens
         mask = torch.zeros(num_query_tokens, sz) == 0
-        mask[:,train_size:].zero_()
-        mask[:,train_size:] |= torch.eye(num_query_tokens) == 1
+        mask[:, train_size:].zero_()
+        mask[:, train_size:] |= torch.eye(num_query_tokens) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -72,8 +71,8 @@ class TransformerModel(nn.Module):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         trainset_size = seq_len - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        #mask[:,num_global_att_tokens:].zero_()
-        #mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
+        # mask[:,num_global_att_tokens:].zero_()
+        # mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -100,7 +99,7 @@ class TransformerModel(nn.Module):
     def forward(self, src, src_mask=None, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        if len(src) == 2: # (x,y) and no style
+        if len(src) == 2:  # (x,y) and no style
             src = (None,) + src
 
         style_src, x_src, y_src = src
@@ -111,7 +110,8 @@ class TransformerModel(nn.Module):
         global_src = torch.tensor([], device=x_src.device) if self.global_att_embeddings is None else \
             self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
 
-        if src_mask is not None: assert self.global_att_embeddings is None or isinstance(src_mask, tuple)
+        if src_mask is not None:
+            assert self.global_att_embeddings is None or isinstance(src_mask, tuple)
         if src_mask is None:
             if self.global_att_embeddings is None:
                 full_len = len(x_src) + len(style_src)
@@ -141,7 +141,7 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
         return output[single_eval_pos+len(style_src)+(self.global_att_embeddings.num_embeddings if self.global_att_embeddings else 0):]
-    
+
 
 class TransformerEncoderDiffInit(Module):
     r"""TransformerEncoder is a stack of N encoder layers

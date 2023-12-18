@@ -13,6 +13,7 @@ from warnings import filterwarnings, catch_warnings
 
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
+
 class NeuralNetwork(nn.Module):
     def __init__(self, n_features=784, n_classes=10, hidden_size=128, n_layers=2, dropout_rate=0.0, layernorm=False, nonlinearity='relu'):
         super().__init__()
@@ -46,8 +47,9 @@ class NeuralNetwork(nn.Module):
     def forward(self, x):
         # pass the input through the model
         return self.model(x)
-    
-def _encode_y(y):        
+
+
+def _encode_y(y):
     if isinstance(y, torch.Tensor):
         y = y.detach().numpy()
     if y.ndim == 1:
@@ -58,6 +60,7 @@ def _encode_y(y):
         # used probabilities as labels
         classes = torch.arange(y.shape[1])
     return y, classes
+
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
@@ -127,11 +130,11 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         else:
             X = torch.tensor(X, dtype=torch.float32, device=self.device)
         return self.model_(X.nan_to_num())
-        
+
     def predict(self, X):
         pred = self._predict(X)
         return self.classes_[pred.argmax(1).detach().cpu().numpy()]
-    
+
     def predict_proba(self, X):
         pred = self._predict(X)
         return pred.softmax(dim=1).detach().cpu().numpy()
@@ -154,17 +157,21 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y):
         self.classes_ = np.unique(y)
-        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, verbose=self.verbose, **self.kwargs).fit(X, y)
+        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature,
+                                device=self.device, verbose=self.verbose, **self.kwargs).fit(X, y)
         y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
-	
+
         self.mlp_.fit(X, y_train_soft_probs)
         return self
+
     def predict(self, X):
         return self.classes_[self.mlp_.predict(X)]
+
     def predict_proba(self, X):
         return self.mlp_.predict_proba(X)
+
 
 class DistilledMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, clf, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, verbose=0, **kwargs):
@@ -184,80 +191,12 @@ class DistilledMLP(ClassifierMixin, BaseEstimator):
         y_train_soft_probs = self.clf.predict_proba(X) * self.temperature ** 2
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
-	
+
         self.mlp_.fit(X, y_train_soft_probs)
         return self
+
     def predict(self, X):
         return self.classes_[self.mlp_.predict(X)]
+
     def predict_proba(self, X):
         return self.mlp_.predict_proba(X)
-
-
-class SmoteAugmentedDataset(IterableDataset):
-    def __init__(self, X, y, tabpfn, categorical_features=None, upsample_rate=2, temperature=1, device='cpu'):
-        if isinstance(X, torch.Tensor):
-            X = X.detach().numpy()
-        if isinstance(y, torch.Tensor):
-            y = y.detach().numpy()
-        self.X = X
-        self.y = y
-        self.tabpfn = tabpfn
-        self.categorical_features = categorical_features
-        self.upsample_rate = upsample_rate
-        self.random_state = np.random.RandomState(42)
-        self.new_counts = (pd.value_counts(y) * self.upsample_rate).to_dict()
-        self.temperature = temperature
-        self.device = device
-
-    def __len__(self):
-        return len(self.X) * self.upsample_rate
-    
-    def __iter__(self):
-        random_seed = self.random_state.randint(0, 2**32-1)
-        from imblearn.over_sampling import SMOTENC, SMOTE
-        if self.categorical_features is None:
-            smote = SMOTE(sampling_strategy=self.new_counts, random_state=random_seed)
-        else:
-            smote = SMOTENC(sampling_strategy=self.new_counts, categorical_features=self.categorical_features, random_state=random_seed)
-        with catch_warnings():
-            filterwarnings("ignore", category=UserWarning)
-            X_new, _ = smote.fit_resample(self.X, self.y)
-        y_train_soft_probs = self.tabpfn.predict_proba(X_new) * self.temperature ** 2
-        X_return = torch.tensor(X_new, dtype=torch.float32, device=self.device)
-        y_return = torch.tensor(y_train_soft_probs, device=self.device)
-        yield X_return, y_return
-
-
-class DistilledTabPFNMLPUpsampler(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, upsample_rate=2, categorical_features=None, N_ensemble_configurations=32, **kwargs):
-        self.temperature = temperature
-        self.n_epochs = n_epochs
-        self.hidden_size = hidden_size
-        self.learning_rate = learning_rate
-        self.device = device
-        self.n_layers = n_layers
-        self.dropout_rate = dropout_rate
-        self.layernorm = layernorm
-        self.upsample_rate = upsample_rate
-        self.categorical_features = categorical_features
-        self.N_ensemble_configurations = N_ensemble_configurations
-        self.kwargs = kwargs
-
-    def fit(self, X, y):
-        tabpfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature, device=self.device, **self.kwargs).fit(X, y, overwrite_warning=True)
-        augmented_dataset = SmoteAugmentedDataset(X, y, categorical_features=self.categorical_features, upsample_rate=self.upsample_rate, tabpfn=tabpfn, device=self.device, temperature=self.temperature)
-
-        self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
-                             n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm)
-        dataloader = DataLoader(augmented_dataset, batch_size=None)
-        # classes is range since we always have y as probabilities
-        self.mlp_.fit_from_dataloader(dataloader, n_features=X.shape[1], classes=np.arange(len(tabpfn.classes_)))
-        return self
-    def predict(self, X):
-        return self.mlp_.predict(X)
-    def predict_proba(self, X):
-        return self.mlp_.predict_proba(X)
-    @property
-    def classes_(self):
-        return self.mlp_.classes_
-

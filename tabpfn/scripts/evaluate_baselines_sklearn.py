@@ -13,57 +13,69 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
 
+
 def make_logreg(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore'), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, LogisticRegression(max_iter=1000))
+
 
 def make_knn(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, KNeighborsClassifier())
 
+
 def make_hgb(categorical_features):
     preprocess = make_column_transformer((OrdinalEncoder(), categorical_features), remainder="passthrough")
     return make_pipeline(preprocess, HistGradientBoostingClassifier(categorical_features=categorical_features))
+
 
 def make_rf(categorical_features):
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=SimpleImputer())
     return make_pipeline(preprocess, RandomForestClassifier())
 
+
 def make_tabpfn(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
-    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False, max_categories=10), categorical_features), remainder=cont_pipe)
+    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False,
+                                         max_categories=10), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, TabPFNClassifier())
+
 
 def make_mlp(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, TorchMLP(n_epochs=100))
 
+
 def make_distilled_tabpfn(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
-    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False, max_categories=10), categorical_features), remainder=cont_pipe)
+    preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False,
+                                         max_categories=10), categorical_features), remainder=cont_pipe)
     return make_pipeline(preprocess, DistilledTabPFNMLP(n_epochs=100))
+
 
 def make_lgbm(categorical_features):
     from lightgbm import LGBMClassifier
 
     return LGBMClassifier(categorical_features=categorical_features)
 
+
 def evaluate(previous_results=None, models=None, verbose=0):
     from tqdm import tqdm
     from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
-    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True)
+    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
+        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     if models is None:
         models = {'mlp': make_mlp,
-                'distilled_tabpfn': make_distilled_tabpfn,
-                'logreg': make_logreg,
-                    'knn': make_knn,
-                    'hgb': make_hgb,
-                    'rf': make_rf,
-                    'tabpfn': make_tabpfn}
+                  'distilled_tabpfn': make_distilled_tabpfn,
+                  'logreg': make_logreg,
+                  'knn': make_knn,
+                  'hgb': make_hgb,
+                  'rf': make_rf,
+                  'tabpfn': make_tabpfn}
 
     if previous_results is None:
         from collections import defaultdict
@@ -104,15 +116,16 @@ def evaluate_with_time(models=None, previous_scores=None, verbose=0):
     from tqdm import tqdm
     from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
-    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True)
+    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
+        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     if models is None:
         models = {'mlp': make_mlp,
-                'distilled_tabpfn': make_distilled_tabpfn,
-                'logreg': make_logreg,
-                    'knn': make_knn,
-                    'hgb': make_hgb,
-                    'rf': make_rf,
-                    'tabpfn': make_tabpfn}
+                  'distilled_tabpfn': make_distilled_tabpfn,
+                  'logreg': make_logreg,
+                  'knn': make_knn,
+                  'hgb': make_hgb,
+                  'rf': make_rf,
+                  'tabpfn': make_tabpfn}
 
     if previous_scores is None:
         result_dict = {}

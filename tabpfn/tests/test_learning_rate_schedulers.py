@@ -37,7 +37,7 @@ def test_min_lr(learning_rate_schedule, min_lr, base_lr):
         raise ValueError(f"Invalid learning rate schedule: {learning_rate_schedule}")
     # add linear warmup to scheduler
     scheduler = SequentialLR(optimizer, [LinearLR(optimizer, start_factor=1e-10, end_factor=1, total_iters=warmup_epochs),
-                                            base_scheduler], milestones=[warmup_epochs])
+                                         base_scheduler], milestones=[warmup_epochs])
 
     import warnings
     warnings.simplefilter("ignore", UserWarning)
@@ -56,7 +56,9 @@ def test_min_lr(learning_rate_schedule, min_lr, base_lr):
         assert lrs.min() == pytest.approx(min_lr)
 
 
-TESTING_DEFAULTS = ['--extra-fast-test', '-m', 'tabpfn', '-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'False', '-e', '8', '-N', '2', '-S', 'True', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000', '--learning-rate', '0.003']
+TESTING_DEFAULTS = ['--extra-fast-test', '-m', 'tabpfn', '-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'False', '-e', '8', '-N', '2', '-S', 'True',
+                    '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000', '--learning-rate', '0.003']
+
 
 def test_train_defaults():
     L.seed_everything(42)

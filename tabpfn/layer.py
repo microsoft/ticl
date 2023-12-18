@@ -92,7 +92,6 @@ class TransformerEncoderLayer(Module):
             global_and_train_tokens_src = src_[:num_global_tokens+num_train_tokens]
             eval_tokens_src = src_[num_global_tokens+num_train_tokens:]
 
-
             attn = partial(checkpoint, self.self_attn) if self.recompute_attn else self.self_attn
 
             global_tokens_src2 = attn(global_tokens_src, global_and_train_tokens_src, global_and_train_tokens_src, None, True, global_src_mask)[0]

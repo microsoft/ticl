@@ -43,20 +43,23 @@ class AdditiveModelDecoder(nn.Module):
         self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
 
         if decoder_two_hidden_layers:
-            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                            nn.ReLU(),
-                            nn.Linear(hidden_size, hidden_size),
-                            nn.ReLU(),
-                            nn.Linear(hidden_size, self.num_output_layer_weights))
+            self.mlp = nn.Sequential(
+                nn.Linear(out_size,  hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, self.num_output_layer_weights))
         else:
-            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, self.num_output_layer_weights))
+            self.mlp = nn.Sequential(
+                nn.Linear(out_size,  hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, self.num_output_layer_weights))
 
     def forward(self, x):
         res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
         assert res.shape[1] == self.num_output_layer_weights
         return res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out), res[:, -self.n_out:]
+
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
@@ -90,23 +93,28 @@ class MLPModelDecoder(nn.Module):
         if self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + (self.in_size + 1) * self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
-                self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size** 2 + self.predicted_hidden_layer_size)
+                self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size ** 2 + self.predicted_hidden_layer_size)
         else:
-            self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + self.in_size * self.weight_embedding_rank + self.predicted_hidden_layer_size
+            self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + self.in_size * \
+                self.weight_embedding_rank + self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
-                self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size * self.weight_embedding_rank + self.predicted_hidden_layer_size)
-            self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
+                self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size *
+                                                                                       self.weight_embedding_rank + self.predicted_hidden_layer_size)
+            self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(
+                self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
 
         if decoder_two_hidden_layers:
-            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                            nn.ReLU(),
-                            nn.Linear(hidden_size, hidden_size),
-                            nn.ReLU(),
-                            nn.Linear(hidden_size, self.num_output_layer_weights))
+            self.mlp = nn.Sequential(
+                nn.Linear(out_size,  hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, self.num_output_layer_weights))
         else:
-            self.mlp = nn.Sequential(nn.Linear(out_size,  hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, self.num_output_layer_weights))
+            self.mlp = nn.Sequential(
+                nn.Linear(out_size,  hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, self.num_output_layer_weights))
 
     def forward(self, x):
         hidden_size = self.predicted_hidden_layer_size

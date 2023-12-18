@@ -29,7 +29,7 @@ def _check_boundary_response_method(estimator, response_method):
         Prediction method of estimator.
     """
     has_classes = hasattr(estimator, "classes_")
-    
+
     if has_classes and len(estimator.classes_) > 2:
         if response_method not in {"auto", "predict"}:
             msg = (

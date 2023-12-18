@@ -21,10 +21,8 @@ from joblib import Parallel, delayed
 import itertools
 from functools import partial
 
-def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
-             , verbose=False
-             , return_tensor=False
-             , **kwargs):
+
+def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):
     """
     Evaluates a list of datasets for a model function.
 
@@ -37,16 +35,14 @@ def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
     :param kwargs:
     :return:
     """
-    overall_result = {'metric_used': get_scoring_string(metric_used)
-                      , 'bptt': bptt
-                      , 'eval_positions': eval_positions}
+    overall_result = {'metric_used': get_scoring_string(metric_used), 'bptt': bptt, 'eval_positions': eval_positions}
 
     aggregated_metric_datasets, num_datasets = torch.tensor(0.0), 0
 
     # For each dataset
     for [ds_name, X, y, categorical_feats, _, _] in datasets:
         dataset_bptt = min(len(X), bptt)
-        #if verbose and dataset_bptt < bptt:
+        # if verbose and dataset_bptt < bptt:
         #    print(f'Dataset too small for given bptt, reducing to {len(X)} ({bptt})')
 
         aggregated_metric, num = torch.tensor(0.0), 0
@@ -56,15 +52,8 @@ def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
             eval_position_real = int(dataset_bptt * 0.5) if 2 * eval_position > dataset_bptt else eval_position
             eval_position_bptt = int(eval_position_real * 2.0)
 
-            r = evaluate_position(X, y, model=model
-                        , num_classes=len(torch.unique(y))
-                        , categorical_feats = categorical_feats
-                        , bptt = eval_position_bptt
-                        , ds_name=ds_name
-                        , eval_position = eval_position_real
-                        , metric_used = metric_used
-                                  , device=device
-                        ,**kwargs)
+            r = evaluate_position(X, y, model=model, num_classes=len(torch.unique(y)), categorical_feats=categorical_feats,
+                                  bptt=eval_position_bptt, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device, **kwargs)
 
             if r is None:
                 print('Execution failed', ds_name)
@@ -96,7 +85,7 @@ def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
             new_metric = torch_nanmean(torch.stack([metric_used(ys[i], outputs[i]) for i in range(ys.shape[0])]))
 
             if not return_tensor:
-                make_scalar = lambda x: float(x.detach().cpu().numpy()) if (torch.is_tensor(x) and (len(x.shape) == 0)) else x
+                def make_scalar(x): return float(x.detach().cpu().numpy()) if (torch.is_tensor(x) and (len(x.shape) == 0)) else x
                 new_metric = make_scalar(new_metric)
                 ds_result = {k: make_scalar(ds_result[k]) for k in ds_result.keys()}
 
@@ -112,11 +101,13 @@ def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu'
 
     return overall_result
 
+
 """
 ===============================
 INTERNAL HELPER FUNCTIONS
 ===============================
 """
+
 
 def _eval_single_dataset_wrapper(**kwargs):
     max_time = kwargs['max_time']
@@ -129,6 +120,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     result['split'] = kwargs['split_number']
     result['max_time'] = kwargs['max_time']
     return result
+
 
 def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
     if callable(model):
@@ -144,50 +136,24 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
     if "cuda" in device:
         results = []
         for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
-            result = _eval_single_dataset_wrapper(datasets=[ds]
-                                                , model=model_callable
-                                                , model_name=model_name
-                                                , bptt=bptt, base_path=base_path
-                                                , eval_positions=eval_positions
-                                                , device=device, max_splits=1
-                                                , overwrite=overwrite
-                                                , save=True
-                                                , metric_used=metric_used
-                                                , path_interfix=task_type
-                                                , fetch_only=fetch_only
-                                                , split_number=split_number
-                                                , verbose=verbose
-                                                , max_time=max_time
-                                                , append_metric=append_metric)
+            result = _eval_single_dataset_wrapper(datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
+                                                  overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
             results.append(result)
     else:
-        results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds]
-                                                , model=model_callable
-                                                , model_name=model_name
-                                                , bptt=bptt, base_path=base_path
-                                                , eval_positions=eval_positions
-                                                , device=device, max_splits=1
-                                                , overwrite=overwrite
-                                                , save=True
-                                                , metric_used=metric_used
-                                                , path_interfix=task_type
-                                                , fetch_only=fetch_only
-                                                , split_number=split_number
-                                                , verbose=verbose
-                                                , max_time=max_time
-                                                , append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
+        results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
+                                                                                           save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
     return results
-
 
 
 def check_file_exists(path):
     """Checks if a pickle file exists. Returns None if not, else returns the unpickled file."""
     if (os.path.isfile(path)):
-        #print(f'loading results from {path}')
+        # print(f'loading results from {path}')
         with open(path, 'rb') as f:
             return np.load(f, allow_pickle=True).tolist()
     return None
+
 
 def generate_valid_split(X, y, bptt, eval_position, is_classification, split_number=1):
     """Generates a deteministic train-(test/valid) split. Both splits must contain the same classes and all classes in
@@ -207,7 +173,7 @@ def generate_valid_split(X, y, bptt, eval_position, is_classification, split_num
     X, y = X[perm], y[perm]
     while not done:
         if seed > 20:
-            return None, None # No split could be generated in 7 passes, return None
+            return None, None  # No split could be generated in 7 passes, return None
         random.seed(seed)
         i = random.randint(0, len(X) - bptt) if len(X) - bptt > 0 else 0
         y_ = y[i:i + bptt]
@@ -229,10 +195,7 @@ def generate_valid_split(X, y, bptt, eval_position, is_classification, split_num
     return eval_xs, eval_ys
 
 
-def evaluate_position(X, y, categorical_feats, model, bptt
-                      , eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False
-                      , max_time=300, split_number=1, metric_used=None, device='cpu'
-                      , per_step_normalization=False, verbose=0, **kwargs):
+def evaluate_position(X, y, categorical_feats, model, bptt, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False, max_time=300, split_number=1, metric_used=None, device='cpu', per_step_normalization=False, verbose=0, **kwargs):
     """
     Evaluates a dataset with a 'bptt' number of training samples.
 
@@ -255,8 +218,8 @@ def evaluate_position(X, y, categorical_feats, model, bptt
     """
 
     path = os.path.join(base_path, f'results/tabular/{path_interfix}/results_{method}_{ds_name}_{eval_position}_{bptt}_{split_number}.npy')
-        #log_path =
-    ## Load results if on disk
+    # log_path =
+    # Load results if on disk
     if not overwrite:
         result = check_file_exists(path)
         if result is not None:
@@ -264,13 +227,12 @@ def evaluate_position(X, y, categorical_feats, model, bptt
                 print(f'Loaded saved result for {path}')
             return result
         elif fetch_only:
-            #print(f'Could not load saved result for {path}')
+            # print(f'Could not load saved result for {path}')
             return None
 
-    ## Generate data splits
-    eval_xs, eval_ys = generate_valid_split(X, y, bptt, eval_position
-                                            , is_classification=tabular_metrics.is_classification(metric_used)
-                                            , split_number=split_number)
+    # Generate data splits
+    eval_xs, eval_ys = generate_valid_split(
+        X, y, bptt, eval_position, is_classification=tabular_metrics.is_classification(metric_used), split_number=split_number)
     if eval_xs is None:
         print(f"No dataset could be generated {ds_name} {bptt}")
         return None
@@ -284,24 +246,18 @@ def evaluate_position(X, y, categorical_feats, model, bptt
 
     start_time = time.time()
 
-    if isinstance(model, nn.Module): # Two separate predict interfaces for transformer and baselines
-        outputs, best_configs = transformer_predict(model, eval_xs, eval_ys, eval_position, metric_used=metric_used
-                                                    , categorical_feats=categorical_feats
-                                                    , inference_mode=True
-                                                    , device=device
-                                                    , extend_features=True,
+    if isinstance(model, nn.Module):  # Two separate predict interfaces for transformer and baselines
+        outputs, best_configs = transformer_predict(model, eval_xs, eval_ys, eval_position, metric_used=metric_used, categorical_feats=categorical_feats, inference_mode=True, device=device, extend_features=True,
                                                     **kwargs), None
     else:
-        _, outputs, best_configs = baseline_predict(model, eval_xs, eval_ys, categorical_feats
-                                                    , eval_pos=eval_position
-                                                    , device=device
-                                                    , max_time=max_time, metric_used=metric_used, **kwargs)
+        _, outputs, best_configs = baseline_predict(model, eval_xs, eval_ys, categorical_feats, eval_pos=eval_position,
+                                                    device=device, max_time=max_time, metric_used=metric_used, **kwargs)
     eval_ys = eval_ys[eval_position:]
     if outputs is None:
         print('Execution failed', ds_name)
         return None
 
-    if torch.is_tensor(outputs): # Transfers data to cpu for saving
+    if torch.is_tensor(outputs):  # Transfers data to cpu for saving
         outputs = outputs.cpu()
         eval_ys = eval_ys.cpu()
 

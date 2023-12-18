@@ -66,7 +66,8 @@ def set_locals_in_self(locals):
     """
     self = locals['self']
     for var_name, val in locals.items():
-        if var_name != 'self': setattr(self, var_name, val)
+        if var_name != 'self':
+            setattr(self, var_name, val)
 
 
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
@@ -89,11 +90,13 @@ class StoreDictKeyPair(argparse.Action):
         setattr(namespace, self.dest, my_dict)
         print("dict values: {}".format(my_dict))
 
+
 def get_nan_value(v, set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
         return v
     else:
         return random.choice([-999, 0, 1, 999])
+
 
 def to_ranking(data):
     x = (data >= data.unsqueeze(-3))
@@ -103,6 +106,8 @@ def to_ranking(data):
 #   1. Cmparing to unique elements: When all values are different we still get quadratic blowup
 #   2. Argsort(Argsort()) returns ranking, but with duplicate values there is an ordering which is problematic
 #   3. Argsort(Argsort(Unique))->Scatter seems a bit complicated, doesn't have quadratic blowup, but how fast?
+
+
 def to_ranking_low_mem(data):
     x = torch.zeros_like(data)
     for col in range(data.shape[-1]):
@@ -111,14 +116,18 @@ def to_ranking_low_mem(data):
         x[:, :, col] = x_
     return x
 
+
 def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('nan'), set_value_to_nan)
+
 
 def nan_handling_missing_for_no_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('-inf'), set_value_to_nan)
 
+
 def nan_handling_missing_for_a_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('inf'), set_value_to_nan)
+
 
 def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
     """
@@ -132,6 +141,7 @@ def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
         return value / num, 1.-num/x.shape[dim]
     return value / num
 
+
 def torch_masked_std(x, mask, dim=0):
     """
     Returns the std of a torch tensor and only considers the elements, where the mask is true.
@@ -144,11 +154,14 @@ def torch_masked_std(x, mask, dim=0):
     quadratic_difference_from_mean = torch.square(torch.where(mask, mean_broadcast - x, torch.full_like(x, 0)))
     return torch.sqrt(torch.sum(quadratic_difference_from_mean, dim=dim) / (num - 1))
 
+
 def torch_nanmean(x, dim=0, return_nanshare=False):
     return torch_masked_mean(x, ~torch.isnan(x), dim=dim, return_share_of_ignored_values=return_nanshare)
 
+
 def torch_nanstd(x, dim=0):
     return torch_masked_std(x, ~torch.isnan(x), dim=dim)
+
 
 def normalize_data(data, normalize_positions=-1):
     if normalize_positions > 0:
@@ -161,6 +174,7 @@ def normalize_data(data, normalize_positions=-1):
     data = torch.clip(data, min=-100, max=100)
 
     return data
+
 
 def remove_outliers(X, n_sigma=4, normalize_positions=-1):
     # Expects T, B, H
@@ -180,11 +194,13 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1):
 
     X = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)
     X = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)
-            # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
+    # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
     return X
+
 
 def bool_mask_to_att_mask(mask):
     return mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+
 
 def print_on_master_only(is_master):
     import builtins as __builtin__
@@ -200,7 +216,7 @@ def print_on_master_only(is_master):
 
 
 def init_dist(device):
-    #print('init dist')
+    # print('init dist')
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
         rank = int(os.environ["LOCAL_RANK"])
@@ -232,17 +248,21 @@ def init_dist(device):
 
         return True, rank, f'cuda:{rank}'
     else:
-        #print('Not using distributed')
+        # print('Not using distributed')
         # will not change any of the behavior of print, but allows putting the force=True in the print calls
         print_on_master_only(True)
         return False, 0, device
 
 # NOP function for python with statements (x = NOP(); with x:)
+
+
 class NOP():
     def __enter__(self):
         pass
+
     def __exit__(self, type, value, traceback):
         pass
+
 
 def check_compatibility(dl):
     if hasattr(dl, 'num_outputs'):
@@ -250,11 +270,13 @@ def check_compatibility(dl):
         assert dl.num_outputs != 1, "We assume num_outputs to be 1. Instead of the num_ouputs change your loss." \
                                     "We specify the number of classes in the CE loss."
 
+
 def product_dict(dic):
     keys = dic.keys()
     vals = dic.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
+
 
 def normalize_by_used_features_f(x, num_features_used, num_features, normalize_with_sqrt=False):
     if normalize_with_sqrt:
@@ -327,6 +349,7 @@ def get_latest_losses(fileglob="models_diff/*.cpkt"):
         lr_dict[shortname] = config.get("learning_rates", np.NaN)
     return losses_dict, lr_dict, wallclock_dict, last_saves
 
+
 def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
     def trim(series, skip):
         if pd.api.types.is_scalar(series):
@@ -389,8 +412,6 @@ class ExponentialLR(LRScheduler):
                 for base_lr in self.base_lrs]
 
 
-
-
 class ReduceLROnSpike:
     """Reduce learning rate when a metric has bounced up.
 
@@ -443,7 +464,6 @@ class ReduceLROnSpike:
         self.recent_losses = []
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
 
-
     def step(self, metrics):
         # convert `metrics` to float, in case it's a zero-dim Tensor
         current = float(metrics)
@@ -484,10 +504,10 @@ class ReduceLROnSpike:
         self.__dict__.update(state_dict)
 
     def get_last_lr(self):
-       """ Return last computed learning rate by current scheduler.
-       """
-       return self._last_lr
-    
+        """ Return last computed learning rate by current scheduler.
+        """
+        return self._last_lr
+
 
 def make_base_parser(description):
     parser = argparse.ArgumentParser(description=description)
@@ -523,6 +543,7 @@ def make_base_parser(description):
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     return parser
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -533,7 +554,7 @@ def str2bool(v):
 
 
 def init_device(gpu_id, use_cpu):
-        # Single GPU training, get GPU ID from command line
+    # Single GPU training, get GPU ID from command line
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
         rank = int(os.environ["LOCAL_RANK"])
@@ -645,18 +666,19 @@ def make_training_callback(save_every, model_string, base_path, report):
                         old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
                         if os.path.exists(old_file_name):
                             if loss > this_loss:
-                                    try:
-                                        print(f"Removing old model file {old_file_name}")
-                                        os.remove(old_file_name)
-                                    except Exception as e:
-                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                                try:
+                                    print(f"Removing old model file {old_file_name}")
+                                    os.remove(old_file_name)
+                                except Exception as e:
+                                    print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
                                 print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
-        
+
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
             print(e)
     return save_callback
+
 
 def load_model_state(load_path, config):
     model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
@@ -674,8 +696,9 @@ def load_model_state(load_path, config):
     else:
         print("WARNING warm starting with new settings")
         compare_dicts(config_sample, old_config, all=True)
-    
+
     return model_state, optimizer_state, scheduler, config_sample
+
 
 def init_mlflow(experiment_name, model_string, continue_run):
     if socket.gethostname() == "amueller-tabpfn-4gpu":

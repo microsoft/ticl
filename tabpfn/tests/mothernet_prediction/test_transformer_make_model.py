@@ -10,6 +10,7 @@ MOTHERNET_LOW_RANK_PATH = "models_diff/mn_n1024_L2_W128_P512_1_gpu_08_03_2023_03
 MOTHERNET_NEW_CODE = "models_diff/mn_d2048_H4096_1_gpu_08_04_2023_16_28_11_epoch_950_kept_for_testing.cpkt"
 TABPFN_MODEL_PATH = "models_diff/download_epoch_100.cpkt"
 
+
 @pytest.mark.parametrize("ensemble", [ShiftClassifier, EnsembleMeta, None])
 @pytest.mark.parametrize("class_offset", [0, 4])
 def test_basic_iris(ensemble, class_offset):
@@ -28,6 +29,7 @@ def test_basic_iris(ensemble, class_offset):
     pred_prob = mothernet.predict_proba(X_test)
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test + class_offset) > 0.9
+
 
 def test_predict_new_training_code_iris():
     pytest.skip("haven't checked in model checkpoints yet")
@@ -54,11 +56,13 @@ def test_two_layers_iris():
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
 
+
 def test_two_layers_iris_tabpfn_logic():
     pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
-    mothernet = TabPFNClassifier(model_string="mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33", epoch=780, device='cpu', N_ensemble_configurations=1)
+    mothernet = TabPFNClassifier(model_string="mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33",
+                                 epoch=780, device='cpu', N_ensemble_configurations=1)
     mothernet.fit(X_train, y_train)
     pred = mothernet.predict(X_test)
     assert pred.shape == (38,)
@@ -79,6 +83,7 @@ def test_low_rank_iris():
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
 
+
 def test_low_rank_iris_tabpfn_logic():
     pytest.skip("haven't checked in model checkpoints yet")
     iris = load_iris()
@@ -90,6 +95,7 @@ def test_low_rank_iris_tabpfn_logic():
     pred_prob = mothernet.predict_proba(X_test)
     assert pred_prob.shape == (38, 3)
     assert mothernet.score(X_test, y_test) > 0.9
+
 
 def test_tabpfn_load_error():
     pytest.skip("haven't checked in model checkpoints yet")

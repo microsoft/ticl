@@ -28,7 +28,7 @@ def get_criterion(max_num_classes):
 def eval_criterion(criterion, targets, output, device, n_out):
     if isinstance(criterion, nn.GaussianNLLLoss):
         assert output.shape[-1] == 2, \
-                        'need to write a little bit of code to handle multiple regression targets at once'
+            'need to write a little bit of code to handle multiple regression targets at once'
 
         mean_pred = output[..., 0]
         var_pred = output[..., 1].abs()
@@ -41,6 +41,7 @@ def eval_criterion(criterion, targets, output, device, n_out):
         losses = criterion(output, targets)
     losses = losses.view(*output.shape[0:2])
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
+
 
 def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out):
     model.train()  # Turn on the train mode
@@ -59,8 +60,8 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
             time_to_get_batch = time.time() - before_get_batch
             before_forward = time.time()
             with autocast(dtype=torch.bfloat16) if scaler is not None else nullcontext():
-                output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data) if isinstance(data, tuple) else data.to(device)
-                                , single_eval_pos=single_eval_pos)
+                output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
+                               if isinstance(data, tuple) else data.to(device), single_eval_pos=single_eval_pos)
 
                 forward_time = time.time() - before_forward
 
@@ -128,7 +129,6 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             model.start_time -= model.wallclock_times[-1]
         if epoch_callback is not None:
             epoch_callback(model, None, None, "start")
-
 
     dl.model = model
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, betas=(adam_beta1, 0.999))
@@ -223,9 +223,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 model.wallclock_times.append(time.time() - model.start_time)
                 epoch_callback(model, optimizer, scheduler, epoch)
 
-
     except KeyboardInterrupt:
         pass
 
-    if rank == 0: # trivially true for non-parallel training
+    if rank == 0:  # trivially true for non-parallel training
         return total_loss, model.to('cpu'), dl, epoch

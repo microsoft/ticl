@@ -6,12 +6,13 @@ from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 def test_main():
     pytest.skip("This is not working yet")
-    test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids[:1], multiclass=True,
-                                                                        shuffled=True,
-                                                                        filter_for_nan=False,
-                                                                        max_samples=10000,
-                                                                        num_feats=100,
-                                                                        return_capped=True)
+    test_datasets, cc_test_datasets_multiclass_df = load_openml_list(
+        open_cc_dids[:1], multiclass=True,
+                                                                     shuffled=True,
+                                                                     filter_for_nan=False,
+                                                                     max_samples=10000,
+                                                                     num_feats=100,
+                                                                     return_capped=True)
 
     classifier_with_only_inference = TabPFNClassifier(device='cpu')
     classifier_normal = TabPFNClassifier(device='cpu')

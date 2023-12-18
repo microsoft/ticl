@@ -16,10 +16,11 @@ param_grid['saint'] = {
     "dropout": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
 }
 
+
 def saint_metric(x, y, test_x, test_y, cat_features, metric_used):
-    ## Original Implementation https://github.com/somepago/saint
-    ## Reimplementation from https://github.com/kathrinse/TabSurvey
-    ## HowTo install
+    # Original Implementation https://github.com/somepago/saint
+    # Reimplementation from https://github.com/kathrinse/TabSurvey
+    # HowTo install
     # git clone git@github.com:kathrinse/TabSurvey.git
     # cd TabSurvey
     # requirements
@@ -41,6 +42,7 @@ def saint_metric(x, y, test_x, test_y, cat_features, metric_used):
         from models.saint import SAINT
 
         import warnings
+
         def warn(*args, **kwargs):
             pass
 

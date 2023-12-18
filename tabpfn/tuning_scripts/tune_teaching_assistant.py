@@ -33,7 +33,7 @@ tuner = Tuner(
         grace_period=10,
     ),
     results_update_interval=5,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
+    # stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
     stop_criterion=StoppingCriterion(max_num_trials_started=2000),
     n_workers=16,  # how many trials are evaluated in parallel
     tuner_name="teaching-assistant-id-only-mobster"

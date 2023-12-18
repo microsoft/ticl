@@ -26,8 +26,8 @@ class MotherNetAdditive(nn.Module):
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16):
         super().__init__()
         self.model_type = 'Transformer'
-        encoder_layer_creator = lambda: TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
-                                                                pre_norm=pre_norm, recompute_attn=recompute_attn)
+        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
@@ -65,8 +65,8 @@ class MotherNetAdditive(nn.Module):
     @staticmethod
     def generate_D_q_matrix(sz, query_size):
         train_size = sz-query_size
-        mask = torch.zeros(sz,sz) == 0
-        mask[:,train_size:].zero_()
+        mask = torch.zeros(sz, sz) == 0
+        mask[:, train_size:].zero_()
         mask |= torch.eye(sz) == 1
         return bool_mask_to_att_mask(mask)
 
@@ -75,8 +75,8 @@ class MotherNetAdditive(nn.Module):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         sz = seq_len + num_global_att_tokens
         mask = torch.zeros(num_query_tokens, sz) == 0
-        mask[:,train_size:].zero_()
-        mask[:,train_size:] |= torch.eye(num_query_tokens) == 1
+        mask[:, train_size:].zero_()
+        mask[:, train_size:] |= torch.eye(num_query_tokens) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -84,8 +84,8 @@ class MotherNetAdditive(nn.Module):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         trainset_size = seq_len - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        #mask[:,num_global_att_tokens:].zero_()
-        #mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
+        # mask[:,num_global_att_tokens:].zero_()
+        # mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -122,7 +122,8 @@ class MotherNetAdditive(nn.Module):
 
         if h.isnan().all():
             print("NAN")
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
         return h
 
 
@@ -138,6 +139,7 @@ def bin_data(data, n_bins):
     # assert X_binned.max() == n_bins - 1
     X_onehot = torch.nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
     return X_onehot, bin_edges
+
 
 def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
     if "cuda" in inference_device and device == "cpu":
@@ -184,7 +186,8 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
         out += biases
         if np.isnan(out).any():
             print("NAN")
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
         from scipy.special import softmax
         return softmax(out / .8, axis=1)
     elif "cuda" in inference_device:
@@ -196,7 +199,8 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
         std[torch.isnan(std)] = 1
         X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
         out = torch.clamp(X_test_scaled, min=-100, max=100)
-        import pdb; pdb.set_trace()
+        import pdb
+        pdb.set_trace()
         for i, (b, w) in enumerate(layers):
             out = torch.matmul(out, w) + b
             if i != len(layers) - 1:

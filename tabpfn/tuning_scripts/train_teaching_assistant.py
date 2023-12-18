@@ -15,6 +15,7 @@ import pickle
 
 import pmlb
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -22,6 +23,7 @@ def str2bool(v):
         return False
     else:
         raise ValueError("Boolean value expected.")
+
 
 if __name__ == '__main__':
 
@@ -39,16 +41,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     report = Reporter()
 
-    #x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
-    #x, y = x.ravel(), y.ravel()
+    # x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
+    # x, y = x.ravel(), y.ravel()
 
-    #z = (x + y) % 7
+    # z = (x + y) % 7
 
     device = "cpu"
     torch.set_num_threads(1)
 
-    #labels = z
-    #data = np.c_[x, y]
+    # labels = z
+    # data = np.c_[x, y]
     from sklearn.datasets import fetch_openml
     df = fetch_openml("teachingAssistant").frame
     labels = LabelEncoder().fit_transform(df['class'])
@@ -84,5 +86,4 @@ if __name__ == '__main__':
                            dropout_rate=args.dropout_rate, weight_decay=args.weight_decay, epoch_callback=epoch_callback, nonlinearity=args.nonlinearity)
     mlp.fit(X_train, y_train)
 
-    
     print(mlp.score(X_test, y_test))

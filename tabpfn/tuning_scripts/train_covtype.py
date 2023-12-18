@@ -23,6 +23,7 @@ def str2bool(v):
     else:
         raise ValueError("Boolean value expected.")
 
+
 def epoch_callback(model, epoch, loss):
     # with torch.no_grad():
     #     pred = model(X_test_tensor)
@@ -31,6 +32,7 @@ def epoch_callback(model, epoch, loss):
     # report(epoch=epoch + 1, accuracy=acc)
     report(epoch=epoch + 1, accuracy=loss)
     pickle.dump(model, open(checkpoint_path, "wb"))
+
 
 if __name__ == '__main__':
 
@@ -47,16 +49,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     report = Reporter()
 
-    #x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
-    #x, y = x.ravel(), y.ravel()
+    # x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
+    # x, y = x.ravel(), y.ravel()
 
-    #z = (x + y) % 7
+    # z = (x + y) % 7
 
     device = "cpu"
     torch.set_num_threads(1)
 
-    #labels = z
-    #data = np.c_[x, y]
+    # labels = z
+    # data = np.c_[x, y]
     X, y = fetch_covtype(return_X_y=True)
     y = LabelEncoder().fit_transform(y)
 
@@ -67,9 +69,9 @@ if __name__ == '__main__':
     X_test_tensor = torch.tensor(X_test, device=device, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test, device=device)
 
-
     checkpoint_dir = args.st_checkpoint_dir
-    import pdb; pdb.set_trace()
+    import pdb
+    pdb.set_trace()
     if checkpoint_dir is not None:
         print(checkpoint_dir)
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -81,5 +83,4 @@ if __name__ == '__main__':
                            dropout_rate=args.dropout_rate, weight_decay=args.weight_decay, epoch_callback=epoch_callback, nonlinearity=args.nonlinearity)
     mlp.fit(X_train, y_train)
 
-    
     print(mlp.score(X_test, y_test))

@@ -25,10 +25,10 @@ config_space = {
     'reduce-lr-on-spike': choice([False]),
     'min-lr': loguniform(1e-8, 1e-2),
     'save-every': 1,
-    #'spike-tolerance': randint(1, 10),
+    # 'spike-tolerance': randint(1, 10),
     'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
-    #'num-steps': 128,
+    # 'num-steps': 128,
     'model-maker': 'tabpfn',
 }
 
@@ -36,7 +36,7 @@ early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
 
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='../fit_model.py'),
-        scheduler=MOBSTER(
+    scheduler=MOBSTER(
         config_space,
         metric='loss',
         resource_attr='wallclock_time',
@@ -50,7 +50,7 @@ tuner = Tuner(
     max_failures=1000,
     results_update_interval=60,
     print_update_interval=120,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
+    # stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
     n_workers=4,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,

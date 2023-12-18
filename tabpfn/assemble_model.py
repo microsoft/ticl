@@ -1,6 +1,5 @@
 
 
-
 def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
                    model_maker, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
@@ -19,33 +18,36 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     else:
         n_out = 1
     if model_maker == "mlp":
-        model = TransformerModelMakeMLP(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
-                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
-                                decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
-                                no_double_embedding=no_double_embedding, pre_norm=pre_norm, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
-                                **model_extra_args
-                                )
+        model = TransformerModelMakeMLP(
+            encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
+            y_encoder=y_encoder, input_normalization=input_normalization,
+            efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
+            predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
+            decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
+            no_double_embedding=no_double_embedding, pre_norm=pre_norm, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
+            **model_extra_args
+        )
     elif model_maker == 'perceiver':
-        model = TabPerceiver(encoder=encoder, input_dim=emsize, depth=nlayers, n_out=n_out, latent_dim=emsize, latent_heads=nhead, ff_dropout=dropout,
-                                y_encoder=y_encoder, output_attention=output_attention, special_token=special_token,
-                                predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
-                                decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
-                                no_double_embedding=no_double_embedding, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
-                                num_latents=num_latents,
-                                **model_extra_args
-                                )
+        model = TabPerceiver(
+            encoder=encoder, input_dim=emsize, depth=nlayers, n_out=n_out, latent_dim=emsize, latent_heads=nhead, ff_dropout=dropout,
+            y_encoder=y_encoder, output_attention=output_attention, special_token=special_token,
+            predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
+            decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
+            no_double_embedding=no_double_embedding, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
+            num_latents=num_latents,
+            **model_extra_args
+        )
     elif model_maker == "additive":
         model = MotherNetAdditive(
             n_features=num_features, n_out=n_out, ninp=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, shared_embedding=shared_embedding)
     else:
-        model = TransformerModel(encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
-                                y_encoder=y_encoder, input_normalization=input_normalization,
-                                efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
-                                )
+        model = TransformerModel(
+            encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
+            y_encoder=y_encoder, input_normalization=input_normalization,
+            efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
+        )
     if model_state is not None:
         if not load_model_strict:
             for k, v in model.state_dict().items():
@@ -55,6 +57,5 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
 
     if verbose:
         print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
-
 
     return model

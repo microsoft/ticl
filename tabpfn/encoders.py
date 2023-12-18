@@ -35,20 +35,22 @@ class _PositionalEncoding(nn.Module):
         self.d_model = d_model
         self.device_test_tensor = nn.Parameter(torch.tensor(1.))
 
-    def forward(self, x):# T x B x num_features
+    def forward(self, x):  # T x B x num_features
         assert self.d_model % x.shape[-1]*2 == 0
         d_per_feature = self.d_model // x.shape[-1]
         pe = torch.zeros(*x.shape, d_per_feature, device=self.device_test_tensor.device)
-        #position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        # position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         interval_size = 10
-        div_term = (1./interval_size) * 2*math.pi*torch.exp(torch.arange(0, d_per_feature, 2, device=self.device_test_tensor.device).float()*math.log(math.sqrt(2)))
-        #print(div_term/2/math.pi)
+        div_term = (1./interval_size) * 2*math.pi*torch.exp(torch.arange(0, d_per_feature,
+                                                                         2, device=self.device_test_tensor.device).float()*math.log(math.sqrt(2)))
+        # print(div_term/2/math.pi)
         pe[..., 0::2] = torch.sin(x.unsqueeze(-1) * div_term)
         pe[..., 1::2] = torch.cos(x.unsqueeze(-1) * div_term)
-        return self.dropout(pe).view(x.shape[0],x.shape[1],self.d_model)
+        return self.dropout(pe).view(x.shape[0], x.shape[1], self.d_model)
 
 
-Positional = lambda _, emsize: _PositionalEncoding(d_model=emsize)
+def Positional(_, emsize): return _PositionalEncoding(d_model=emsize)
+
 
 class EmbeddingEncoder(nn.Module):
     def __init__(self, num_features, em_size, num_embs=100):
@@ -56,7 +58,7 @@ class EmbeddingEncoder(nn.Module):
         self.num_embs = num_embs
         self.embeddings = nn.Embedding(num_embs * num_features, em_size, max_norm=True)
         self.init_weights(.1)
-        self.min_max = (-2,+2)
+        self.min_max = (-2, +2)
 
     @property
     def width(self):
@@ -103,7 +105,7 @@ def get_normalized_encoder(encoder_creator, data_std):
 
 class ZNormalize(nn.Module):
     def forward(self, x):
-        return (x-x.mean(-1,keepdim=True))/x.std(-1,keepdim=True)
+        return (x-x.mean(-1, keepdim=True))/x.std(-1, keepdim=True)
 
 
 class AppendEmbeddingEncoder(nn.Module):
@@ -126,6 +128,7 @@ class AppendEmbeddingEncoder(nn.Module):
             encoded_x = torch.cat([encoded_x, self.emb[None, None, :].repeat(1, encoded_x.shape[1], 1)], 0)
         return encoded_x
 
+
 def get_append_embedding_encoder(encoder_creator):
     return lambda num_features, emsize: AppendEmbeddingEncoder(encoder_creator(num_features, emsize), num_features, emsize)
 
@@ -145,12 +148,14 @@ class VariableNumFeaturesEncoder(nn.Module):
 def get_variable_num_features_encoder(encoder_creator):
     return lambda num_features, emsize: VariableNumFeaturesEncoder(encoder_creator(num_features, emsize), num_features)
 
+
 class NoMeanEncoder(nn.Module):
     """
     This can be useful for any prior that is translation invariant in x or y.
     A standard GP for example is translation invariant in x.
     That is, GP(x_test+const,x_train+const,y_train) = GP(x_test,x_train,y_train).
     """
+
     def __init__(self, base_encoder):
         super().__init__()
         self.base_encoder = base_encoder
@@ -162,10 +167,15 @@ class NoMeanEncoder(nn.Module):
 def get_no_mean_encoder(encoder_creator):
     return lambda num_features, emsize: NoMeanEncoder(encoder_creator(num_features, emsize))
 
+
 Linear = nn.Linear
-MLP = lambda num_features, emsize: nn.Sequential(nn.Linear(num_features+1,emsize*2),
-                                                 nn.ReLU(),
-                                                 nn.Linear(emsize*2,emsize))
+
+
+def MLP(num_features, emsize): return nn.Sequential(
+            nn.Linear(num_features+1, emsize*2),
+                                                    nn.ReLU(),
+                                                    nn.Linear(emsize*2, emsize))
+
 
 class NanHandlingEncoder(nn.Module):
     def __init__(self, num_features, emsize, keep_nans=True):
@@ -178,13 +188,14 @@ class NanHandlingEncoder(nn.Module):
     def forward(self, x):
         if self.keep_nans:
             x = torch.cat([torch.nan_to_num(x, nan=0.0), normalize_data(torch.isnan(x) * -1
-                                                          + torch.logical_and(torch.isinf(x), torch.sign(x) == 1) * 1
-                                                          + torch.logical_and(torch.isinf(x), torch.sign(x) == -1) * 2
-                                                          )], -1)
+                                                                        + torch.logical_and(torch.isinf(x), torch.sign(x) == 1) * 1
+                                                                        + torch.logical_and(torch.isinf(x), torch.sign(x) == -1) * 2
+                                                                        )], -1)
         else:
             x = torch.nan_to_num(x, nan=0.0)
         return self.layer(x)
-    
+
+
 class FeaturewiseMLP(nn.Module):
     def __init__(self, num_features, emsize=512, hidden_size=512, replace_nan_by_zero=False):
         super().__init__()
@@ -206,14 +217,14 @@ class FeaturewiseMLP(nn.Module):
     def forward(self, x):
         if self.replace_nan_by_zero:
             x = torch.nan_to_num(x, nan=0.0)
-        #x = x.unsqueeze(-1)
+        # x = x.unsqueeze(-1)
         my_range = torch.arange(0, self.num_features, device=x.get_device()).float().broadcast_to(x.shape)
         interval_size = 100
         div_term = (1./interval_size) * 2*math.pi*torch.exp(torch.arange(0, self.d_per_feature, 2, device=x.get_device()).float()*math.log(math.sqrt(2)))
         sin_range = torch.sin(my_range.unsqueeze(-1) * div_term)
         cos_range = torch.cos(my_range.unsqueeze(-1) * div_term)
-        #sin_x = torch.sin(x * div_term)
-        #cos_x = torch.cos(x * div_term)
+        # sin_x = torch.sin(x * div_term)
+        # cos_x = torch.cos(x * div_term)
         new_shape = x.shape[:-1] + (-1,)
         x2 = torch.cat([x, sin_range.reshape(new_shape), cos_range.reshape(new_shape)], -1)
         result = self.mlp(x2)
@@ -236,6 +247,7 @@ class Linear(nn.Linear):
         super().__setstate__(state)
         self.__dict__.setdefault('replace_nan_by_zero', True)
 
+
 class BinEmbeddingEncoder(nn.Module):
     def __init__(self, num_features, emsize, n_bins, rank):
         super().__init__()
@@ -247,10 +259,12 @@ class BinEmbeddingEncoder(nn.Module):
         self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
 
     def forward(self, x):
-        import pdb; pdb.set_trace()
+        import pdb
+        pdb.set_trace()
         x = torch.einsum('bfn,qrn->bqfr', x, self.query)
         return x.reshape(x.shape[0], self.num_features * self.n_bins * self.rank)
-    
+
+
 class OneHotAndLinear(nn.Linear):
     def __init__(self, num_classes, emsize):
         super().__init__(num_classes, emsize)
@@ -261,10 +275,10 @@ class OneHotAndLinear(nn.Linear):
         if (x == -100).any():
             pass
         y = x.squeeze().long()
-        mask = y==-100
+        mask = y == -100
         y[mask] = 0
         out = torch.nn.functional.one_hot(y, self.num_classes).float()
-        
+
         if out.ndim == 3:
             out[:, :, 0][mask] = 0
         else:
@@ -276,12 +290,11 @@ class OneHotAndLinear(nn.Linear):
         super().__setstate__(state)
 
 
-
 class Conv(nn.Module):
     def __init__(self, input_size, emsize):
         super().__init__()
         self.convs = torch.nn.ModuleList([nn.Conv2d(64 if i else 1, 64, 3) for i in range(5)])
-        self.linear = nn.Linear(64,emsize)
+        self.linear = nn.Linear(64, emsize)
 
     def forward(self, x):
         size = math.isqrt(x.shape[-1])
@@ -292,7 +305,7 @@ class Conv(nn.Module):
                 break
             x = conv(x)
             x.relu_()
-        x = nn.AdaptiveAvgPool2d((1,1))(x).squeeze(-1).squeeze(-1)
+        x = nn.AdaptiveAvgPool2d((1, 1))(x).squeeze(-1).squeeze(-1)
         return self.linear(x)
 
 

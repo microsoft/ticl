@@ -1,3 +1,4 @@
+import torch.cuda as cutorch
 import time
 import random
 
@@ -11,6 +12,7 @@ from .utils import uniform_int_sampler_f
 
 time_it = False
 
+
 class BalancedBinarize(nn.Module):
     def __init__(self):
         super().__init__()
@@ -18,12 +20,14 @@ class BalancedBinarize(nn.Module):
     def forward(self, x):
         return (x > torch.median(x)).float()
 
+
 def class_sampler_f(min_, max_):
     def s():
         if random.random() > 0.5:
             return uniform_int_sampler_f(min_, max_)()
         return 2
     return s
+
 
 class RegressionNormalized(nn.Module):
     def __init__(self):
@@ -38,6 +42,7 @@ class RegressionNormalized(nn.Module):
         norm = (x - minima) / (maxima-minima)
 
         return norm
+
 
 class MulticlassRank(nn.Module):
     def __init__(self, num_classes, ordered_p=0.5):
@@ -60,6 +65,7 @@ class MulticlassRank(nn.Module):
         d[:, reverse_classes] = self.num_classes - 1 - d[:, reverse_classes]
         return d
 
+
 class MulticlassValue(nn.Module):
     def __init__(self, num_classes, ordered_p=0.5):
         super().__init__()
@@ -77,6 +83,7 @@ class MulticlassValue(nn.Module):
         d[:, reverse_classes] = self.num_classes - 1 - d[:, reverse_classes]
         return d
 
+
 class MulticlassMultiNode(nn.Module):
     def __init__(self, num_classes, ordered_p=0.5):
         super().__init__()
@@ -90,7 +97,8 @@ class MulticlassMultiNode(nn.Module):
             return self.alt_multi_class(x)
         T = 3
         x[torch.isnan(x)] = 0.00001
-        d = torch.multinomial(torch.pow(0.00001+torch.sigmoid(x[:, :, 0:self.num_classes]).reshape(-1, self.num_classes), T), 1, replacement=True).reshape(x.shape[0], x.shape[1])#.float()
+        d = torch.multinomial(torch.pow(0.00001+torch.sigmoid(x[:, :, 0:self.num_classes]).reshape(-1,
+                              self.num_classes), T), 1, replacement=True).reshape(x.shape[0], x.shape[1])  # .float()
         return d
 
 
@@ -99,7 +107,7 @@ class FlexibleCategorical(torch.nn.Module):
         super(FlexibleCategorical, self).__init__()
 
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
-                                hyperparameters.keys()}
+                  hyperparameters.keys()}
         self.args = args
         self.args_passed = {**self.args}
         self.args_passed.update({'num_features': self.h['num_features_used']})
@@ -110,13 +118,13 @@ class FlexibleCategorical(torch.nn.Module):
         else:
             if self.h['num_classes'] > 1 and not self.h['balanced']:
                 if self.h['multiclass_type'] == 'rank':
-                    self.class_assigner = MulticlassRank(self.h['num_classes']
-                                                 , ordered_p=self.h['output_multiclass_ordered_p']
-                                                 )
-                elif self.h['multiclass_type'] == 'value':
-                    self.class_assigner = MulticlassValue(self.h['num_classes']
-                                                         , ordered_p=self.h['output_multiclass_ordered_p']
+                    self.class_assigner = MulticlassRank(
+                        self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
                                                          )
+                elif self.h['multiclass_type'] == 'value':
+                    self.class_assigner = MulticlassValue(
+                        self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
+                                                          )
                 elif self.h['multiclass_type'] == 'multi_node':
                     self.class_assigner = MulticlassMultiNode(self.h['num_classes'])
                 else:
@@ -127,9 +135,8 @@ class FlexibleCategorical(torch.nn.Module):
                 raise NotImplementedError("Balanced multiclass training is not possible")
 
     def drop_for_reason(self, x, v):
-        nan_prob_sampler = CategoricalActivation(ordered_p=0.0
-                                                 , categorical_p=1.0
-                                                 , keep_activation_size=False,
+        nan_prob_sampler = CategoricalActivation(
+            ordered_p=0.0, categorical_p=1.0, keep_activation_size=False,
                                                  num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
@@ -148,14 +155,14 @@ class FlexibleCategorical(torch.nn.Module):
 
         start = time.time()
 
-        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5: # Only one out of two datasets should have nans
-            if random.random() < self.h['nan_prob_no_reason']: # Missing for no reason
+        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
+            if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
                 x = self.drop_for_no_reason(x, nan_handling_missing_for_no_reason_value(self.h['set_value_to_nan']))
 
-            if self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5: # Missing for a reason
+            if self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Missing for a reason
                 x = self.drop_for_reason(x, nan_handling_missing_for_a_reason_value(self.h['set_value_to_nan']))
 
-            if self.h['nan_prob_unknown_reason'] > 0: # Missing for unknown reason  and random.random() > 0.5
+            if self.h['nan_prob_unknown_reason'] > 0:  # Missing for unknown reason  and random.random() > 0.5
                 if random.random() < self.h['nan_prob_unknown_reason_reason_prior']:
                     x = self.drop_for_no_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
                 else:
@@ -165,7 +172,7 @@ class FlexibleCategorical(torch.nn.Module):
         if 'categorical_feature_p' in self.h and random.random() < self.h['categorical_feature_p']:
             p = random.random()
             for col in range(x.shape[2]):
-                num_unique_features = max(round(random.gammavariate(1,10)),2)
+                num_unique_features = max(round(random.gammavariate(1, 10)), 2)
                 m = MulticlassRank(num_unique_features, ordered_p=0.3)
                 if random.random() < p:
                     x[:, :, col] = m(x[:, :, col])
@@ -191,7 +198,9 @@ class FlexibleCategorical(torch.nn.Module):
             print('Flex Forward Block 4', round(time.time() - start, 3))
             start = time.time()
         if self.h['normalize_by_used_features']:
-            x = normalize_by_used_features_f(x, self.h['num_features_used'], self.args['num_features'], normalize_with_sqrt=self.h.get('normalize_with_sqrt',False))
+            x = normalize_by_used_features_f(
+                x, self.h['num_features_used'], self.args['num_features'],
+                                             normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
         if time_it:
             print('Flex Forward Block 5', round(time.time() - start, 3))
 
@@ -214,7 +223,7 @@ class FlexibleCategorical(torch.nn.Module):
                     targets_in_eval = torch.unique(y[self.args['single_eval_pos']:, b], sorted=True)
 
                     is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                                targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
                     if not is_compatible:
                         randperm = torch.randperm(x.shape[0])
@@ -223,12 +232,12 @@ class FlexibleCategorical(torch.nn.Module):
                 if not is_compatible:
                     if not is_compatible:
                         # todo check that it really does this and how many together
-                        y[:, b] = -100 # Relies on CE having `ignore_index` set to -100 (default)
+                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
         if self.h['normalize_labels']:
-            #assert self.h['output_multiclass_ordered_p'] == 0., "normalize_labels destroys ordering of labels anyways."
+            # assert self.h['output_multiclass_ordered_p'] == 0., "normalize_labels destroys ordering of labels anyways."
             for b in range(y.shape[1]):
-                valid_labels = y[:,b] != -100
+                valid_labels = y[:, b] != -100
                 if self.h.get('normalize_ignore_label_too', False):
                     valid_labels[:] = True
                 y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
@@ -242,14 +251,14 @@ class FlexibleCategorical(torch.nn.Module):
 
         return x, y, y  # x.shape = (T,B,H)
 
-import torch.cuda as cutorch
 
 @torch.no_grad()
 def get_batch(batch_size, seq_len, num_features, get_batch, device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(32, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
     assert num_models > 0, f'Batch size ({batch_size}) is too small for batch_size_per_gp_sample ({batch_size_per_gp_sample})'
-    assert num_models * batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+    assert num_models * \
+        batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
 
     # Sample one seq_len for entire batch
     seq_len = hyperparameters['seq_len_used']() if callable(hyperparameters['seq_len_used']) else seq_len

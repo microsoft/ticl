@@ -1,3 +1,4 @@
+from sklearn.base import BaseEstimator, ClassifierMixin
 import numpy as np
 import itertools
 import random
@@ -23,11 +24,12 @@ from sklearn.ensemble import VotingClassifier
 
 from einops import rearrange, repeat
 
+
 class MLPModelPredictor(nn.Module):
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        if len(src) == 2: # (x,y) and no style
+        if len(src) == 2:  # (x,y) and no style
             src = (None,) + src
 
         _, x_src_org, y_src = src
@@ -61,7 +63,8 @@ class MLPModelPredictor(nn.Module):
         if h.isnan().all():
             print("NAN")
             raise ValueError("NAN")
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
         return h
 
 
@@ -72,8 +75,8 @@ class TransformerModelMaker(MLPModelPredictor):
                  all_layers_same_init=False, efficient_eval_masking=True):
         super().__init__()
         self.model_type = 'Transformer'
-        encoder_layer_creator = lambda: TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
-                                                                pre_norm=pre_norm, recompute_attn=recompute_attn)
+        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
@@ -108,8 +111,8 @@ class TransformerModelMaker(MLPModelPredictor):
     @staticmethod
     def generate_D_q_matrix(sz, query_size):
         train_size = sz-query_size
-        mask = torch.zeros(sz,sz) == 0
-        mask[:,train_size:].zero_()
+        mask = torch.zeros(sz, sz) == 0
+        mask[:, train_size:].zero_()
         mask |= torch.eye(sz) == 1
         return bool_mask_to_att_mask(mask)
 
@@ -118,8 +121,8 @@ class TransformerModelMaker(MLPModelPredictor):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         sz = seq_len + num_global_att_tokens
         mask = torch.zeros(num_query_tokens, sz) == 0
-        mask[:,train_size:].zero_()
-        mask[:,train_size:] |= torch.eye(num_query_tokens) == 1
+        mask[:, train_size:].zero_()
+        mask[:, train_size:] |= torch.eye(num_query_tokens) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -127,8 +130,8 @@ class TransformerModelMaker(MLPModelPredictor):
         train_size = seq_len + num_global_att_tokens - num_query_tokens
         trainset_size = seq_len - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        #mask[:,num_global_att_tokens:].zero_()
-        #mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
+        # mask[:,num_global_att_tokens:].zero_()
+        # mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -185,10 +188,11 @@ class TransformerModelMakeMLP(TransformerModelMaker):
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None):
-        super().__init__(encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
-                 pos_encoder=pos_encoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
-                 activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
-                 all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
+        super().__init__(
+            encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
+                         pos_encoder=pos_encoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
+                         activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
+                         all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
         self.no_double_embedding = no_double_embedding
         self.output_attention = output_attention
         self.special_token = special_token
@@ -214,8 +218,9 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
 
     eval_xs_ = normalize_data(xs, eval_position)
 
-    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
-                                                   normalize_with_sqrt=False)
+    eval_xs = normalize_by_used_features_f(
+        eval_xs_, X_train.shape[-1], max_features,
+                                           normalize_with_sqrt=False)
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
 
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
@@ -232,7 +237,6 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
-
 def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
@@ -246,8 +250,9 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs_ = normalize_data(xs, eval_position)
 
-    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
-                                                   normalize_with_sqrt=False)
+    eval_xs = normalize_by_used_features_f(
+        eval_xs_, X_train.shape[-1], max_features,
+                                           normalize_with_sqrt=False)
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
@@ -261,11 +266,11 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     else:
         # perceiver
         data = rearrange(train_x, 'n b d -> b n d')
-        x = repeat(model.latents, 'n d -> b n d', b = data.shape[0])
+        x = repeat(model.latents, 'n d -> b n d', b=data.shape[0])
 
         # layers
         for cross_attn, cross_ff, self_attns in model.layers:
-            x = cross_attn(x, context = data) + x
+            x = cross_attn(x, context=data) + x
             x = cross_ff(x) + x
 
             for self_attn, self_ff in self_attns:
@@ -282,7 +287,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         encoder_weight = model.encoder.get_parameter("weight")
         encoder_bias = model.encoder.get_parameter("bias")
 
-        w1_data_space_prenorm  = torch.matmul(encoder_weight[:, :n_features].T, w1)
+        w1_data_space_prenorm = torch.matmul(encoder_weight[:, :n_features].T, w1)
         b1_data_space = torch.matmul(encoder_bias, w1) + b1
 
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
@@ -309,12 +314,13 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     return [(detach(b), detach(w)) for (b, w) in layers_result]
 
+
 def predict_with_linear_model(X_train, X_test, weights, biases):
     mean = X_train.mean(axis=0)
     std = X_train.std(axis=0, ddof=1) + .000001
     X_test_scaled = (X_test - mean) / std
     X_test_scaled = np.clip(X_test_scaled, a_min=-100, a_max=100)
-    res2 = np.dot(X_test_scaled , weights) + biases
+    res2 = np.dot(X_test_scaled, weights) + biases
     from scipy.special import softmax
     return softmax(res2 / .8, axis=1)
 
@@ -331,7 +337,7 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
     eval_xs_ = normalize_data(xs, eval_position)
 
     eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
-                                                   normalize_with_sqrt=False)
+                                           normalize_with_sqrt=False)
     x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((eval_xs.shape[0], 100 - eval_xs.shape[1]))]))
 
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
@@ -347,11 +353,8 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
     total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
 
     pred_simple = torch.matmul(model.encoder(x_all_torch),  linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
-    probs =  torch.nn.functional.softmax(pred_simple/ 0.8, dim=1)
+    probs = torch.nn.functional.softmax(pred_simple / 0.8, dim=1)
     return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy(), probs[eval_position:]
-
-
-from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 class ForwardLinearModel(ClassifierMixin, BaseEstimator):
@@ -394,7 +397,8 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
                 out = np.maximum(out, 0)
         if np.isnan(out).any():
             print("NAN")
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
         from scipy.special import softmax
         return softmax(out / .8, axis=1)
     elif "cuda" in inference_device:
@@ -439,7 +443,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
             self.parameters_ = layers
         else:
             *lower_layers, b_last, w_last = layers
-            self.parameters_  = (*lower_layers, (b_last[indices], w_last[:, indices]))
+            self.parameters_ = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
         return self
 
@@ -472,6 +476,7 @@ class PermutationsMeta(ClassifierMixin, BaseEstimator):
     @property
     def classes_(self):
         return self.vc_.classes_
+
 
 class ShiftClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, base_estimator, feature_shift=0, label_shift=0, transformer=None):
@@ -506,6 +511,7 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
     def predict(self, X):
         return self.predict_proba(X).argmax(axis=1)
 
+
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
     def __init__(self, base_estimator, n_estimators=32, random_state=0, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
         self.base_estimator = base_estimator
@@ -532,7 +538,8 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             if use_power_transformer:
                 # remove zero-variance features to avoid division by zero
-                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()), ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
+                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
+                                     ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
             estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
         self.vc_.fit(X, y)
@@ -544,7 +551,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         # numeric instabilities propagate and sklearn's metrics don't like it.
-        probs =  self.vc_.predict_proba(X)
+        probs = self.vc_.predict_proba(X)
         probs /= probs.sum(axis=1).reshape(-1, 1)
         return probs
 

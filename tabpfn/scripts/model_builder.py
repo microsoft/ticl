@@ -58,7 +58,7 @@ def load_model(path, device, verbose=False):
 def get_encoder(config):
     if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
         ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
-        ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
+            ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
         encoder = encoders.NanHandlingEncoder
     else:
         encoder = partial(encoders.Linear, replace_nan_by_zero=True)
@@ -88,7 +88,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['verbose'] = verbose_prior
 
     if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
-        config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize'] * config['bptt'] * config['bptt']) / 10824640000))
+        config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize']
+                                                    * config['bptt'] * config['bptt']) / 10824640000))
 
     criterion = get_criterion(config['max_num_classes'])
 
@@ -117,7 +118,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
 
-
     dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], device=device,
                              prior_type=config['prior_type'], flexible=config['flexible'], differentiable=config['differentiable'],
                              single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']),
@@ -137,7 +137,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
                            output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'],
                            special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None, num_latents=config['num_latents'], shared_embedding=config.get('shared_embedding', False))
-    
+
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
@@ -146,16 +146,9 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model = train(dl,
                   model, criterion=criterion,
-                  optimizer_state=optimizer_state, scheduler=scheduler
-
-                  , epochs=epochs, stop_after_epochs=config['stop_after_epochs']
-                  , warmup_epochs=config['warmup_epochs']
-                  , gpu_device=device
-                  , aggregate_k_gradients=config['aggregate_k_gradients']
-                  , epoch_callback=epoch_callback
-                  , lr=config['lr'], min_lr=config['min_lr'],
-                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99)
-                  , verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
+                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'], warmup_epochs=config[
+                      'warmup_epochs'], gpu_device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback, lr=config['lr'], min_lr=config['min_lr'],
+                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99), verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
                   weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False),
                   reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'],
                   spike_tolerance=config['spike_tolerance']

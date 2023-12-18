@@ -16,6 +16,7 @@ from tabpfn.utils import load_model_state, make_base_parser, init_device, get_mo
 import socket
 import shutil
 
+
 def main(argv):
     parser = make_base_parser("Train TabPFN")
     args = parser.parse_args(argv)
@@ -26,7 +27,7 @@ def main(argv):
 
     if args.create_new_run and not args.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
-    
+
     base_path = args.base_path
 
     torch.set_num_threads(24)
@@ -51,7 +52,7 @@ def main(argv):
 
     with mlflow.start_run(**run_args) as run:
         mlflow.log_param('hostname', socket.gethostname())
-        mlflow.log_params({k:v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+        mlflow.log_params({k: v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                  optimizer_state=optimizer_state, scheduler=scheduler,
                                                  load_model_strict=args.continue_run or args.load_strict)
@@ -61,6 +62,7 @@ def main(argv):
     return {'loss': total_loss, 'model': model, 'dataloader': dl,
             'config': config, 'base_path': base_path,
             'model_string': model_string, 'epoch': epoch}
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
