@@ -12,7 +12,7 @@ from sklearn.model_selection import cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
-from tabpfn.transformer_make_model import ForwardLinearModel, PermutationsMeta, ForwardMLPModel
+from tabpfn.models.transformer_make_model import ForwardLinearModel, PermutationsMeta, ForwardMLPModel
 from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
 
 

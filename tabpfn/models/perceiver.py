@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 from einops.layers.torch import Reduce
 
-from tabpfn.decoders import MLPModelDecoder
-from tabpfn.transformer_make_model import MLPModelPredictor
+from tabpfn.models.decoders import MLPModelDecoder
+from tabpfn.models.transformer_make_model import MLPModelPredictor
 
 # helpers
 

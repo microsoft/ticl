@@ -4,10 +4,10 @@ import numpy as np
 
 from tabpfn.fit_model import main
 from tabpfn.fit_tabpfn import main as tabpfn_main
-from tabpfn.transformer_make_model import TransformerModelMakeMLP
-from tabpfn.transformer import TransformerModel
-from tabpfn.perceiver import TabPerceiver
-from tabpfn.mothernet_additive import MotherNetAdditive
+from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
+from tabpfn.models.transformer import TransformerModel
+from tabpfn.models.perceiver import TabPerceiver
+from tabpfn.models.mothernet_additive import MotherNetAdditive
 import lightning as L
 
 

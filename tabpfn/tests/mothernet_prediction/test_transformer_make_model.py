@@ -1,4 +1,4 @@
-from tabpfn.transformer_make_model import ShiftClassifier, EnsembleMeta, ForwardMLPModel
+from tabpfn.models.transformer_make_model import ShiftClassifier, EnsembleMeta, ForwardMLPModel
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier

@@ -1,7 +1,7 @@
 from functools import partial
-import tabpfn.encoders as encoders
+import tabpfn.models.encoders as encoders
 
-from tabpfn.transformer import TransformerModel
+from tabpfn.models.transformer import TransformerModel
 from tabpfn.utils import get_uniform_single_eval_pos_sampler
 from tabpfn.dataloader import get_dataloader
 from tabpfn.assemble_model import assemble_model

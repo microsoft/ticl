@@ -5,13 +5,13 @@ import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder
 
-from tabpfn.layer import TransformerEncoderLayer
+from tabpfn.models.layer import TransformerEncoderLayer
 from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 from tabpfn.utils import normalize_by_used_features_f, normalize_data
 
-from tabpfn.transformer import TransformerEncoderDiffInit
-from tabpfn.encoders import Linear, BinEmbeddingEncoder
-from tabpfn.decoders import AdditiveModelDecoder
+from tabpfn.models.transformer import TransformerEncoderDiffInit
+from tabpfn.models.encoders import Linear, BinEmbeddingEncoder
+from tabpfn.models.decoders import AdditiveModelDecoder
 from tabpfn.scripts.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder

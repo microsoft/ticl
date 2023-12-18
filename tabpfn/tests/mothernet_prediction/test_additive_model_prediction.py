@@ -1,5 +1,5 @@
-from tabpfn.transformer_make_model import ShiftClassifier, EnsembleMeta
-from tabpfn.mothernet_additive import ForwardAdditiveModel
+from tabpfn.models.transformer_make_model import ShiftClassifier, EnsembleMeta
+from tabpfn.models.mothernet_additive import ForwardAdditiveModel
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 import pytest
