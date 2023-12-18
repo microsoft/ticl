@@ -41,62 +41,54 @@ class CustomUnpickler(pickle.Unpickler):
         else:
             return super().find_class(module, name)
 
+def _get_file(e, base_path, add_name, eval_addition):
+    """
+    Returns the different paths of model_file, model_path and results_file
+    """
+    model_file = f'models_diff/{add_name}_epoch_{e}.cpkt'
+    model_path = os.path.join(base_path, model_file)
+    results_file = os.path.join(base_path,
+                                f'models_diff/prior_diff_real_results_{add_name}_n_0_epoch_{e}_{eval_addition}.pkl')
+    return model_path, results_file
+
+def _check_file(e, base_path, add_name, eval_addition, verbose):
+    model_path, results_file = _get_file(e, base_path, add_name, eval_addition)
+    if not Path(model_path).is_file():
+        if add_name == "download":
+            print('We have to download the TabPFN, as there is no checkpoint at ', model_path)
+            print('It has about 100MB, so this might take a moment.')
+            import requests
+            url = 'https://github.com/automl/TabPFN/raw/main/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_42.cpkt'
+            r = requests.get(url, allow_redirects=True)
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            open(model_path, 'wb').write(r.content)
+        else:
+            model_path = None
+    else:
+        if verbose:
+            print(f"loading model from file {model_path}")
+    return model_path, results_file
+    
+
 def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', verbose=0):
     """
     Workflow for loading a model and setting appropriate parameters for diffable hparam tuning.
-
-    :param e:
-    :param eval_positions_valid:
-    :param add_name:
-    :param base_path:
-    :param device:
-    :param eval_addition:
-    :return:
     """
-    def get_file(e):
-        """
-        Returns the different paths of model_file, model_path and results_file
-        """
-        model_file = f'models_diff/{add_name}_epoch_{e}.cpkt'
-        model_path = os.path.join(base_path, model_file)
-        # print('Evaluate ', model_path)
-        results_file = os.path.join(base_path,
-                                    f'models_diff/prior_diff_real_results_{add_name}_n_0_epoch_{e}_{eval_addition}.pkl')
-        return model_file, model_path, results_file
-
-    def check_file(e):
-        model_file, model_path, results_file = get_file(e)
-        if not Path(model_path).is_file():
-            if add_name == "download":
-                print('We have to download the TabPFN, as there is no checkpoint at ', model_path)
-                print('It has about 100MB, so this might take a moment.')
-                import requests
-                url = 'https://github.com/automl/TabPFN/raw/main/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_42.cpkt'
-                r = requests.get(url, allow_redirects=True)
-                os.makedirs(os.path.dirname(model_path), exist_ok=True)
-                open(model_path, 'wb').write(r.content)
-            else:
-                model_file = None
-        else:
-            if verbose:
-                print(f"loading model from file {model_file}")
-        return model_file, model_path, results_file
-
-    model_file = None
+    model_path = None
     if e == -1:
         for e_ in range(100, -1, -1):
-            model_file_, model_path_, results_file_ = check_file(e_)
-            if model_file_ is not None:
+            model_path_, results_file_ = _check_file(e_, base_path, add_name, eval_addition, verbose)
+            if model_path_ is not None:
                 e = e_
-                model_file, model_path, results_file = model_file_, model_path_, results_file_
+                model_path, results_file = model_path_, results_file_
                 break
     else:
-        model_file, model_path, results_file = check_file(e)
+        model_path, results_file = _check_file(e, base_path, add_name, eval_addition, verbose)
 
-    if model_file is None:
-        model_file, model_path, results_file = get_file(e)
+    if model_path is None:
+        model_path, results_file = _get_file(e, base_path, add_name, eval_addition)
         raise Exception('No checkpoint found at '+str(model_path))
-    model, c = load_model(model_file, device, verbose=False)
+    model, c = load_model(model_path, device, verbose=False)
 
     return model, c, results_file
 
