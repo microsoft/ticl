@@ -6,10 +6,7 @@ import pickle
 from tabpfn import TabPFNClassifier
 
 
-
-
 def test_main():
-    pytest.skip("This is not working yet")
     xs = np.random.rand(100, 99)
     ys = np.random.randint(0, 3, 100)
 
@@ -24,7 +21,7 @@ def test_main():
     pickle_dump = pickle.dumps(classifier)
     classifier = pickle.loads(pickle_dump)
     pred2 = classifier.predict_proba(test_xs)
-    self.assertTrue((pred1 == pred2).all())
+    assert (pred1 == pred2).all()
 
 
 
