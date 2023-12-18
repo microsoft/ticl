@@ -120,11 +120,11 @@ class FlexibleCategorical(torch.nn.Module):
                 if self.h['multiclass_type'] == 'rank':
                     self.class_assigner = MulticlassRank(
                         self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
-                                                         )
+                    )
                 elif self.h['multiclass_type'] == 'value':
                     self.class_assigner = MulticlassValue(
                         self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
-                                                          )
+                    )
                 elif self.h['multiclass_type'] == 'multi_node':
                     self.class_assigner = MulticlassMultiNode(self.h['num_classes'])
                 else:
@@ -137,7 +137,7 @@ class FlexibleCategorical(torch.nn.Module):
     def drop_for_reason(self, x, v):
         nan_prob_sampler = CategoricalActivation(
             ordered_p=0.0, categorical_p=1.0, keep_activation_size=False,
-                                                 num_classes_sampler=lambda: 20)
+            num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
         x[d < torch.rand((1,), device=x.device) * 20 * self.h['nan_prob_no_reason'] * random.random()] = v
@@ -200,7 +200,7 @@ class FlexibleCategorical(torch.nn.Module):
         if self.h['normalize_by_used_features']:
             x = normalize_by_used_features_f(
                 x, self.h['num_features_used'], self.args['num_features'],
-                                             normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
+                normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
         if time_it:
             print('Flex Forward Block 5', round(time.time() - start, 3))
 

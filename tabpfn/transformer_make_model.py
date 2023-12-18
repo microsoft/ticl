@@ -190,9 +190,9 @@ class TransformerModelMakeMLP(TransformerModelMaker):
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None):
         super().__init__(
             encoder, n_out, ninp, nhead, nhid, nlayers, dropout=dropout, style_encoder=style_encoder, y_encoder=y_encoder,
-                         pos_encoder=pos_encoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
-                         activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
-                         all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
+            pos_encoder=pos_encoder, input_normalization=input_normalization, init_method=init_method, pre_norm=pre_norm,
+            activation=activation, recompute_attn=recompute_attn, num_global_att_tokens=num_global_att_tokens, full_attention=full_attention,
+            all_layers_same_init=all_layers_same_init, efficient_eval_masking=efficient_eval_masking)
         self.no_double_embedding = no_double_embedding
         self.output_attention = output_attention
         self.special_token = special_token
@@ -220,7 +220,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features,
-                                           normalize_with_sqrt=False)
+        normalize_with_sqrt=False)
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
 
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
@@ -252,7 +252,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features,
-                                           normalize_with_sqrt=False)
+        normalize_with_sqrt=False)
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)

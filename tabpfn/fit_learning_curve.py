@@ -113,7 +113,7 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
 def get_runs(filter_string, experiment_id):
     return MlflowClient().search_runs(
         experiment_ids=experiment_id, filter_string=filter_string,
-                                      run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
+        run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
 
 def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running", "reference"), mlflow_host=None):

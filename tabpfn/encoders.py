@@ -172,9 +172,9 @@ Linear = nn.Linear
 
 
 def MLP(num_features, emsize): return nn.Sequential(
-            nn.Linear(num_features+1, emsize*2),
-                                                    nn.ReLU(),
-                                                    nn.Linear(emsize*2, emsize))
+    nn.Linear(num_features+1, emsize*2),
+    nn.ReLU(),
+    nn.Linear(emsize*2, emsize))
 
 
 class NanHandlingEncoder(nn.Module):
