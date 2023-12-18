@@ -2,8 +2,8 @@
 import math
 import operator
 
-import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 import networkx
 import numpy as np
 import pandas as pd
@@ -40,13 +40,6 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
         labels (bool, optional): if set to `True`, the calculated avg rank
         values will be displayed
     """
-    try:
-        import matplotlib
-        import matplotlib.pyplot as plt
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-    except ImportError:
-        raise ImportError("Function graph_ranks requires matplotlib.")
-
     width = float(width)
     textspace = float(textspace)
 
@@ -106,8 +99,6 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
     cline = 0.4
 
     k = len(sums)
-
-    lines = None
 
     linesblank = 0
     scalewidth = width - 2 * textspace
@@ -234,7 +225,7 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
             print(clq)
         min_idx = np.array(clq).min()
         max_idx = np.array(clq).max()
-        if min_idx >= len(nnames) / 2 and achieved_half == False:
+        if min_idx >= len(nnames) / 2 and achieved_half is False:
             start = cline + 0.25
             achieved_half = True
         line([(rankpos(ssums[min_idx]) - side, start),
@@ -252,7 +243,7 @@ def form_cliques(p_values, nnames):
     m = len(nnames)
     g_data = np.zeros((m, m), dtype=np.int64)
     for p in p_values:
-        if p[3] == False:
+        if p[3] is False:
             i = np.where(nnames == p[0])[0][0]
             j = np.where(nnames == p[1])[0][0]
             min_i = min(i, j)

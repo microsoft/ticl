@@ -23,7 +23,6 @@ def _custom_cd_diagram(result, reverse, ax, width, linewidth=0.7, linewidth_bar=
         ax.text(x / width, y / height, s, *args, **kwargs)
 
     sorted_ranks, names, groups = get_sorted_rank_groups(result, reverse)
-    cd = result.cd
 
     lowv = min(1, int(math.floor(min(sorted_ranks))))
     highv = max(len(sorted_ranks), int(math.ceil(max(sorted_ranks))))
@@ -82,10 +81,10 @@ def _custom_cd_diagram(result, reverse, ax, width, linewidth=0.7, linewidth_bar=
         plot_text(textspace + scalewidth + 0.2, chei, names[i], ha="left", va="center")
 
     # upper scale
-    if not reverse:
-        begin, end = rankpos(lowv), rankpos(lowv + cd)
-    else:
-        begin, end = rankpos(highv), rankpos(highv - cd)
+    # if not reverse:
+    #     begin, end = rankpos(lowv), rankpos(lowv + cd)
+    # else:
+    #     begin, end = rankpos(highv), rankpos(highv - cd)
     distanceh += 0.15
     bigtick /= 2
     # plot_line([(begin, distanceh), (end, distanceh)], linewidth=linewidth)
