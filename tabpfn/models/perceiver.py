@@ -1,5 +1,4 @@
-from functools import wraps
-from math import log, pi
+from math import pi
 
 import torch
 import torch.nn.functional as F
@@ -19,20 +18,6 @@ def exists(val):
 
 def default(val, d):
     return val if exists(val) else d
-
-# def cache_fn(f):
-#     cache = dict()
-#     @wraps(f)
-#     def cached_fn(*args, _cache = True, key = None, **kwargs):
-#         if not _cache:
-#             return f(*args, **kwargs)
-#         nonlocal cache
-#         if key in cache:
-#             return cache[key]
-#         result = f(*args, **kwargs)
-#         cache[key] = result
-#         return result
-#     return cached_fn
 
 
 def fourier_encode(x, max_freq, num_bands=4):
@@ -195,9 +180,6 @@ class Perceiver(nn.Module):
 
         self.layers = nn.ModuleList([])
         for i in range(depth):
-            should_cache = i > 0 and weight_tie_layers
-            cache_args = {'_cache': should_cache}
-
             self_attns = nn.ModuleList([])
 
             for block_ind in range(self_per_cross_attn):

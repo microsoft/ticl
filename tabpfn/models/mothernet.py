@@ -130,6 +130,7 @@ class TransformerModelMaker(MLPModelPredictor):
                 nn.init.zeros_(attn.out_proj.weight)
                 nn.init.zeros_(attn.out_proj.bias)
 
+
 class TransformerModelMakeMLP(TransformerModelMaker):
     def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
@@ -153,4 +154,3 @@ class TransformerModelMakeMLP(TransformerModelMaker):
 
     def inner_forward(self, train_x):
         return self.transformer_encoder(train_x)
-

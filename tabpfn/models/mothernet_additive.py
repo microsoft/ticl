@@ -71,11 +71,8 @@ class MotherNetAdditive(nn.Module):
 
     @staticmethod
     def generate_global_att_trainset_matrix(num_global_att_tokens, seq_len, num_query_tokens):
-        train_size = seq_len + num_global_att_tokens - num_query_tokens
         trainset_size = seq_len - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        # mask[:,num_global_att_tokens:].zero_()
-        # mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -129,4 +126,3 @@ def bin_data(data, n_bins):
     # assert X_binned.max() == n_bins - 1
     X_onehot = nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
     return X_onehot, bin_edges
-

@@ -1,4 +1,3 @@
-import math
 from typing import Optional
 
 import torch
@@ -6,7 +5,7 @@ import torch.nn as nn
 from torch import Tensor
 from torch.nn import Module, TransformerEncoder
 
-from tabpfn.models.layer import TransformerEncoderLayer, _get_activation_fn
+from tabpfn.models.layer import TransformerEncoderLayer
 from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
@@ -68,11 +67,9 @@ class TransformerModel(nn.Module):
 
     @staticmethod
     def generate_global_att_trainset_matrix(num_global_att_tokens, seq_len, num_query_tokens):
-        train_size = seq_len + num_global_att_tokens - num_query_tokens
         trainset_size = seq_len - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        # mask[:,num_global_att_tokens:].zero_()
-        # mask[:,num_global_att_tokens:] |= torch.eye(trainset_size) == 1
+
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
@@ -81,11 +78,6 @@ class TransformerModel(nn.Module):
         return bool_mask_to_att_mask(mask)
 
     def init_weights(self):
-        initrange = 1.
-        # if isinstance(self.encoder,EmbeddingEncoder):
-        #    self.encoder.weight.data.uniform_(-initrange, initrange)
-        # self.decoder.bias.data.zero_()
-        # self.decoder.weight.data.uniform_(-initrange, initrange)
         if self.init_method is not None:
             self.apply(self.init_method)
         for layer in self.transformer_encoder.layers:
