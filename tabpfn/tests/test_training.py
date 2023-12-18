@@ -8,7 +8,7 @@ from tabpfn.fit_model import main
 from tabpfn.fit_tabpfn import main as tabpfn_main
 from tabpfn.models.mothernet_additive import MotherNetAdditive
 from tabpfn.models.perceiver import TabPerceiver
-from tabpfn.models.transformer import TransformerModel
+from tabpfn.models.transformer import TabPFN
 from tabpfn.models.mothernet import MotherNet
 
 
@@ -143,7 +143,7 @@ def test_train_tabpfn():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
     assert results['loss'] == pytest.approx(2.3182566165924072)
     assert count_parameters(results['model']) == 579850
-    assert isinstance(results['model'], TransformerModel)
+    assert isinstance(results['model'], TabPFN)
 
 
 def test_train_tabpfn_refactored():
@@ -153,7 +153,7 @@ def test_train_tabpfn_refactored():
         results = tabpfn_main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert results['loss'] == 2.3345985412597656
     assert count_parameters(results['model']) == 579850
-    assert isinstance(results['model'], TransformerModel)
+    assert isinstance(results['model'], TabPFN)
 
 
 def test_train_additive_defaults():
