@@ -282,31 +282,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
                         no_grad=True,
                         return_logits=False,
                         **kwargs):
-    """
-
-    :param model:
-    :param eval_xs:
-    :param eval_ys:
-    :param eval_position:
-    :param rescale_features:
-    :param device:
-    :param max_features:
-    :param style:
-    :param inference_mode:
-    :param num_classes:
-    :param extend_features:
-    :param normalize_to_ranking:
-    :param softmax_temperature:
-    :param multiclass_decoder:
-    :param preprocess_transform:
-    :param categorical_feats:
-    :param feature_shift_decoder:
-    :param N_ensemble_configurations:
-    :param average_logits:
-    :param normalize_with_sqrt:
-    :param metric_used:
-    :return:
-    """
     num_classes = len(torch.unique(eval_ys))
 
     def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits):
@@ -315,7 +290,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         # no_grad disables inference_mode, because otherwise the gradients are lost
         inference_mode_call = torch.inference_mode() if inference_mode and no_grad else NOP()
         with inference_mode_call:
-            start = time.time()
             output = model(
                 (used_style.repeat(eval_xs.shape[1], 1) if used_style is not None else None, eval_xs, eval_ys.float()),
                 single_eval_pos=eval_position)[:, :, 0:num_classes]
@@ -323,14 +297,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
             output = output[:, :, 0:num_classes] / torch.exp(softmax_temperature)
             if not return_logits:
                 output = torch.nn.functional.softmax(output, dim=-1)
-            # else:
-            #    output[:, :, 1] = model((style.repeat(eval_xs.shape[1], 1) if style is not None else None, eval_xs, eval_ys.float()),
-            #               single_eval_pos=eval_position)
 
-            #    output[:, :, 1] = torch.sigmoid(output[:, :, 1]).squeeze(-1)
-            #    output[:, :, 0] = 1 - output[:, :, 1]
-
-        # print('RESULTS', eval_ys.shape, torch.unique(eval_ys, return_counts=True), output.mean(axis=0))
 
         return output
 
@@ -398,17 +365,9 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     if not differentiable_hps_as_style:
         style = None
 
-    if style is not None:
-        raise ValueError("We should delete this")
-        style = style.to(device)
-        style = style.unsqueeze(0) if len(style.shape) == 1 else style
-        num_styles = style.shape[0]
-        softmax_temperature = softmax_temperature if softmax_temperature.shape else softmax_temperature.unsqueeze(
-            0).repeat(num_styles)
-    else:
-        num_styles = 1
-        style = None
-        softmax_temperature = torch.log(torch.tensor([0.8]))
+    num_styles = 1
+    style = None
+    softmax_temperature = torch.log(torch.tensor([0.8]))
 
     styles_configurations = range(0, num_styles)
 

@@ -12,7 +12,8 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 
 from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 from tabpfn.evaluation.baselines.distill_mlp import TorchMLP, DistilledTabPFNMLP
-
+from tqdm import tqdm
+from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
 def make_logreg(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
@@ -63,9 +64,6 @@ def make_lgbm(categorical_features):
 
 
 def evaluate(previous_results=None, models=None, verbose=0):
-    from tqdm import tqdm
-    from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
-
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
         open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     if models is None:
@@ -113,9 +111,6 @@ def evaluate(previous_results=None, models=None, verbose=0):
 
 def evaluate_with_time(models=None, previous_scores=None, verbose=0):
     # this version always takes a dataframe and returns a dataframe
-    from tqdm import tqdm
-    from tabpfn.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
-
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
         open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     if models is None:

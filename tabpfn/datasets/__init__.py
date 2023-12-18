@@ -75,7 +75,7 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
             modifications['samples_capped'] = True
 
         if X.shape[0] < min_samples:
-            print(f'Too few samples left')
+            print('Too few samples left')
             continue
 
         if len(np.unique(y)) > max_num_classes:
@@ -84,7 +84,7 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
                 y = y[y < np.unique(y)[10]]
                 modifications['classes_capped'] = True
             else:
-                print(f'Too many classes')
+                print('Too many classes')
                 continue
 
         datasets += [[entry['name'], X, y, categorical_feats, attribute_names, modifications]]

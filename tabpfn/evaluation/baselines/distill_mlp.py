@@ -2,14 +2,11 @@ from sklearn.base import ClassifierMixin, BaseEstimator
 import torch
 from torch.utils.data import TensorDataset
 
-import torch
 import numpy as np
-from collections import OrderedDict
 from torch import nn
-from torch.utils.data import IterableDataset, DataLoader
+from torch.utils.data import DataLoader
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
-from warnings import filterwarnings, catch_warnings
 
 from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 
