@@ -107,8 +107,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
-                 feature_shift_decoder=True, only_inference=True, seed=0, no_grad=True, batch_size_inference=32,
-                 subsample_features=False):
+                 feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
+                 subsample_features=False, verbose=False, epoch=-1):
         """
         Initializes the classifier and loads the model. 
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the 
@@ -131,8 +131,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         :param multiclass_decoder: If set to permutation, randomly shifts the classes for each ensemble configuration. 
         :param feature_shift_decoder: If set to true shifts the features for each ensemble configuration according to a 
                random permutation.
-        :param only_inference: Indicates if the model should be loaded to only restore inference capabilities or also 
-               training capabilities. Note that the training capabilities are currently not being fully restored.
         :param seed: Seed that is used for the prediction. Allows for a deterministic behavior of the predictions.
         :param batch_size_inference: This parameter is a trade-off between performance and memory consumption.
                The computation done with different values for batch_size_inference is the same,
@@ -143,23 +141,9 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                 the features are subsampled to self.max_features.
         """
 
-        # Model file specification (Model name, Epoch)
-        i = 0
-        model_key = model_string+'|'+str(device)
-        if model_key in self.models_in_memory:
-            model, c, results_file = self.models_in_memory[model_key]
-        else:
-            model, c, results_file = load_model_workflow(i, -1, add_name=model_string, base_path=base_path, device=device,
-                                                         eval_addition='', only_inference=only_inference)
-            self.models_in_memory[model_key] = (model, c, results_file)
-            if len(self.models_in_memory) == 2:
-                print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
-        #style, temperature = self.load_result_minimal(style_file, i, e)
-
         self.verbose = verbose
         self.device = device
         self.style = None
-        self.temperature = temperature
         self.N_ensemble_configurations = N_ensemble_configurations
         self.base__path = base_path
         self.base_path = base_path
@@ -170,6 +154,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.seed = seed
         self.no_grad = no_grad
         self.subsample_features = subsample_features
+        self.epoch = epoch
+        self.temperature = None
 
         assert self.no_preprocess_mode if not self.no_grad else True, \
             "If no_grad is false, no_preprocess_mode must be true, because otherwise no gradient can be computed."
@@ -219,10 +205,9 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         #style, temperature = self.load_result_minimal(style_file, i, e)
         self.model = model
-
-
-        # Check that X and y have correct shape
-        X, y = check_X_y(X, y, force_all_finite=False)
+        if self.no_grad:
+            # Check that X and y have correct shape
+            X, y = check_X_y(X, y, force_all_finite=False)
         # Store the classes seen during fit
         y = self._validate_targets(y)
         self.label_encoder = LabelEncoder()
