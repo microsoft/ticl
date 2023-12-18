@@ -3,10 +3,10 @@ import math
 import torch
 from torch import nn
 
-from tabpfn.utils import default_device, normalize_by_used_features_f
+from tabpfn.utils import default_device
 
-from .utils import (beta_sampler_f, gamma_sampler_f, get_batch_to_dataloader, order_by_y, scaled_beta_sampler_f,
-                    trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f, zipf_sampler_f)
+from .utils import (beta_sampler_f, gamma_sampler_f, get_batch_to_dataloader,
+                    trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f)
 
 
 def unpack_dict_of_tuples(d):
@@ -169,7 +169,7 @@ class DifferentiableHyperparameterList(nn.Module):
         def append_hp(hp_key, hp_val):
             sampled_hyperparameters_keys.append(hp_key)
             # Function remaps hyperparameters from [-1, 1] range to true value
-            s_min, s_max, s_mean, s_std = hp_val.sampler_min, hp_val.sampler_max, hp_val.sampler_mean, hp_val.sampler_std
+            _, _, s_mean, s_std = hp_val.sampler_min, hp_val.sampler_max, hp_val.sampler_mean, hp_val.sampler_std
             sampled_hyperparameters_f.append((lambda x: (x-s_mean)/s_std, lambda y: (y * s_std)+s_mean))
             # sampled_hyperparameters_f.append(((lambda x: ((x - s_min) / (s_max - s_min) * (2) - 1)
             #                                  , (lambda y: ((y + 1) * (1 / 2) * (s_max - s_min) + s_min))))

@@ -2,7 +2,6 @@ import random
 import time
 
 import torch
-import torch.cuda as cutorch
 from torch import nn
 
 from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,

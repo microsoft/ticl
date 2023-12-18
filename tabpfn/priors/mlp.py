@@ -107,7 +107,8 @@ def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default
             if self.sampling == 'normal':
                 causes = sample_normal()
             elif self.sampling == 'mixed':
-                zipf_p, multi_p, normal_p = random.random() * 0.66, random.random() * 0.66, random.random() * 0.66
+                # zipf_p, multi_p, normal_p = random.random() * 0.66, random.random() * 0.66, random.random() * 0.66
+                multi_p, normal_p = random.random() * 0.66, random.random() * 0.66
 
                 def sample_cause(n):
                     if random.random() > normal_p:

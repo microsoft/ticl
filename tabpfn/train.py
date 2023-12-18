@@ -4,7 +4,6 @@ from contextlib import nullcontext
 import torch
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
-from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 import tabpfn.utils as utils

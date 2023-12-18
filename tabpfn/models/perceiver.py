@@ -8,7 +8,7 @@ from einops.layers.torch import Reduce
 from torch import einsum, nn
 
 from tabpfn.models.decoders import MLPModelDecoder
-from tabpfn.models.transformer_make_model import MLPModelPredictor
+from tabpfn.models.mothernet import MLPModelPredictor
 
 # helpers
 

@@ -1,15 +1,12 @@
-import logging
 import os
 import pickle
-import time
 from argparse import ArgumentParser
 from pathlib import Path
 
-import numpy as np
 import torch
 from sklearn.datasets import fetch_covtype
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from syne_tune import Reporter
 
 from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
@@ -25,11 +22,6 @@ def str2bool(v):
 
 
 def epoch_callback(model, epoch, loss):
-    # with torch.no_grad():
-    #     pred = model(X_test_tensor)
-    #     acc = (pred.argmax(axis=1) == y_test_tensor).to(torch.float32).mean().item()
-    #     print(acc)
-    # report(epoch=epoch + 1, accuracy=acc)
     report(epoch=epoch + 1, accuracy=loss)
     pickle.dump(model, open(checkpoint_path, "wb"))
 
@@ -49,16 +41,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     report = Reporter()
 
-    # x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
-    # x, y = x.ravel(), y.ravel()
-
-    # z = (x + y) % 7
-
     device = "cpu"
     torch.set_num_threads(1)
 
-    # labels = z
-    # data = np.c_[x, y]
     X, y = fetch_covtype(return_X_y=True)
     y = LabelEncoder().fit_transform(y)
 

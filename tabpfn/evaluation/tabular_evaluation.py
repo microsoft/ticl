@@ -16,7 +16,7 @@ from tqdm import tqdm
 from tabpfn.evaluation import tabular_metrics
 from tabpfn.evaluation.baselines.baseline_prediction_interface import *
 from tabpfn.evaluation.baselines.tabular_baselines import get_scoring_string, transformer_metric
-from tabpfn.prediction_interfaces.transformer_prediction_interface import *
+from tabpfn.prediction.tabpfn import *
 from tabpfn.utils import normalize_data, remove_outliers, to_ranking_low_mem, torch_nanmean
 
 

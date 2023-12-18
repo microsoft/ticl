@@ -1,8 +1,5 @@
-import logging
-import time
 from argparse import ArgumentParser
 
-import numpy as np
 import pmlb
 import torch
 from sklearn.model_selection import train_test_split
@@ -25,16 +22,9 @@ if __name__ == '__main__':
     args, _ = parser.parse_args()
     report = Reporter()
 
-    # x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
-    # x, y = x.ravel(), y.ravel()
-
-    # z = (x + y) % 7
-
     device = "cpu"
     torch.set_num_threads(2)
 
-    # labels = z
-    # data = np.c_[x, y]
     data, labels = pmlb.fetch_data('satimage', return_X_y=True, local_cache_dir='/tmp/pmlb')
     labels = LabelEncoder().fit_transform(labels)
     if args.onehot:

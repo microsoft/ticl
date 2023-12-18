@@ -2,8 +2,8 @@ import pytest
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
-from tabpfn.models.transformer_make_model import EnsembleMeta, ForwardMLPModel, ShiftClassifier
-from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction.mothernet import EnsembleMeta, ForwardMLPModel, ShiftClassifier
+from tabpfn.prediction.tabpfn import TabPFNClassifier
 
 MOTHERNET_PATH = "models_diff/prior_diff_real_checkpointcontinue_hidden_128_embed_dim_1024_decoder_nhid_2048_nlayer12_lr0003_n_0_epoch_on_exit.cpkt"
 MOTHERNET_L2_PATH = "models_diff/mothernet_128_decoder_2048_emsize_512_nlayers_12_steps_8192_bs_8ada_lr_3e-05_1_gpu_07_31_2023_23_18_33_epoch_780.cpkt"

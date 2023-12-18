@@ -26,6 +26,7 @@ def make_binary_data(length=10, subset_size=5, n_prototypes=5):
 
 
 def get_scores(length, subset_size, n_prototypes, models):
+    from sklearn.model_selection import cross_validate
     X, y = make_binary_data(length=length, subset_size=subset_size, n_prototypes=n_prototypes)
     result = {'prototypes': n_prototypes}
     for model_name, model in models.items():
@@ -45,6 +46,8 @@ def function_of_rank(rank=2, length=4):
 
 
 def get_scores_rank(length, rank, models):
+    from sklearn.model_selection import cross_validate, StratifiedKFold
+
     X, y = function_of_rank(length=length, rank=rank)
     result = {'rank': rank}
     for model_name, model in models.items():
@@ -52,17 +55,19 @@ def get_scores_rank(length, rank, models):
     return result
 
 
-rf_scores = []
-tabpfn_scores = []
-mlp_scores = []
-torch.set_num_threads(1)
-prototypes = np.arange(1, 200, 5)
-models = {
-    'mlp': MLPClassifier(max_iter=1000),
-    'tabpfn': tabpfn,
-    'rf': RandomForestClassifier()
-}
-res_subset_7 = Parallel(n_jobs=-1)(delayed(get_scores)(length=10, subset_size=7, n_prototypes=n_prototypes, models=models)
-                                   for i in range(5) for n_prototypes in prototypes)
-res_subset_7 = pd.DataFrame.from_dict(res_subset_7)
-sns.lineplot(data=res_subset_7.melt(id_vars="prototypes", var_name="model", value_name="score"), x="prototypes", y="score", hue="model")
+def compare_models():
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.ensemble import RandomForestClassifier
+    from tabpfn.prediction.tabpfn import TabPFNClassifier
+
+    torch.set_num_threads(1)
+    prototypes = np.arange(1, 200, 5)
+    models = {
+        'mlp': MLPClassifier(max_iter=1000),
+        'tabpfn': TabPFNClassifier(),
+        'rf': RandomForestClassifier()
+    }
+    res_subset_7 = Parallel(n_jobs=-1)(delayed(get_scores)(length=10, subset_size=7, n_prototypes=n_prototypes, models=models)
+                                       for i in range(5) for n_prototypes in prototypes)
+    res_subset_7 = pd.DataFrame.from_dict(res_subset_7)
+    sns.lineplot(data=res_subset_7.melt(id_vars="prototypes", var_name="model", value_name="score"), x="prototypes", y="score", hue="model")

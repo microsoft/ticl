@@ -11,7 +11,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
     from tabpfn.models.mothernet_additive import MotherNetAdditive
     from tabpfn.models.perceiver import TabPerceiver
     from tabpfn.models.transformer import TransformerModel
-    from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
+    from tabpfn.models.mothernet import TransformerModelMakeMLP
 
     if max_num_classes > 2:
         n_out = max_num_classes

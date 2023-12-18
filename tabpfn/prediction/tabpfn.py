@@ -1,20 +1,16 @@
-import io
 import os
 import pathlib
-import pickle
 import random
-import time
 from pathlib import Path
 
 import numpy as np
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, PowerTransformer, QuantileTransformer, RobustScaler
-from sklearn.utils import column_or_1d, gen_batches
-from sklearn.utils.multiclass import check_classification_targets, unique_labels
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, QuantileTransformer, RobustScaler
+from sklearn.utils import column_or_1d
+from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from torch.utils.checkpoint import checkpoint
-from tqdm import tqdm
 
 from tabpfn.model_builder import load_model
 from tabpfn.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers, to_ranking_low_mem
@@ -82,32 +78,32 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
                  subsample_features=False, verbose=False, epoch=-1):
         """
-        Initializes the classifier and loads the model. 
-        Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the 
+        Initializes the classifier and loads the model.
+        Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the
         repository if no model is found.
 
-        Can also be used to compute gradients with respect to the inputs X_train and X_test. Therefore no_grad has to be 
-        set to False and no_preprocessing_mode must be True. Furthermore, X_train and X_test need to be given as 
+        Can also be used to compute gradients with respect to the inputs X_train and X_test. Therefore no_grad has to be
+        set to False and no_preprocessing_mode must be True. Furthermore, X_train and X_test need to be given as
         torch.Tensors and their requires_grad parameter must be set to True.
 
 
         :param device: If the model should run on cuda or cpu.
         :param base_path: Base path of the directory, from which the folders like models_diff can be accessed.
-        :param model_string: Name of the model. Used first to check if the model is already in memory, and if not, 
-               tries to load a model with that name from the models_diff directory. It looks for files named as 
-               follows: "prior_diff_real_checkpoint" + model_string + "_n_0_epoch_e.cpkt", where e can be a number 
-               between 100 and 0, and is checked in a descending order. 
-        :param N_ensemble_configurations: The number of ensemble configurations used for the prediction. Thereby the 
-               accuracy, but also the running time, increases with this number. 
+        :param model_string: Name of the model. Used first to check if the model is already in memory, and if not,
+               tries to load a model with that name from the models_diff directory. It looks for files named as
+               follows: "prior_diff_real_checkpoint" + model_string + "_n_0_epoch_e.cpkt", where e can be a number
+               between 100 and 0, and is checked in a descending order.
+        :param N_ensemble_configurations: The number of ensemble configurations used for the prediction. Thereby the
+               accuracy, but also the running time, increases with this number.
         :param no_preprocess_mode: Specifies whether preprocessing is to be performed.
-        :param multiclass_decoder: If set to permutation, randomly shifts the classes for each ensemble configuration. 
-        :param feature_shift_decoder: If set to true shifts the features for each ensemble configuration according to a 
+        :param multiclass_decoder: If set to permutation, randomly shifts the classes for each ensemble configuration.
+        :param feature_shift_decoder: If set to true shifts the features for each ensemble configuration according to a
                random permutation.
         :param seed: Seed that is used for the prediction. Allows for a deterministic behavior of the predictions.
         :param batch_size_inference: This parameter is a trade-off between performance and memory consumption.
                The computation done with different values for batch_size_inference is the same,
                but it is split into smaller/larger batches.
-        :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test. 
+        :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test.
                For this to correctly function no_preprocessing_mode must be set to true.
         :param subsample_features: If set to true and the number of features in the dataset exceeds self.max_features (100),
                 the features are subsampled to self.max_features.
@@ -148,7 +144,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             )
 
         self.classes_ = cls
-
         return np.asarray(y, dtype=np.float64, order="C")
 
     def fit(self, X, y, overwrite_warning=False):
@@ -189,7 +184,9 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         if len(np.unique(y)) > self.max_num_classes:
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
-            raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable. We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN). Please confirm you want to run by passing overwrite_warning=True to the fit function.")
+            raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable."
+                             "We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN)."
+                             "Please confirm you want to run by passing overwrite_warning=True to the fit function.")
 
         # Return the classifier
         return self
@@ -238,7 +235,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          no_grad=self.no_grad,
                                          batch_size_inference=self.batch_size_inference,
                                          **get_params_from_config(self.c))
-        prediction_, y_ = prediction.squeeze(0), y_full.squeeze(1).long()[eval_pos:]
+        prediction_ = prediction.squeeze(0)
 
         return prediction_.detach().cpu().numpy() if self.no_grad else prediction_
 
@@ -291,7 +288,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
             if not return_logits:
                 output = torch.nn.functional.softmax(output, dim=-1)
 
-
         return output
 
     def preprocess_input(eval_xs, preprocess_transform):
@@ -326,13 +322,10 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
             feats = set(range(eval_xs.shape[1])) if 'all' in preprocess_transform else set(
                 range(eval_xs.shape[1])) - set(categorical_feats)
             for col in feats:
-                try:
-                    pt.fit(eval_xs[0:eval_position, col:col + 1])
-                    trans = pt.transform(eval_xs[:, col:col + 1])
-                    # print(scipy.stats.spearmanr(trans[~np.isnan(eval_xs[:, col:col+1])], eval_xs[:, col:col+1][~np.isnan(eval_xs[:, col:col+1])]))
-                    eval_xs[:, col:col + 1] = trans
-                except:
-                    pass
+                pt.fit(eval_xs[0:eval_position, col:col + 1])
+                trans = pt.transform(eval_xs[:, col:col + 1])
+                # print(scipy.stats.spearmanr(trans[~np.isnan(eval_xs[:, col:col+1])], eval_xs[:, col:col+1][~np.isnan(eval_xs[:, col:col+1])]))
+                eval_xs[:, col:col + 1] = trans
             eval_xs = torch.tensor(eval_xs).float()
         warnings.simplefilter('default')
 
@@ -386,7 +379,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     output = None
     eval_xs_transformed = {}
     inputs, labels = [], []
-    start = time.time()
     for ensemble_configuration in ensemble_configurations:
         (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration, styles_configuration = ensemble_configuration
 
@@ -421,7 +413,6 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
     labels = torch.split(labels, batch_size_inference, dim=1)
     # print('PREPROCESSING TIME', str(time.time() - start))
     outputs = []
-    start = time.time()
     for batch_input, batch_label in zip(inputs, labels):
         # preprocess_transform_ = preprocess_transform if styles_configuration % 2 == 0 else 'none'
         import warnings

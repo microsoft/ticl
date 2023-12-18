@@ -1,12 +1,11 @@
 import numpy as np
-import pandas as pd
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction.tabpfn import TabPFNClassifier
 
 
 class NeuralNetwork(nn.Module):

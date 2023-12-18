@@ -9,12 +9,15 @@ import re
 import shutil
 import socket
 import time
+import warnings
 
 import mlflow
 import numpy as np
 import pandas as pd
 import torch
-from scipy.signal import convolve, windows
+
+from pathlib import Path
+from scipy.signal import convolve
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -575,12 +578,12 @@ def init_device(gpu_id, use_cpu):
 
 def get_model_string(config, args, parser):
     if args.continue_run:
-        if checkpoint_dir is None:
+        if args.st_checkpoint_dir is None:
             model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
             if args.create_new_run:
                 model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
-            with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
+            with open(f"{args.st_checkpoint_dir }/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
         mm = config['model_maker']
@@ -604,8 +607,8 @@ def get_model_string(config, args, parser):
         gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
         model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-        if checkpoint_dir is not None:
-            with open(f"{checkpoint_dir}/model_string.txt", 'w') as f:
+        if args.st_checkpoint_dir is not None:
+            with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:
                 f.write(model_string)
 
 

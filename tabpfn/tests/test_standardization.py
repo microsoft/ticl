@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from tabpfn.datasets import load_openml_list, open_cc_dids
-from tabpfn.utils import remove_outliers, torch_nanmean, torch_nanstd
+from tabpfn.utils import remove_outliers
 
 
 def old_torch_nanmean(x, axis=0, return_nanshare=False):

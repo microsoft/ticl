@@ -9,7 +9,7 @@ from tabpfn.fit_tabpfn import main as tabpfn_main
 from tabpfn.models.mothernet_additive import MotherNetAdditive
 from tabpfn.models.perceiver import TabPerceiver
 from tabpfn.models.transformer import TransformerModel
-from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
+from tabpfn.models.mothernet import TransformerModelMakeMLP
 
 
 def count_parameters(model):

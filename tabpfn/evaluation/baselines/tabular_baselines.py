@@ -1,4 +1,3 @@
-import itertools
 import math
 import os
 import random
@@ -7,28 +6,22 @@ import tempfile
 import time
 
 import numpy as np
-import pandas
 import pandas as pd
 import sklearn
 import torch
-import xgboost as xgb
-from hyperopt import STATUS_OK, Trials, fmin, hp, rand, space_eval, tpe
+from hyperopt import Trials, fmin, hp, rand, space_eval, tpe
 from lightgbm import LGBMClassifier
-from sklearn import neighbors, preprocessing
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn import neighbors
 from sklearn.compose import ColumnTransformer
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression, Ridge, RidgeClassifier
-from sklearn.metrics import make_scorer
-from sklearn.model_selection import GridSearchCV, KFold, ParameterGrid, cross_val_score
+from sklearn.model_selection import GridSearchCV, KFold, cross_val_score
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from torch import nn
-from tqdm import tqdm
 
 from tabpfn.evaluation import tabular_metrics
-from tabpfn.utils import remove_outliers
 
 tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
@@ -246,7 +239,7 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
     from sklearn.impute import SimpleImputer
     from sklearn.pipeline import make_pipeline
 
-    from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
+    from tabpfn.prediction.tabpfn import TabPFNClassifier
 
     if onehot:
         ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,

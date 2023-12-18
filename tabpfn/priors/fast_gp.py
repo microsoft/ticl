@@ -36,8 +36,8 @@ def get_model(x, y, hyperparameters):
 def get_batch(batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
               equidistant_x=False, fix_x=None, **kwargs):
     if isinstance(hyperparameters, (tuple, list)):
-        hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3]                           # , "num_features_used": hyperparameters[4]
-                           , "normalize_by_used_features": hyperparameters[5], "order_y": hyperparameters[6], "sampling": hyperparameters[7]
+        hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
+                           "normalize_by_used_features": hyperparameters[5], "order_y": hyperparameters[6], "sampling": hyperparameters[7]
                            }
     elif hyperparameters is None:
         hyperparameters = {"noise": .1, "outputscale": .1, "lengthscale": .1}
@@ -108,17 +108,13 @@ def evaluate(x, y, y_non_noisy, use_mse=False, hyperparameters={}, get_model_on_
 
     with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))), gpytorch.settings.fast_pred_var(False):
         for t in range(max(start_pos, 1), len(x), step_size):
-            loss_sum = 0.
             model, likelihood = get_model_on_device(x[:t].transpose(0, 1), y[:t].transpose(0, 1), hyperparameters, device)
 
             model.eval()
-            # print([t.shape for t in model.train_inputs])
-            # print(x[:t].transpose(0,1).shape, x[t].unsqueeze(1).shape, y[:t].transpose(0,1).shape)
             f = model(x[t].unsqueeze(1))
             l = likelihood(f)
             means = l.mean.squeeze()
             varis = l.covariance_matrix.squeeze()
-            # print(l.variance.squeeze(), l.mean.squeeze(), y[t])
 
             assert len(means.shape) == len(varis.shape) == 1
             assert len(means) == len(varis) == x.shape[1]

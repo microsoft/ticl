@@ -7,12 +7,8 @@ import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 from tabpfn.fit_model import main
-from tabpfn.fit_tabpfn import main as tabpfn_main
-from tabpfn.models.mothernet_additive import MotherNetAdditive
-from tabpfn.models.perceiver import TabPerceiver
-from tabpfn.models.transformer import TransformerModel
-from tabpfn.models.transformer_make_model import TransformerModelMakeMLP
-from tabpfn.utils import ExponentialLR, ReduceLROnSpike
+# from tabpfn.fit_tabpfn import main as tabpfn_main
+from tabpfn.utils import ExponentialLR
 
 
 @pytest.mark.parametrize('learning_rate_schedule', ['cosine', 'exponential', 'constant'])

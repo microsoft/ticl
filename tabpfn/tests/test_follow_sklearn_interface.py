@@ -1,7 +1,6 @@
 import pickle
 
 import numpy as np
-import pytest
 
 from tabpfn import TabPFNClassifier
 
@@ -12,7 +11,7 @@ def test_main():
 
     eval_position = xs.shape[0] // 2
     train_xs, train_ys = xs[0:eval_position], ys[0:eval_position]
-    test_xs, test_ys = xs[eval_position:], ys[eval_position:]
+    test_xs, _ = xs[eval_position:], ys[eval_position:]
 
     classifier = TabPFNClassifier(device='cpu')
     classifier.fit(train_xs, train_ys)
