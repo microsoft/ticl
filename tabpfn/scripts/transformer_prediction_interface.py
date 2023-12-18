@@ -305,6 +305,7 @@ class NeighborsMetaClassifier(ClassifierMixin, BaseEstimator):
         self.n_trees_annoy = n_trees_annoy
 
     def fit(self, X, y):
+        from annoy import AnnoyIndex
         self.X_ = np.array(X)
         self.y_ = np.array(y)
         self.classes_ = np.unique(self.y_)
