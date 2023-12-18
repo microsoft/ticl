@@ -1,17 +1,11 @@
-import os
-import shutil
 import socket
 import sys
-import time
-from datetime import datetime
-from pathlib import Path
 
 import mlflow
-import numpy as np
 import torch
 from syne_tune import Reporter
 
-from tabpfn.model_builder import get_model, save_model
+from tabpfn.model_builder import get_model
 from tabpfn.model_configs import evaluate_hypers, get_base_config_paper
 from tabpfn.utils import (get_model_string, init_device, init_mlflow, load_model_state, make_base_parser, make_training_callback,
                           synetune_handle_checkpoint)
@@ -50,7 +44,7 @@ def main(argv):
 
     run_args = init_mlflow(args.experiment, model_string, args.continue_run and not args.create_new_run)
 
-    with mlflow.start_run(**run_args) as run:
+    with mlflow.start_run(**run_args):
         mlflow.log_param('hostname', socket.gethostname())
         mlflow.log_params({k: v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
         total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,

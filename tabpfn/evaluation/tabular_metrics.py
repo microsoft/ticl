@@ -12,7 +12,7 @@ import pandas as pd
 import torch
 from scipy.stats import rankdata
 from sklearn.metrics import (accuracy_score, average_precision_score, balanced_accuracy_score, mean_absolute_error,
-                             mean_squared_error, r2_score, roc_auc_score)
+                             r2_score, roc_auc_score)
 
 
 def root_mean_squared_error_metric(target, pred):
@@ -215,8 +215,7 @@ def make_metric_matrix(global_results, methods, pos, name, ds):
     for m in global_results:
         try:
             result += [[global_results[m][d[0] + '_' + name + '_at_' + str(pos)] for d in ds]]
-        except Exception as e:
-            # raise(e)
+        except Exception:
             result += [[np.nan]]
     result = np.array(result)
     result = pd.DataFrame(result.T, index=[d[0] for d in ds], columns=[k for k in list(global_results.keys())])

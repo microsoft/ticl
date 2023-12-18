@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 
 import mlflow
-import numpy as np
 import torch
 from syne_tune import Reporter
 
@@ -366,7 +365,7 @@ def main(argv):
         else:
             run_args = {'run_name': model_string}
 
-        with mlflow.start_run(**run_args) as run:
+        with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
             mlflow.log_params({k: v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
             total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,

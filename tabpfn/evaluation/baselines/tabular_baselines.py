@@ -8,18 +8,16 @@ import time
 import numpy as np
 import pandas as pd
 import sklearn
-import torch
-from hyperopt import Trials, fmin, hp, rand, space_eval, tpe
+from hyperopt import Trials, fmin, hp, rand, space_eval
 from lightgbm import LGBMClassifier
 from sklearn import neighbors
 from sklearn.compose import ColumnTransformer
-from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression, Ridge, RidgeClassifier
-from sklearn.model_selection import GridSearchCV, KFold, cross_val_score
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.model_selection import KFold, cross_val_score
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
-from torch import nn
 
 from tabpfn.evaluation import tabular_metrics
 
@@ -237,7 +235,6 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
-    from sklearn.pipeline import make_pipeline
 
     from tabpfn.prediction.tabpfn import TabPFNClassifier
 
@@ -320,14 +317,6 @@ def get_updates_for_regularization_cocktails(
     import argparse
 
     from autoPyTorch.utils.hyperparameter_search_space_update import HyperparameterSearchSpaceUpdates
-
-    augmentation_names_to_trainers = {
-        'mixup': 'MixUpTrainer',
-        'cutout': 'RowCutOutTrainer',
-        'cutmix': 'RowCutMixTrainer',
-        'standard': 'StandardTrainer',
-        'adversarial': 'AdversarialTrainer',
-    }
 
     include_updates = dict()
     include_updates['network_embedding'] = ['NoEmbedding']
@@ -739,7 +728,6 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
     # os.environ.get('SLURM_JOBID', '')
     categorical_indicator = np.array([i in categorical_indicator for i in range(X_train.shape[1])])
     with tempfile.TemporaryDirectory(prefix=f"{len(X_train)}_{len(X_test)}_{max_time}") as temp_dir:
-        from autoPyTorch import metrics
         from autoPyTorch.api.tabular_classification import TabularClassificationTask
         from autoPyTorch.data.tabular_validator import TabularInputValidator
         from autoPyTorch.datasets.resampling_strategy import HoldoutValTypes, NoResamplingStrategyTypes
@@ -893,7 +881,6 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
         if fitted_pipeline is None:
             api.get_incumbent_config
 
-        train_predictions = fitted_pipeline.predict(X_train)
         test_predictions = fitted_pipeline.predict(X_test)
 
         metric = metric_used(y_test, test_predictions.squeeze())
@@ -906,7 +893,6 @@ def well_tuned_simple_nets_metric(X_train, y_train, X_test, y_test, categorical_
 
 # AUTO Sklearn
 def autosklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
-    import autosklearn.classification
     return autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=max_time, version=1)
 
 
@@ -988,7 +974,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
 
 
 def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
-    from lightautoml.automl.presets.tabular_presets import TabularAutoML, TabularUtilizedAutoML
+    from lightautoml.automl.presets.tabular_presets import TabularUtilizedAutoML
     from lightautoml.tasks import Task
 
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, impute=False, standardize=False, cat_features=cat_features)
@@ -1003,7 +989,7 @@ def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     tr_data = np.concatenate([x, np.expand_dims(y, -1)], -1)
     tr_data = pd.DataFrame(tr_data, columns=[str(k) for k in range(0, x.shape[-1] + 1)])
-    oof_pred = automl.fit_predict(tr_data, roles=roles)
+    _ = automl.fit_predict(tr_data, roles=roles)
     te_data = pd.DataFrame(test_x, columns=[str(k) for k in range(0, x.shape[-1])])
 
     probabilities = automl.predict(te_data).data
@@ -1023,7 +1009,10 @@ def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 param_grid_hyperopt['lightgbm'] = {
     # , 'feature_fraction': 0.8,
     # , 'subsample': 0.2
-    'num_leaves': hp.randint('num_leaves', 5, 50), 'max_depth': hp.randint('max_depth', 3, 20), 'learning_rate': hp.loguniform('learning_rate', -3, math.log(1.0)), 'n_estimators': hp.randint('n_estimators', 50, 2000), 'min_child_weight': hp.choice('min_child_weight', [1e-5, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4]), 'subsample': hp.uniform('subsample', 0.2, 0.8), 'colsample_bytree': hp.uniform('colsample_bytree', 0.2, 0.8), 'reg_alpha': hp.choice('reg_alpha', [0, 1e-1, 1, 2, 5, 7, 10, 50, 100]), 'reg_lambda': hp.choice('reg_lambda', [0, 1e-1, 1, 5, 10, 20, 50, 100])
+    'num_leaves': hp.randint('num_leaves', 5, 50), 'max_depth': hp.randint('max_depth', 3, 20), 'learning_rate': hp.loguniform('learning_rate', -3, math.log(1.0)),
+    'n_estimators': hp.randint('n_estimators', 50, 2000), 'min_child_weight': hp.choice('min_child_weight', [1e-5, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4]),
+    'subsample': hp.uniform('subsample', 0.2, 0.8), 'colsample_bytree': hp.uniform('colsample_bytree', 0.2, 0.8),
+    'reg_alpha': hp.choice('reg_alpha', [0, 1e-1, 1, 2, 5, 7, 10, 50, 100]), 'reg_lambda': hp.choice('reg_lambda', [0, 1e-1, 1, 5, 10, 20, 50, 100])
 }  # 'normalize': [False],
 
 
@@ -1245,8 +1234,6 @@ def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300)
 
     return metric, pred, best
 
-    return metric, pred, params_used[best_idx]
-
 
 # Catboost
 # Hyperparameter space: https://arxiv.org/pdf/2106.03253.pdf
@@ -1263,6 +1250,7 @@ param_grid_hyperopt['catboost'] = {
 
 def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
+    from catboost import CatBoostClassifier, CatBoostRegressor
 
     # Nans in categorical features must be encoded as separate class
     x[:, cat_features], test_x[:, cat_features] = np.nan_to_num(x[:, cat_features], -1), np.nan_to_num(
@@ -1375,82 +1363,6 @@ def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=
     return metric, pred, times
 
 
-"""
-LEGACY UNUSED
-"""
-
-# Ridge
-param_grid['ridge'] = {'alpha': [0, 0.1, .5, 1.0, 2.0], 'fit_intercept': [True, False]}  # 'normalize': [False],
-
-
-def ridge_metric(x, y, test_x, test_y, cat_features, metric_used):
-    import warnings
-
-    def warn(*args, **kwargs):
-        pass
-
-    warnings.warn = warn
-
-    x, y, test_x, test_y = x.cpu(), y.cpu(), test_x.cpu(), test_y.cpu()
-    x, test_x = torch.nan_to_num(x), torch.nan_to_num(test_x)
-
-    clf = RidgeClassifier(n_jobs=MULTITHREAD)
-
-    # create a dictionary of all values we want to test for n_neighbors
-    # use gridsearch to test all values for n_neighbors
-    clf = GridSearchCV(clf, param_grid['ridge'], cv=min(CV, x.shape[0]//2), scoring=get_scoring_string(metric_used), n_jobs=MULTITHREAD)
-    # fit model to data
-    clf.fit(x, y.long())
-
-    pred = clf.decision_function(test_x)
-    metric = metric_used(test_y, pred)
-
-    return metric, pred
-
-
-def mlp_acc(x, y, test_x, test_y, hyperparameters):
-    num_layers, hidden_dim, activation_module, fixed_dropout_prob, is_binary_classification, epochs, lr, weight_decay = hyperparameters
-    num_features = x.shape[1]
-
-    x, y = x.to(device), y.to(device)
-    test_x, test_y = test_x.to(device), test_y.to(device)
-
-    def get_model():
-        model = nn.Sequential(*[
-            module for layer_idx in range(num_layers) for module in [
-                nn.Linear(hidden_dim if layer_idx > 0 else num_features,
-                          2 if layer_idx == num_layers - 1 else hidden_dim),
-                torch.nn.Identity() if layer_idx == num_layers - 1 else activation_module(),
-                torch.nn.Identity() if layer_idx == num_layers - 1 else torch.nn.Dropout(p=fixed_dropout_prob,
-                                                                                         inplace=False)]
-        ])
-        if is_binary_classification:
-            model.add_module(str(len(model)), torch.nn.Softmax(dim=1))  # TODO might also just do an round!?
-        return model
-
-    model = get_model().to(device)
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-
-    model.train()
-    for epoch in range(epochs):
-        optimizer.zero_grad()
-        # Forward pass
-        y_pred = model(x)[:, 1]
-        # Compute Loss
-
-        loss = criterion(y_pred.squeeze(), y.float())
-
-        # print('Epoch {}: train loss: {}'.format(epoch, loss.item()))
-        # Backward pass
-        loss.backward()
-        optimizer.step()
-
-    model.eval()
-    pred_y = model(test_x)[:, 1] > 0.5
-    acc = (pred_y == test_y).float().mean()
-    return acc
-
-
-clf_dict = {'gp': gp_metric, 'transformer': transformer_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric, 'xgb': xgb_metric, 'lightgbm': lightgbm_metric, 'ridge': ridge_metric, 'logistic': logistic_metric, 'autosklearn': autosklearn_metric, 'autosklearn2': autosklearn2_metric, 'autogluon': autogluon_metric,
-            'cocktail': well_tuned_simple_nets_metric}
+clf_dict = {'gp': gp_metric, 'transformer': transformer_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric,
+            'xgb': xgb_metric, 'lightgbm': lightgbm_metric, 'ridge': ridge_metric, 'logistic': logistic_metric, 'autosklearn': autosklearn_metric, 'autosklearn2': autosklearn2_metric,
+            'autogluon': autogluon_metric, 'cocktail': well_tuned_simple_nets_metric}

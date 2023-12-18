@@ -8,7 +8,6 @@ import torch
 import tabpfn.models.encoders as encoders
 from tabpfn.assemble_model import assemble_model
 from tabpfn.dataloader import get_dataloader
-from tabpfn.models.transformer import TransformerModel
 from tabpfn.train import get_criterion, train
 from tabpfn.utils import get_uniform_single_eval_pos_sampler
 

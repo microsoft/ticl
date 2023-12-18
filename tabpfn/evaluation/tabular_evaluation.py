@@ -2,22 +2,21 @@ import itertools
 import os
 import random
 import time
-from contextlib import nullcontext
 from functools import partial
-from pathlib import Path
 
 import numpy as np
 import torch
 from joblib import Parallel, delayed
 from torch import nn
-from torch.utils.checkpoint import checkpoint
 from tqdm import tqdm
 
+from sklearn.base import BaseEstimator
+
 from tabpfn.evaluation import tabular_metrics
-from tabpfn.evaluation.baselines.baseline_prediction_interface import *
 from tabpfn.evaluation.baselines.tabular_baselines import get_scoring_string, transformer_metric
-from tabpfn.prediction.tabpfn import *
-from tabpfn.utils import normalize_data, remove_outliers, to_ranking_low_mem, torch_nanmean
+from tabpfn.utils import torch_nanmean
+from tabpfn.prediction import transformer_predict
+from tabpfn.evaluation.baselines.baseline_prediction_interface import baseline_predict
 
 
 def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):
@@ -134,13 +133,18 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
     if "cuda" in device:
         results = []
         for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
-            result = _eval_single_dataset_wrapper(datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
-                                                  overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
+            result = _eval_single_dataset_wrapper(
+                datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
+                overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
+                split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
             results.append(result)
     else:
-        results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
-                                                                                           save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
+        results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(
+            datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path,
+            eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
+            save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
+            verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
     return results
 
 

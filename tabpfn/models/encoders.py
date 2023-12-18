@@ -2,8 +2,6 @@ import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 from tabpfn.utils import normalize_data
 
@@ -167,9 +165,6 @@ class NoMeanEncoder(nn.Module):
 
 def get_no_mean_encoder(encoder_creator):
     return lambda num_features, emsize: NoMeanEncoder(encoder_creator(num_features, emsize))
-
-
-Linear = nn.Linear
 
 
 def MLP(num_features, emsize): return nn.Sequential(
