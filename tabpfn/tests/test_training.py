@@ -84,7 +84,7 @@ def test_train_double_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
-    assert results['loss'] == 2.2983956336975098
+    assert results['loss'] == pytest.approx(2.2983956336975098)
     assert count_parameters(results['model']) == 1775818
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -93,7 +93,7 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
-    assert results['loss'] == 2.2754929065704346
+    assert results['loss'] == pytest.approx(2.2754929065704346)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -111,7 +111,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == 2.298816442489624
+    assert results['loss'] == pytest.approx(2.298816442489624)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
@@ -141,7 +141,7 @@ def test_train_tabpfn():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
-    assert results['loss'] == 2.3182566165924072
+    assert results['loss'] == pytest.approx(2.3182566165924072)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TransformerModel)
 
