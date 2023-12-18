@@ -15,8 +15,8 @@ def count_parameters(model):
 
 # really tiny model for smoke tests
 # one step per epoch, no adapting batchsize, CPU, Mothernet
-TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0']
-TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0']
+TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike', 'True']
+TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'True', '-e', '128', '-S', 'False', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike', 'True']
 
 def test_train_defaults():
     L.seed_everything(42)
@@ -110,7 +110,7 @@ def test_train_low_rank_ignored():
     # it boolean flag is not set, -W is ignored for easier hyperparameter search
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'False'])
     assert results['loss'] == pytest.approx(2.4058380126953125)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], TransformerModelMakeMLP)
@@ -118,8 +118,10 @@ def test_train_low_rank_ignored():
 def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == 2.299163341522217
+        results = main(['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128',
+                        '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
+                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
+    assert results['loss'] == pytest.approx(2.299163341522217)
     assert count_parameters(results['model']) == 926474
     assert isinstance(results['model'], TransformerModelMakeMLP)
 
