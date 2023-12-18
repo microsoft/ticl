@@ -12,7 +12,7 @@ from tabpfn.utils import normalize_by_used_features_f, normalize_data
 from tabpfn.models.transformer import TransformerEncoderDiffInit
 from tabpfn.models.encoders import Linear, BinEmbeddingEncoder
 from tabpfn.models.decoders import AdditiveModelDecoder
-from tabpfn.scripts.model_builder import load_model
+from tabpfn.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import BaseEstimator, ClassifierMixin

@@ -9,8 +9,8 @@ import numpy as np
 import time
 
 
-from tabpfn.scripts.model_builder import get_model, save_model
-from tabpfn.scripts.model_configs import evaluate_hypers, get_base_config_paper
+from tabpfn.model_builder import get_model, save_model
+from tabpfn.model_configs import evaluate_hypers, get_base_config_paper
 from tabpfn.utils import load_model_state, make_base_parser, init_device, get_model_string, init_mlflow, synetune_handle_checkpoint, make_training_callback
 
 import socket

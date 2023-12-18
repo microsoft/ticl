@@ -11,7 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 from warnings import filterwarnings, catch_warnings
 
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 
 
 class NeuralNetwork(nn.Module):

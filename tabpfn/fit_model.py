@@ -9,8 +9,8 @@ import numpy as np
 import time
 
 
-from tabpfn.scripts.model_builder import get_model, save_model
-from tabpfn.scripts.model_configs import get_prior_config, evaluate_hypers
+from tabpfn.model_builder import get_model, save_model
+from tabpfn.model_configs import get_prior_config, evaluate_hypers
 from tabpfn.utils import compare_dicts
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 

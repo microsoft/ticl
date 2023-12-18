@@ -10,7 +10,7 @@ from sklearn.linear_model import LogisticRegression, Ridge
 from tabpfn.utils import remove_outliers
 from tqdm import tqdm
 import pandas as pd
-from tabpfn.scripts import tabular_metrics
+from tabpfn.evaluation import tabular_metrics
 import itertools
 import torch
 import numpy as np
@@ -245,7 +245,7 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 
 
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
-    from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+    from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
     from sklearn.pipeline import make_pipeline
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
@@ -1126,7 +1126,7 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
-    from tabpfn.scripts.distill_mlp import TorchMLP
+    from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
 
     def clf_(**params):
         if is_classification(metric_used):

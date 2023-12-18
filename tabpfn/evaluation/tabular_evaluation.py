@@ -11,11 +11,11 @@ from torch import nn
 
 from torch.utils.checkpoint import checkpoint
 from tabpfn.utils import normalize_data, torch_nanmean, to_ranking_low_mem, remove_outliers
-from tabpfn.scripts.tabular_baselines import get_scoring_string
-from tabpfn.scripts import tabular_metrics
-from tabpfn.scripts.transformer_prediction_interface import *
-from tabpfn.scripts.baseline_prediction_interface import *
-from tabpfn.scripts.tabular_baselines import transformer_metric
+from tabpfn.evaluation.baselines.tabular_baselines import get_scoring_string
+from tabpfn.evaluation import tabular_metrics
+from tabpfn.prediction_interfaces.transformer_prediction_interface import *
+from tabpfn.evaluation.baselines.baseline_prediction_interface import *
+from tabpfn.evaluation.baselines.tabular_baselines import transformer_metric
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import itertools

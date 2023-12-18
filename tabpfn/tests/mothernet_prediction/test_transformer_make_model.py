@@ -1,7 +1,7 @@
 from tabpfn.models.transformer_make_model import ShiftClassifier, EnsembleMeta, ForwardMLPModel
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 import pytest
 
 MOTHERNET_PATH = "models_diff/prior_diff_real_checkpointcontinue_hidden_128_embed_dim_1024_decoder_nhid_2048_nlayer12_lr0003_n_0_epoch_on_exit.cpkt"

@@ -1,7 +1,7 @@
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.compose import make_column_transformer
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -13,7 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
 from tabpfn.models.transformer_make_model import ForwardLinearModel, PermutationsMeta, ForwardMLPModel
-from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
+from tabpfn.evaluation.baselines.distill_mlp import TorchMLP, DistilledTabPFNMLP
 
 
 def add_forward_mlp_model(model_name, model_path, current_models=None, permutations=False):

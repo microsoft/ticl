@@ -10,8 +10,8 @@ from sklearn.model_selection import cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
-from tabpfn.scripts.distill_mlp import TorchMLP, DistilledTabPFNMLP
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.evaluation.baselines.distill_mlp import TorchMLP, DistilledTabPFNMLP
 
 
 def make_logreg(categorical_features):

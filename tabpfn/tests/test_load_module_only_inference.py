@@ -1,7 +1,7 @@
 import pytest
 
 from tabpfn.datasets import load_openml_list, open_cc_dids
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction_interfaces.transformer_prediction_interface import TabPFNClassifier
 
 
 def test_main():

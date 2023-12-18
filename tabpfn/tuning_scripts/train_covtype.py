@@ -6,7 +6,7 @@ import os
 from syne_tune import Reporter
 from argparse import ArgumentParser
 
-from tabpfn.scripts.distill_mlp import TorchMLP
+from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split

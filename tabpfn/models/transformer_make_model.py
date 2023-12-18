@@ -16,7 +16,7 @@ from tabpfn.utils import normalize_by_used_features_f, normalize_data
 
 from tabpfn.models.transformer import TransformerEncoderDiffInit
 from tabpfn.models.decoders import LinearModelDecoder, MLPModelDecoder
-from tabpfn.scripts.model_builder import load_model
+from tabpfn.model_builder import load_model
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import clone

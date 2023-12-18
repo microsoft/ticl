@@ -20,7 +20,7 @@ from sklearn.utils import gen_batches
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from pathlib import Path
-from tabpfn.scripts.model_builder import load_model
+from tabpfn.model_builder import load_model
 import os
 import pickle
 import io
