@@ -105,12 +105,56 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     models_in_memory = {}
 
-    def __init__(self, device='cpu', epoch=-1, base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
-                 N_ensemble_configurations=3, combine_preprocessing=False, no_preprocess_mode=False,
-                 multiclass_decoder='permutation', feature_shift_decoder=True, seed=0, verbose=0, temperature=1):
-        # Model file specification (Model name, Epoch)
-        self.epoch = epoch
+    def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
+                 N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
+                 feature_shift_decoder=True, only_inference=True, seed=0, no_grad=True, batch_size_inference=32,
+                 subsample_features=False):
+        """
+        Initializes the classifier and loads the model. 
+        Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the 
+        repository if no model is found.
+        
+        Can also be used to compute gradients with respect to the inputs X_train and X_test. Therefore no_grad has to be 
+        set to False and no_preprocessing_mode must be True. Furthermore, X_train and X_test need to be given as 
+        torch.Tensors and their requires_grad parameter must be set to True.
+        
+        
+        :param device: If the model should run on cuda or cpu.
+        :param base_path: Base path of the directory, from which the folders like models_diff can be accessed.
+        :param model_string: Name of the model. Used first to check if the model is already in memory, and if not, 
+               tries to load a model with that name from the models_diff directory. It looks for files named as 
+               follows: "prior_diff_real_checkpoint" + model_string + "_n_0_epoch_e.cpkt", where e can be a number 
+               between 100 and 0, and is checked in a descending order. 
+        :param N_ensemble_configurations: The number of ensemble configurations used for the prediction. Thereby the 
+               accuracy, but also the running time, increases with this number. 
+        :param no_preprocess_mode: Specifies whether preprocessing is to be performed.
+        :param multiclass_decoder: If set to permutation, randomly shifts the classes for each ensemble configuration. 
+        :param feature_shift_decoder: If set to true shifts the features for each ensemble configuration according to a 
+               random permutation.
+        :param only_inference: Indicates if the model should be loaded to only restore inference capabilities or also 
+               training capabilities. Note that the training capabilities are currently not being fully restored.
+        :param seed: Seed that is used for the prediction. Allows for a deterministic behavior of the predictions.
+        :param batch_size_inference: This parameter is a trade-off between performance and memory consumption.
+               The computation done with different values for batch_size_inference is the same,
+               but it is split into smaller/larger batches.
+        :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test. 
+               For this to correctly function no_preprocessing_mode must be set to true.
+        :param subsample_features: If set to true and the number of features in the dataset exceeds self.max_features (100),
+                the features are subsampled to self.max_features.
+        """
 
+        # Model file specification (Model name, Epoch)
+        i = 0
+        model_key = model_string+'|'+str(device)
+        if model_key in self.models_in_memory:
+            model, c, results_file = self.models_in_memory[model_key]
+        else:
+            model, c, results_file = load_model_workflow(i, -1, add_name=model_string, base_path=base_path, device=device,
+                                                         eval_addition='', only_inference=only_inference)
+            self.models_in_memory[model_key] = (model, c, results_file)
+            if len(self.models_in_memory) == 2:
+                print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
+        #style, temperature = self.load_result_minimal(style_file, i, e)
 
         self.verbose = verbose
         self.device = device
@@ -121,10 +165,16 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.base_path = base_path
         self.model_string = model_string
         self.no_preprocess_mode = no_preprocess_mode
-        self.combine_preprocessing = combine_preprocessing
         self.feature_shift_decoder = feature_shift_decoder
         self.multiclass_decoder = multiclass_decoder
         self.seed = seed
+        self.no_grad = no_grad
+        self.subsample_features = subsample_features
+
+        assert self.no_preprocess_mode if not self.no_grad else True, \
+            "If no_grad is false, no_preprocess_mode must be true, because otherwise no gradient can be computed."
+
+        self.batch_size_inference = batch_size_inference
 
     def remove_models_from_memory(self):
         self.models_in_memory = {}
@@ -181,8 +231,11 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.X_ = X
         self.y_ = y
 
-        if X.shape[1] > self.max_num_features:
-            raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
+        if (X.shape[1] > self.max_num_features):
+            if self.subsample_features:
+                print('WARNING: The number of features for this classifier is restricted to ', self.max_num_features, ' and will be subsampled.')
+            else:
+                raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
         if len(np.unique(y)) > self.max_num_classes:
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
@@ -192,23 +245,30 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         # Return the classifier
         return self
 
-    def predict_proba(self, X, normalize_with_test=False):
-        batches = gen_batches(len(X), batch_size=1024)
-        probas = []
-        for batch in batches:
-            probas.append(self._predict_proba(X[batch], normalize_with_test=normalize_with_test))
-        probas = np.concatenate(probas, axis=0)
-        return probas
+    def predict_proba(self, X, normalize_with_test=False, return_logits=False):
+        """
+        Predict the probabilities for the input X depending on the training set previously passed in the method fit.
 
-    def _predict_proba(self, X, normalize_with_test=False):
+        If no_grad is true in the classifier the function takes X as a numpy.ndarray. If no_grad is false X must be a
+        torch tensor and is not fully checked.
+        """
         # Check is fit had been called
         check_is_fitted(self)
 
         # Input validation
-        X = check_array(X, force_all_finite=False)
-        X_full = np.concatenate([self.X_, X], axis=0)
-        X_full = torch.tensor(X_full, device=self.device).float().unsqueeze(1)
-        y_full = np.concatenate([self.y_, np.zeros_like(X[:, 0])], axis=0)
+        if self.no_grad:
+            X = check_array(X, force_all_finite=False)
+            X_full = np.concatenate([self.X_, X], axis=0)
+            X_full = torch.tensor(X_full, device=self.device).float().unsqueeze(1)
+        else:
+            assert (torch.is_tensor(self.X_) & torch.is_tensor(X)), "If no_grad is false, this function expects X as " \
+                                                                    "a tensor to calculate a gradient"
+            X_full = torch.cat((self.X_, X), dim=0).float().unsqueeze(1).to(self.device)
+
+            if int(torch.isnan(X_full).sum()):
+                print('X contains nans and the gradient implementation is not designed to handel nans.')
+
+        y_full = np.concatenate([self.y_, np.zeros(shape=X.shape[0])], axis=0)
         y_full = torch.tensor(y_full, device=self.device).float().unsqueeze(1)
 
         eval_pos = self.X_.shape[0]
@@ -220,16 +280,18 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          preprocess_transform='none' if self.no_preprocess_mode else 'mix',
                                          normalize_with_test=normalize_with_test,
                                          N_ensemble_configurations=self.N_ensemble_configurations,
-                                         softmax_temperature=np.log(self.temperature),
-                                         combine_preprocessing=self.combine_preprocessing,
+                                         softmax_temperature=self.temperature,
                                          multiclass_decoder=self.multiclass_decoder,
                                          feature_shift_decoder=self.feature_shift_decoder,
                                          differentiable_hps_as_style=self.differentiable_hps_as_style,
-                                         seed=self.seed, verbose=self.verbose,
+                                         seed=self.seed,
+                                         return_logits=return_logits,
+                                         no_grad=self.no_grad,
+                                         batch_size_inference=self.batch_size_inference,
                                          **get_params_from_config(self.c))
         prediction_, y_ = prediction.squeeze(0), y_full.squeeze(1).long()[eval_pos:]
 
-        return prediction_.detach().cpu().numpy()
+        return prediction_.detach().cpu().numpy() if self.no_grad else prediction_
 
     def predict(self, X, return_winning_probability=False, normalize_with_test=False):
         p = self.predict_proba(X, normalize_with_test=normalize_with_test)
@@ -365,13 +427,14 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
                         categorical_feats=[],
                         feature_shift_decoder=False,
                         N_ensemble_configurations=10,
-                        combine_preprocessing=False,
                         batch_size_inference=16,
                         differentiable_hps_as_style=False,
                         average_logits=True,
                         fp16_inference=False,
                         normalize_with_sqrt=False,
                         seed=0,
+                        no_grad=True,
+                        return_logits=False,
                         **kwargs):
     """
 
@@ -402,7 +465,9 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
     def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits):
         # Initialize results array size S, B, Classes
-        inference_mode_call = torch.inference_mode() if inference_mode else NOP()
+
+        # no_grad disables inference_mode, because otherwise the gradients are lost
+        inference_mode_call = torch.inference_mode() if inference_mode and no_grad else NOP()
         with inference_mode_call:
             start = time.time()
             output = model(
@@ -428,6 +493,10 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         if eval_xs.shape[1] > 1:
             raise Exception("Transforms only allow one batch dim - TODO")
+
+        if eval_xs.shape[2] > max_features:
+            eval_xs = eval_xs[:, :, sorted(np.random.choice(eval_xs.shape[2], max_features, replace=False))]
+
         if preprocess_transform != 'none':
             if preprocess_transform == 'power' or preprocess_transform == 'power_all':
                 pt = PowerTransformer(standardize=True)
@@ -463,13 +532,14 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
 
         eval_xs = eval_xs.unsqueeze(1)
 
-        # TODO: Cautian there is information leakage when to_ranking is used, we should not use it
-        eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position) if not normalize_to_ranking else normalize_data(to_ranking_low_mem(eval_xs))
+        # TODO: Caution there is information leakage when to_ranking is used, we should not use it
+        eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position) \
+                if not normalize_to_ranking else normalize_data(to_ranking_low_mem(eval_xs))
         # Rescale X
         eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features,
                                                normalize_with_sqrt=normalize_with_sqrt)
 
-        return eval_xs.detach().to(device)
+        return eval_xs.to(device)
 
     eval_xs, eval_ys = eval_xs.to(device), eval_ys.to(device)
     eval_ys = eval_ys[:eval_position]
@@ -530,16 +600,9 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         if preprocess_transform_configuration in eval_xs_transformed:
             eval_xs_ = eval_xs_transformed[preprocess_transform_configuration].clone()
         else:
-            if eval_xs_.shape[-1] * 3 < max_features and combine_preprocessing:
-                eval_xs_ = torch.cat([preprocess_input(eval_xs_, preprocess_transform='power_all'),
-                            preprocess_input(eval_xs_, preprocess_transform='quantile_all')], -1)
-                eval_xs_ = normalize_data(eval_xs_, normalize_positions=-1 if normalize_with_test else eval_position)
-                #eval_xs_ = torch.stack([preprocess_input(eval_xs_, preprocess_transform='power_all'),
-                #                        preprocess_input(eval_xs_, preprocess_transform='robust_all'),
-                #                        preprocess_input(eval_xs_, preprocess_transform='none')], -1)
-                #eval_xs_ = torch.flatten(torch.swapaxes(eval_xs_, -2, -1), -2)
-            else:
-                eval_xs_ = preprocess_input(eval_xs_, preprocess_transform=preprocess_transform_configuration)
+            eval_xs_ = preprocess_input(eval_xs_, preprocess_transform=preprocess_transform_configuration)
+            if no_grad:
+                eval_xs_ = eval_xs_.detach()
             eval_xs_transformed[preprocess_transform_configuration] = eval_xs_
 
         eval_ys_ = ((eval_ys_ + class_shift_configuration) % num_classes).float()
@@ -584,12 +647,13 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
         output_ = torch.cat([output_[..., class_shift_configuration:],output_[..., :class_shift_configuration]],dim=-1)
 
         #output_ = predict(eval_xs, eval_ys, style_, preprocess_transform_)
-        if not average_logits:
+        if not average_logits and not return_logits:
+            # transforms every ensemble_configuration into a probability -> equal contribution of every configuration
             output_ = torch.nn.functional.softmax(output_, dim=-1)
         output = output_ if output is None else output + output_
 
     output = output / len(ensemble_configurations)
-    if average_logits:
+    if average_logits and not return_logits:
         output = torch.nn.functional.softmax(output, dim=-1)
 
     output = torch.transpose(output, 0, 1)
