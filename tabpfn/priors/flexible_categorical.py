@@ -1,6 +1,7 @@
 import random
 import time
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -42,6 +43,25 @@ class RegressionNormalized(nn.Module):
         norm = (x - minima) / (maxima-minima)
 
         return norm
+
+
+class MulticlassSteps(nn.Module):
+    """"Sample piecewise constant functions with random number of steps and random class boundaries"""
+    def __init__(self, num_classes, max_steps=10):
+        super().__init__()
+        self.num_classes = class_sampler_f(2, num_classes)()
+        self.num_steps = np.random.randint(1, max_steps) if max_steps > 1 else 1
+
+    def forward(self, x):
+        # x has shape (T,B,H) ?!
+        # x has shape (samples, batch)
+        # CAUTION: This samples the same idx in sequence for each class boundary in a batch
+        class_boundary_indices = torch.randint(0, x.shape[0], ((self.num_classes - 1) * (self.num_steps - 1),))
+        class_boundaries_sorted, _ = x[class_boundary_indices].sort(axis=0)
+        step_assignments = torch.searchsorted(class_boundaries_sorted.T.contiguous(), x.T.contiguous()).T
+        class_assignments = torch.randint(0, self.num_classes, ((self.num_classes - 1) * self.num_steps, x.shape[1]))
+        classes = torch.gather(class_assignments, 0, step_assignments)
+        return classes
 
 
 class MulticlassRank(nn.Module):
@@ -127,6 +147,8 @@ class FlexibleCategorical(torch.nn.Module):
                     )
                 elif self.h['multiclass_type'] == 'multi_node':
                     self.class_assigner = MulticlassMultiNode(self.h['num_classes'])
+                elif self.h['multiclass_type'] == 'steps':
+                    self.class_assigner =  MulticlassSteps(self.h['num_classes'], self.h['multiclass_max_steps'])
                 else:
                     raise ValueError("Unknow Multiclass type")
             elif self.h['num_classes'] == 2 and self.h['balanced']:
