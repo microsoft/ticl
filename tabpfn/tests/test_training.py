@@ -141,11 +141,19 @@ def test_train_low_rank():
     assert isinstance(results['model'], MotherNet)
 
 
-def test_train_tabpfn():
+def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
     assert results['loss'] == pytest.approx(2.3182566165924072)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+def test_train_tabpfn_stepped_multiclass():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
+    assert results['loss'] == pytest.approx(2.0325722694396973)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 

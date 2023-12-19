@@ -39,7 +39,7 @@ def main(argv):
     config['output_multiclass_ordered_p'] = 0.
     del config['differentiable_hyperparameters']['output_multiclass_ordered_p']
 
-    config['multiclass_type'] = 'rank'
+    config['multiclass_max_steps'] = 10
     del config['differentiable_hyperparameters']['multiclass_type']
 
     config['sampling'] = 'normal'  # vielleicht schlecht?
@@ -135,6 +135,7 @@ def main(argv):
     parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
+    parser.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
 
     args = parser.parse_args(argv)
 
@@ -187,6 +188,8 @@ def main(argv):
     config['adam_beta1'] = args.adam_beta1
     config['spike_tolerance'] = args.spike_tolerance
     config['extra_fast_test'] = args.extra_fast_test
+    config['multiclass_type'] = args.multiclass_type
+
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding

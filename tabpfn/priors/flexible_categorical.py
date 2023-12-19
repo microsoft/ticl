@@ -132,7 +132,6 @@ class FlexibleCategorical(torch.nn.Module):
         self.args_passed = {**self.args}
         self.args_passed.update({'num_features': self.h['num_features_used']})
         self.get_batch = get_batch
-
         if self.h['num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
