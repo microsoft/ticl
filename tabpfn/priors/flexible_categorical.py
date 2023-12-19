@@ -170,7 +170,10 @@ class FlexibleCategorical(torch.nn.Module):
 
     def forward(self, batch_size):
         start = time.time()
+
         x, y, y_ = self.get_batch(hyperparameters=self.h, **self.args_passed)
+        assert x.shape[2] == self.h['num_features_used']
+
         if time_it:
             print('Flex Forward Block 1', round(time.time() - start, 3))
 
