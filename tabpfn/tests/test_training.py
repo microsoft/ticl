@@ -31,6 +31,7 @@ def test_train_defaults():
     assert results['loss'] == pytest.approx(2.4058380126953125)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 1000394
 
 
 def test_train_synetune():
@@ -96,6 +97,9 @@ def test_train_special_token():
     assert results['loss'] == pytest.approx(2.2754929065704346)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
+    assert results['model'].special_token
+    assert count_parameters(results['model'].decoder) == 1000266
+    assert results['model'].token_embedding.shape == (1, 1, 128)
 
 
 def test_train_reduce_on_spike():
