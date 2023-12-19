@@ -115,7 +115,8 @@ def get_runs(filter_string, experiment_id):
         run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
 
-def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running", "reference"), mlflow_host=None):
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running", "reference"), mlflow_host=None,
+                    legend=False):
     if mlflow_host is None:
         mlflow_host = MLFLOW_HOSTNAME
     mlflow.set_tracking_uri(f"http://{mlflow_host}:5000")
@@ -160,7 +161,8 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
     losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'step': 'epoch'})
     losses_all_df['timestamp'] -= losses_all_df.timestamp.min()
     fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
-    fig.update_layout(showlegend=False)
+    if not legend:
+        fig.update_layout(showlegend=False)
     if return_df:
         return fig, losses_all_df
     return fig
