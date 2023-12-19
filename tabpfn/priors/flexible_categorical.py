@@ -56,10 +56,10 @@ class MulticlassSteps(nn.Module):
         # x has shape (T,B,H) ?!
         # x has shape (samples, batch)
         # CAUTION: This samples the same idx in sequence for each class boundary in a batch
-        class_boundary_indices = torch.randint(0, x.shape[0], ((self.num_classes - 1) * (self.num_steps - 1),))
+        class_boundary_indices = torch.randint(0, x.shape[0], ((self.num_classes - 1) * (self.num_steps - 1),), device=x.device)
         class_boundaries_sorted, _ = x[class_boundary_indices].sort(axis=0)
         step_assignments = torch.searchsorted(class_boundaries_sorted.T.contiguous(), x.T.contiguous()).T
-        class_assignments = torch.randint(0, self.num_classes, ((self.num_classes - 1) * self.num_steps, x.shape[1]))
+        class_assignments = torch.randint(0, self.num_classes, ((self.num_classes - 1) * self.num_steps, x.shape[1]), device=x.device)
         classes = torch.gather(class_assignments, 0, step_assignments)
         return classes
 
