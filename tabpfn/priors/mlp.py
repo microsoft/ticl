@@ -34,6 +34,7 @@ class MLP(torch.nn.Module):
         self.num_outputs = num_outputs
         self.seq_len = seq_len
         self.sampling = sampling
+        self.hyperparameters = hyperparameters
 
         with torch.no_grad():
 
