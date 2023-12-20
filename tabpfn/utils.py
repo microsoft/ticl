@@ -1,26 +1,26 @@
-import os
-import math
 import argparse
-import random
 import datetime
-import itertools
 import glob
+import itertools
+import math
+import os
+import random
 import re
+import shutil
+import socket
 import time
+import warnings
 
-import torch
-from torch import nn
-
+import mlflow
 import numpy as np
 import pandas as pd
-from scipy.signal import convolve, windows
+import torch
+
+from pathlib import Path
+from scipy.signal import convolve
+from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
-
 from torch.optim.optimizer import Optimizer
-
-import socket
-import shutil
-import mlflow
 
 
 def get_openai_lr(transformer_model):
@@ -66,7 +66,8 @@ def set_locals_in_self(locals):
     """
     self = locals['self']
     for var_name, val in locals.items():
-        if var_name != 'self': setattr(self, var_name, val)
+        if var_name != 'self':
+            setattr(self, var_name, val)
 
 
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
@@ -89,11 +90,13 @@ class StoreDictKeyPair(argparse.Action):
         setattr(namespace, self.dest, my_dict)
         print("dict values: {}".format(my_dict))
 
+
 def get_nan_value(v, set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
         return v
     else:
         return random.choice([-999, 0, 1, 999])
+
 
 def to_ranking(data):
     x = (data >= data.unsqueeze(-3))
@@ -103,6 +106,8 @@ def to_ranking(data):
 #   1. Cmparing to unique elements: When all values are different we still get quadratic blowup
 #   2. Argsort(Argsort()) returns ranking, but with duplicate values there is an ordering which is problematic
 #   3. Argsort(Argsort(Unique))->Scatter seems a bit complicated, doesn't have quadratic blowup, but how fast?
+
+
 def to_ranking_low_mem(data):
     x = torch.zeros_like(data)
     for col in range(data.shape[-1]):
@@ -111,64 +116,91 @@ def to_ranking_low_mem(data):
         x[:, :, col] = x_
     return x
 
+
 def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('nan'), set_value_to_nan)
+
 
 def nan_handling_missing_for_no_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('-inf'), set_value_to_nan)
 
+
 def nan_handling_missing_for_a_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('inf'), set_value_to_nan)
 
-def torch_nanmean(x, axis=0, return_nanshare=False):
-    num = torch.where(torch.isnan(x), torch.full_like(x, 0), torch.full_like(x, 1)).sum(axis=axis)
-    value = torch.where(torch.isnan(x), torch.full_like(x, 0), x).sum(axis=axis)
-    if return_nanshare:
-        return value / num, 1.-num/x.shape[axis]
+
+def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
+    """
+    Returns the mean of a torch tensor and only considers the elements, where the mask is true.
+    If return_share_of_ignored_values is true it returns a second tensor with the percentage of ignored values
+    because of the mask.
+    """
+    num = torch.where(mask, torch.full_like(x, 1), torch.full_like(x, 0)).sum(dim=dim)
+    value = torch.where(mask, x, torch.full_like(x, 0)).sum(dim=dim)
+    if return_share_of_ignored_values:
+        return value / num, 1.-num/x.shape[dim]
     return value / num
 
-def torch_nanstd(x, axis=0):
-    num = torch.where(torch.isnan(x), torch.full_like(x, 0), torch.full_like(x, 1)).sum(axis=axis)
-    value = torch.where(torch.isnan(x), torch.full_like(x, 0), x).sum(axis=axis)
+
+def torch_masked_std(x, mask, dim=0):
+    """
+    Returns the std of a torch tensor and only considers the elements, where the mask is true.
+    If get_mean is true it returns as a first Tensor the mean and as a second tensor the std.
+    """
+    num = torch.where(mask, torch.full_like(x, 1), torch.full_like(x, 0)).sum(dim=dim)
+    value = torch.where(mask, x, torch.full_like(x, 0)).sum(dim=dim)
     mean = value / num
-    mean_broadcast = torch.repeat_interleave(mean.unsqueeze(axis), x.shape[axis], dim=axis)
-    return torch.sqrt(torch.nansum(torch.square(mean_broadcast - x), axis=axis) / (num - 1))
+    mean_broadcast = torch.repeat_interleave(mean.unsqueeze(dim), x.shape[dim], dim=dim)
+    quadratic_difference_from_mean = torch.square(torch.where(mask, mean_broadcast - x, torch.full_like(x, 0)))
+    return torch.sqrt(torch.sum(quadratic_difference_from_mean, dim=dim) / (num - 1))
+
+
+def torch_nanmean(x, dim=0, return_nanshare=False):
+    return torch_masked_mean(x, ~torch.isnan(x), dim=dim, return_share_of_ignored_values=return_nanshare)
+
+
+def torch_nanstd(x, dim=0):
+    return torch_masked_std(x, ~torch.isnan(x), dim=dim)
+
 
 def normalize_data(data, normalize_positions=-1):
     if normalize_positions > 0:
-        mean = torch_nanmean(data[:normalize_positions], axis=0)
-        std = torch_nanstd(data[:normalize_positions], axis=0) + .000001
+        mean = torch_nanmean(data[:normalize_positions], dim=0)
+        std = torch_nanstd(data[:normalize_positions], dim=0) + .000001
     else:
-        mean = torch_nanmean(data, axis=0)
-        std = torch_nanstd(data, axis=0) + .000001
+        mean = torch_nanmean(data, dim=0)
+        std = torch_nanstd(data, dim=0) + .000001
     data = (data - mean) / std
     data = torch.clip(data, min=-100, max=100)
 
     return data
 
+
 def remove_outliers(X, n_sigma=4, normalize_positions=-1):
     # Expects T, B, H
     assert len(X.shape) == 3, "X must be T,B,H"
-    #for b in range(X.shape[1]):
-        #for col in range(X.shape[2]):
+
     data = X if normalize_positions == -1 else X[:normalize_positions]
-    data_clean = data[:].clone()
-    data_mean, data_std = torch_nanmean(data, axis=0), torch_nanstd(data, axis=0)
+
+    data_mean, data_std = torch_nanmean(data, dim=0), torch_nanstd(data, dim=0)
     cut_off = data_std * n_sigma
     lower, upper = data_mean - cut_off, data_mean + cut_off
 
-    data_clean[torch.logical_or(data_clean > upper, data_clean < lower)] = np.nan
-    data_mean, data_std = torch_nanmean(data_clean, axis=0), torch_nanstd(data_clean, axis=0)
+    mask = (data <= upper) & (data >= lower) & ~torch.isnan(data)
+    data_mean, data_std = torch_masked_mean(data, mask), torch_masked_std(data, mask)
+
     cut_off = data_std * n_sigma
     lower, upper = data_mean - cut_off, data_mean + cut_off
 
     X = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)
     X = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)
-            # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
+    # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
     return X
+
 
 def bool_mask_to_att_mask(mask):
     return mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+
 
 def print_on_master_only(is_master):
     import builtins as __builtin__
@@ -184,7 +216,7 @@ def print_on_master_only(is_master):
 
 
 def init_dist(device):
-    #print('init dist')
+    # print('init dist')
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
         rank = int(os.environ["LOCAL_RANK"])
@@ -216,17 +248,21 @@ def init_dist(device):
 
         return True, rank, f'cuda:{rank}'
     else:
-        #print('Not using distributed')
+        # print('Not using distributed')
         # will not change any of the behavior of print, but allows putting the force=True in the print calls
         print_on_master_only(True)
         return False, 0, device
 
 # NOP function for python with statements (x = NOP(); with x:)
+
+
 class NOP():
     def __enter__(self):
         pass
+
     def __exit__(self, type, value, traceback):
         pass
+
 
 def check_compatibility(dl):
     if hasattr(dl, 'num_outputs'):
@@ -234,11 +270,13 @@ def check_compatibility(dl):
         assert dl.num_outputs != 1, "We assume num_outputs to be 1. Instead of the num_ouputs change your loss." \
                                     "We specify the number of classes in the CE loss."
 
+
 def product_dict(dic):
     keys = dic.keys()
     vals = dic.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
+
 
 def normalize_by_used_features_f(x, num_features_used, num_features, normalize_with_sqrt=False):
     if normalize_with_sqrt:
@@ -311,6 +349,7 @@ def get_latest_losses(fileglob="models_diff/*.cpkt"):
         lr_dict[shortname] = config.get("learning_rates", np.NaN)
     return losses_dict, lr_dict, wallclock_dict, last_saves
 
+
 def make_long_loss_df(losses_dict, lr_dict, wallclock_dict, smoother=None):
     def trim(series, skip):
         if pd.api.types.is_scalar(series):
@@ -373,8 +412,6 @@ class ExponentialLR(LRScheduler):
                 for base_lr in self.base_lrs]
 
 
-
-
 class ReduceLROnSpike:
     """Reduce learning rate when a metric has bounced up.
 
@@ -427,7 +464,6 @@ class ReduceLROnSpike:
         self.recent_losses = []
         self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
 
-
     def step(self, metrics):
         # convert `metrics` to float, in case it's a zero-dim Tensor
         current = float(metrics)
@@ -468,10 +504,10 @@ class ReduceLROnSpike:
         self.__dict__.update(state_dict)
 
     def get_last_lr(self):
-       """ Return last computed learning rate by current scheduler.
-       """
-       return self._last_lr
-    
+        """ Return last computed learning rate by current scheduler.
+        """
+        return self._last_lr
+
 
 def make_base_parser(description):
     parser = argparse.ArgumentParser(description=description)
@@ -507,6 +543,7 @@ def make_base_parser(description):
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     return parser
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -517,7 +554,7 @@ def str2bool(v):
 
 
 def init_device(gpu_id, use_cpu):
-        # Single GPU training, get GPU ID from command line
+    # Single GPU training, get GPU ID from command line
     if 'LOCAL_RANK' in os.environ:
         # launched with torch.distributed.launch
         rank = int(os.environ["LOCAL_RANK"])
@@ -541,12 +578,12 @@ def init_device(gpu_id, use_cpu):
 
 def get_model_string(config, args, parser):
     if args.continue_run:
-        if checkpoint_dir is None:
+        if args.st_checkpoint_dir is None:
             model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
             if args.create_new_run:
                 model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
-            with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
+            with open(f"{args.st_checkpoint_dir }/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
         mm = config['model_maker']
@@ -570,8 +607,8 @@ def get_model_string(config, args, parser):
         gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
         model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-        if checkpoint_dir is not None:
-            with open(f"{checkpoint_dir}/model_string.txt", 'w') as f:
+        if args.st_checkpoint_dir is not None:
+            with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:
                 f.write(model_string)
 
 
@@ -629,18 +666,19 @@ def make_training_callback(save_every, model_string, base_path, report):
                         old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
                         if os.path.exists(old_file_name):
                             if loss > this_loss:
-                                    try:
-                                        print(f"Removing old model file {old_file_name}")
-                                        os.remove(old_file_name)
-                                    except Exception as e:
-                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                                try:
+                                    print(f"Removing old model file {old_file_name}")
+                                    os.remove(old_file_name)
+                                except Exception as e:
+                                    print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
                                 print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
-        
+
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
             print(e)
     return save_callback
+
 
 def load_model_state(load_path, config):
     model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
@@ -658,8 +696,9 @@ def load_model_state(load_path, config):
     else:
         print("WARNING warm starting with new settings")
         compare_dicts(config_sample, old_config, all=True)
-    
+
     return model_state, optimizer_state, scheduler, config_sample
+
 
 def init_mlflow(experiment_name, model_string, continue_run):
     if socket.gethostname() == "amueller-tabpfn-4gpu":

@@ -4,5 +4,3 @@ def normalize_data(eval_xs):
     eval_xs = (eval_xs - mean) / std
 
     return eval_xs
-
-

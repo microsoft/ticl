@@ -1,16 +1,12 @@
-import logging
-import time
-import torch
-
-from syne_tune import Reporter
 from argparse import ArgumentParser
 
-from tabpfn.scripts.distill_mlp import TorchMLP
-import numpy as np
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-from sklearn.model_selection import train_test_split
-
 import pmlb
+import torch
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from syne_tune import Reporter
+
+from tabpfn.evaluation.baselines.distill_mlp import TorchMLP
 
 if __name__ == '__main__':
 
@@ -26,16 +22,9 @@ if __name__ == '__main__':
     args, _ = parser.parse_args()
     report = Reporter()
 
-    #x, y = np.c_[np.meshgrid(np.arange(10), np.arange(10))]
-    #x, y = x.ravel(), y.ravel()
-
-    #z = (x + y) % 7
-
     device = "cpu"
     torch.set_num_threads(2)
 
-    #labels = z
-    #data = np.c_[x, y]
     data, labels = pmlb.fetch_data('satimage', return_X_y=True, local_cache_dir='/tmp/pmlb')
     labels = LabelEncoder().fit_transform(labels)
     if args.onehot:
@@ -55,5 +44,5 @@ if __name__ == '__main__':
     mlp = TorchMLP(hidden_size=args.hidden_size, device=device, n_epochs=args.epochs, n_layers=args.n_layers, learning_rate=args.learning_rate,
                    dropout_rate=args.dropout_rate, weight_decay=args.weight_decay, epoch_callback=epoch_callback)
     mlp.fit(X_train, y_train)
-    
+
     print(mlp.score(X_test, y_test))

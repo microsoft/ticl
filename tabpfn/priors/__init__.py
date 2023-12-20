@@ -1,4 +1,3 @@
-from . import fast_gp, mlp, flexible_categorical, differentiable_prior, prior_bag
+from . import differentiable_prior, fast_gp, flexible_categorical, mlp, prior_bag, boolean_conjunctions
 
-
-
+__all__ = ["differentiable_prior", "fast_gp", "flexible_categorical", "mlp", "prior_bag", "boolean_conjunctions"]

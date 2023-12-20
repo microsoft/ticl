@@ -5,10 +5,6 @@ This is the original CUDA-supporting pytorch impelementation.
 
 We created a [Colab](https://colab.research.google.com/drive/194mCs6SEPEW6C0rcP7xWzcEtt1RBc8jJ), that lets you play with our scikit-learn interface.
 
-We also created two demos. One to experiment with the TabPFNs predictions (https://huggingface.co/spaces/TabPFN/TabPFNPrediction) and one to check cross-
-validation ROC AUC scores on new datasets (https://huggingface.co/spaces/TabPFN/TabPFNEvaluation). Both of them run on a weak CPU, thus it can require a little bit of time.
-Both demos are based on a scikit-learn interface that makes using the TabPFN as easy as a scikit-learn SVM.
-
 ## Installation
 
 ```bash
@@ -60,15 +56,13 @@ Here, we list some tips and tricks that might help you understand how to use it 
 Read our [paper](https://arxiv.org/abs/2207.01848) for more information about the setup (or contact us ☺️).
 If you use our method, please cite us using
 ```
-@misc{tabpfn,
-  doi = {10.48550/ARXIV.2207.01848},
-  url = {https://arxiv.org/abs/2207.01848},
-  author = {Hollmann, Noah and Müller, Samuel and Eggensperger, Katharina and Hutter, Frank},
-  keywords = {Machine Learning (cs.LG), Machine Learning (stat.ML), FOS: Computer and information sciences, FOS: Computer and information sciences},
-  title = {TabPFN: A Transformer That Solves Small Tabular Classification Problems in a Second},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {arXiv.org perpetual, non-exclusive license}
+@inproceedings{
+  hollmann2023tabpfn,
+  title={Tab{PFN}: A Transformer That Solves Small Tabular Classification Problems in a Second},
+  author={Noah Hollmann and Samuel M{\"u}ller and Katharina Eggensperger and Frank Hutter},
+  booktitle={The Eleventh International Conference on Learning Representations},
+  year={2023},
+  url={https://openreview.net/forum?id=cp5PvcI6w8_}
 }
 ```
 

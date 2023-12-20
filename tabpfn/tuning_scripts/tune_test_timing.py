@@ -1,9 +1,11 @@
 import logging
 
-from syne_tune import Tuner, StoppingCriterion
+from syne_tune import StoppingCriterion, Tuner
 from syne_tune.backend import LocalBackend
-from syne_tune.config_space import randint, loguniform, uniform, lograndint, choice, logfinrange
-from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
+from syne_tune.config_space import randint
+from syne_tune.optimizer.baselines import MOBSTER
+
+
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 
@@ -17,7 +19,7 @@ config_space = {
 
 tuner = Tuner(
     trial_backend=LocalBackend(entry_point='train_test_timing.py'),
-        scheduler=MOBSTER(
+    scheduler=MOBSTER(
         config_space,
         metric='loss',
         resource_attr='time',
@@ -30,7 +32,7 @@ tuner = Tuner(
     max_failures=1000,
     results_update_interval=60,
     print_update_interval=120,
-    #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60 * 60),
+    # stop_criterion=StoppingCriterion(max_wallclock_time=60 *60 * 60),
     stop_criterion=StoppingCriterion(max_num_trials_started=5000),
     n_workers=4,  # how many trials are evaluated in parallel
     tuner_name=tuner_name,

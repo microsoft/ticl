@@ -1,1 +1,3 @@
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn.prediction.tabpfn import TabPFNClassifier
+
+__all__ = ["TabPFNClassifier"]

@@ -1,12 +1,13 @@
 import logging
+import sys
 
-from syne_tune import Tuner, StoppingCriterion
+from syne_tune import StoppingCriterion, Tuner
 from syne_tune.backend import LocalBackend
-from syne_tune.config_space import randint, loguniform, uniform, lograndint, choice, logfinrange
-from syne_tune.optimizer.baselines import ASHA, MOBSTER, HyperTune
+from syne_tune.config_space import choice, logfinrange, loguniform, randint, uniform
+from syne_tune.optimizer.baselines import MOBSTER
+
 root = logging.getLogger()
 root.setLevel(logging.INFO)
-import sys
 
 # hyperparameter search space to consider
 config_space = {
@@ -14,7 +15,7 @@ config_space = {
     'learning-rate': loguniform(1e-7, 1e-2),
     'epochs': 4000,
     'num-layers': randint(2, 24),
-    #'gpu-id': 2,
+    # 'gpu-id': 2,
     'batch-size': logfinrange(lower=2, upper=32, size=5, cast_int=True),
     'adaptive-batch-size': choice([True, False]),
     'weight-decay': loguniform(1e-9, 1e-1),
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     config_space['experiment'] = f'synetune-{tuner_name}'
     tuner = Tuner(
         trial_backend=LocalBackend(entry_point='../fit_model.py'),
-            scheduler=MOBSTER(
+        scheduler=MOBSTER(
             config_space,
             metric='loss',
             resource_attr='wallclock_time',
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         max_failures=1000,
         results_update_interval=60,
         print_update_interval=120,
-        #stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
+        # stop_criterion=StoppingCriterion(max_wallclock_time=60 *60),
         stop_criterion=StoppingCriterion(max_num_trials_started=5000),
         n_workers=4,  # how many trials are evaluated in parallel
         tuner_name=tuner_name,

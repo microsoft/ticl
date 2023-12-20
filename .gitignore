@@ -169,3 +169,4 @@ tabpfn/results
 tabpfn/joblib_cache
 tabpfn/catboost_info
 tabpfn/mlruns
+tabpfn/models_diff
