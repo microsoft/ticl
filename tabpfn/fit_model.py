@@ -29,7 +29,7 @@ def str2bool(v):
 
 def main(argv):
     config = get_prior_config(config_type='causal')
-    config['prior_type'], config['differentiable'], config['flexible'] = 'prior_bag', True, True
+    config['differentiable'], config['flexible'] = True, True
     config['recompute_attn'] = True
     config['max_num_classes'] = 10
     config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
@@ -136,6 +136,7 @@ def main(argv):
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
     parser.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
+    parser.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only'].", default='prior_bag', type=str)
 
     args = parser.parse_args(argv)
 
@@ -189,7 +190,7 @@ def main(argv):
     config['spike_tolerance'] = args.spike_tolerance
     config['extra_fast_test'] = args.extra_fast_test
     config['multiclass_type'] = args.multiclass_type
-
+    config['prior_type'] = args.prior_type
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding

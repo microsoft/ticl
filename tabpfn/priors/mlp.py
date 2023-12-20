@@ -191,6 +191,7 @@ def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default
 
     sample = [get_model()() for _ in range(0, batch_size)]
     x, y = zip(*sample)
+    
     y = torch.cat(y, 1).detach().squeeze(2)
     x = torch.cat(x, 1).detach()
 

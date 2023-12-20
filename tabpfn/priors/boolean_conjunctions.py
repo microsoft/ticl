@@ -29,7 +29,7 @@ def sample_boolean_data(hyperparameters, seq_len, num_features, device):
         selected_bits = torch.multinomial(torch.ones(num_features, device=device), rank, replacement=False)
         signs = torch.randint(2, (rank,), device=device) * 2 - 1
         outputs = outputs + ((signs * inputs[:, selected_bits]) == 1).all(dim=1)
-    return (inputs + 1) / 2, outputs
+    return ((inputs + 1) / 2).unsqueeze(1), outputs.int().unsqueeze(1).unsqueeze(2)
 
 
 def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
