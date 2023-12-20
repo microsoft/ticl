@@ -78,7 +78,7 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
         raise ValueError(f"Unknown inference_device: {inference_device}")
 
 
-class ForwardAdditiveModel(ClassifierMixin, BaseEstimator):
+class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu", inference_device="cpu"):
         self.path = path
         self.device = device
@@ -90,7 +90,7 @@ class ForwardAdditiveModel(ClassifierMixin, BaseEstimator):
         y = le.fit_transform(y)
         model, config = load_model(self.path, device=self.device)
         if "model_maker" not in config:
-            raise ValueError("Cannot load tabpfn weights into ForwardMLPModel")
+            raise ValueError("Cannot load tabpfn weights into MotherNetClassifier")
         if config['model_maker'] != "additive":
             raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
         model.to(self.device)

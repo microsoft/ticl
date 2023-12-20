@@ -4,7 +4,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from tabpfn.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
-from tabpfn.models.mothernet import ForwardLinearModel, ForwardMLPModel, PermutationsMeta
+from tabpfn.models.mothernet import ForwardLinearModel, MotherNetClassifier, PermutationsMeta
 from tabpfn.prediction.tabpfn import TabPFNClassifier
 
 
@@ -13,9 +13,9 @@ def add_forward_mlp_model(model_name, model_path, current_models=None, permutati
         cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
         preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
         if permutations:
-            return make_pipeline(preprocess, PermutationsMeta(ForwardMLPModel(path=model_path)))
+            return make_pipeline(preprocess, PermutationsMeta(MotherNetClassifier(path=model_path)))
         else:
-            return make_pipeline(preprocess, ForwardMLPModel(path=model_path))
+            return make_pipeline(preprocess, MotherNetClassifier(path=model_path))
 
     if current_models:
         current_models[model_name] = make_forward_mlp_model
@@ -38,21 +38,21 @@ def make_forward_linear_model(categorical_features):
 def make_forward_mlp_model(categorical_features):
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
-    return make_pipeline(preprocess, ForwardMLPModel())
+    return make_pipeline(preprocess, MotherNetClassifier())
 
 
 def make_forward_mlp_model_new(categorical_features):
     path = "models_diff/prior_diff_real_checkpoint_output_attention_nlayer6_mlp_emsize_512_multiclass_04_17_2023_23_11_02_n_0_epoch_94.cpkt"
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
-    return make_pipeline(preprocess, ForwardMLPModel(path=path))
+    return make_pipeline(preprocess, MotherNetClassifier(path=path))
 
 
 def make_forward_mlp_model_big_bugfix_caching(categorical_features):
     path_new_big = "models_diff/prior_diff_real_checkpoint_predict_mlp_attention_nlayer12_lr0001_multiclass_04_18_2023_21_31_58_n_0_epoch_40.cpkt"
     cont_pipe = make_pipeline(StandardScaler(), SimpleImputer())
     preprocess = make_column_transformer((OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features), remainder=cont_pipe)
-    return make_pipeline(preprocess, ForwardMLPModel(path=path_new_big))
+    return make_pipeline(preprocess, MotherNetClassifier(path=path_new_big))
 
 
 def make_distilled_tabpfn(categorical_features):

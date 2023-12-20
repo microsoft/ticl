@@ -226,7 +226,7 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         raise ValueError(f"Unknown inference_device: {inference_device}")
 
 
-class ForwardMLPModel(ClassifierMixin, BaseEstimator):
+class MotherNetClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu", label_offset=0, inference_device="cpu"):
         self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
         self.device = device
@@ -239,7 +239,7 @@ class ForwardMLPModel(ClassifierMixin, BaseEstimator):
         y = le.fit_transform(y)
         model, config = load_model(self.path, device=self.device)
         if "model_maker" not in config:
-            raise ValueError("Cannot load tabpfn weights into ForwardMLPModel")
+            raise ValueError("Cannot load tabpfn weights into MotherNetClassifier")
         if config['model_maker'] != "mlp":
             raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
         model.to(self.device)
