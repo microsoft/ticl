@@ -6,8 +6,10 @@ import pytest
 @pytest.mark.parametrize('max_steps', [1, 2, 5, 10])
 @pytest.mark.parametrize('device', ['cpu', 'cuda'])
 def test_multiclass_step(max_classes, max_steps, device):
-    # samples x batch size
+    if device == "cuda" and not torch.cuda.is_available():
+        raise pytest.SkipTest("CUDA not available")
     batchsize = 8
+    # samples x batch size
     x = torch.rand((1152, batchsize), device=device)
 
     steps = MulticlassSteps(max_classes, max_steps=max_steps)
@@ -15,4 +17,4 @@ def test_multiclass_step(max_classes, max_steps, device):
     num_steps = steps.num_steps
     classes = steps.forward(x)
     assert classes.shape == (1152, batchsize)
-    assert (classes.unique().cpu() == torch.range(0, num_classes - 1)).all()
+    assert (classes.unique().cpu() == torch.arange(0, num_classes)).all()
