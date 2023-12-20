@@ -7,7 +7,7 @@ import pytest
 @pytest.mark.parametrize('device', ['cpu', 'cuda'])
 def test_multiclass_step(max_classes, max_steps, device):
     if device == "cuda" and not torch.cuda.is_available():
-        raise pytest.SkipTest("CUDA not available")
+        raise pytest.skip("CUDA not available")
     batchsize = 8
     # samples x batch size
     x = torch.rand((1152, batchsize), device=device)
