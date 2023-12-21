@@ -188,15 +188,18 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
+def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu"):
     if inference_device == "cpu":
         mean = np.nanmean(X_train, axis=0)
         std = np.nanstd(X_train, axis=0, ddof=1) + .000001
         # FIXME replacing nan with 0 as in TabPFN
         X_train = np.nan_to_num(X_train, 0)
         X_test = np.nan_to_num(X_test, 0)
-        std[np.isnan(std)] = 1
-        X_test_scaled = (X_test - mean) / std
+        if scale:
+            std[np.isnan(std)] = 1
+            X_test_scaled = (X_test - mean) / std
+        else:
+            X_test_scaled = X_test
         out = np.clip(X_test_scaled, a_min=-100, a_max=100)
         for i, (b, w) in enumerate(layers):
             out = np.dot(out, w) + b
@@ -215,7 +218,10 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
         X_train = np.nan_to_num(X_train, 0)
         X_test = np.nan_to_num(X_test, 0)
         std[torch.isnan(std)] = 1
-        X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
+        if scale:
+            X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
+        else:
+            X_test_scaled = torch.Tensor(X_test).to(inference_device)
         out = torch.clamp(X_test_scaled, min=-100, max=100)
         for i, (b, w) in enumerate(layers):
             out = torch.matmul(out, w) + b
@@ -227,11 +233,12 @@ def predict_with_mlp_model(X_train, X_test, layers, inference_device="cpu"):
 
 
 class MotherNetClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", label_offset=0, inference_device="cpu"):
+    def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu"):
         self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device
+        self.scale = scale
 
     def fit(self, X, y):
         self.X_train_ = X
@@ -255,7 +262,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, self.parameters_, inference_device=self.inference_device)
+        return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
