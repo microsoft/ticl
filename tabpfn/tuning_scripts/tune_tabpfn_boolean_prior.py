@@ -31,7 +31,7 @@ config_space = {
     'warmup-epochs': randint(0, 30),
     # 'num-steps': 128,
     'model-maker': 'tabpfn',
-    'prior_type': 'boolean_only'
+    'prior-type': 'boolean_only'
 }
 
 early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}
