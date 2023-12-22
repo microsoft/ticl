@@ -44,7 +44,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
-def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu"):
+def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     max_features = 100
@@ -54,8 +54,10 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     ys = torch.Tensor(y_train).to(device)
     xs = torch.Tensor(X_train).to(device)
-
-    eval_xs_ = normalize_data(xs, eval_position)
+    if scale:
+        eval_xs_ = normalize_data(xs, eval_position)
+    else:
+        eval_xs_ = torch.clip(xs, min=-100, max=100)
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features,
@@ -252,7 +254,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device)
+        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device, scale=self.scale)
         if self.label_offset == 0:
             self.parameters_ = layers
         else:
