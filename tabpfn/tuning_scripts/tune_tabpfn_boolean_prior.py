@@ -13,7 +13,7 @@ tuner_name = "tabpfn-boolean-prior"
 
 # hyperparameter search space to consider
 config_space = {
-    'em-size': logfinrange(lower=64, upper=1024, size=5, cast_int=True),
+    'em-size': logfinrange(lower=128, upper=1024, size=4, cast_int=True),
     'learning-rate': loguniform(1e-7, 1e-2),
     'epochs': 4000,
     'num-layers': randint(2, 24),
