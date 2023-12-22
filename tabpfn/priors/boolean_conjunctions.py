@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from tabpfn.utils import default_device
+from tabpfn.utils import default_device, normalize_data
 from tabpfn.priors.utils import get_batch_to_dataloader
 
 
@@ -31,7 +31,9 @@ def sample_boolean_data(hyperparameters, seq_len, num_features, device):
         signs = torch.randint(2, (rank,), device=device) * 2 - 1
         outputs = outputs + ((signs * inputs[:, selected_bits]) == 1).all(dim=1)
     inputs = torch.cat([inputs, torch.zeros(n_samples, num_features - num_features_active, device=device)], dim=1)
-    return ((inputs + 1) / 2).unsqueeze(1), outputs.int().unsqueeze(1).unsqueeze(2)
+    xs, ys =  ((inputs + 1) / 2).unsqueeze(1), outputs.int().unsqueeze(1).unsqueeze(2)
+    xs = normalize_data(xs)
+    return xs, ys
 
 
 def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
