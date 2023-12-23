@@ -161,7 +161,14 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
     losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'step': 'epoch'})
     losses_all_df['timestamp'] -= losses_all_df.timestamp.min()
     fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
-    if not legend:
+    if legend:
+        fig.update_layout(legend=dict(
+        yanchor="top",
+        y=0.99,
+        xanchor="left",
+        x=0.01
+        ))
+    else:
         fig.update_layout(showlegend=False)
     if return_df:
         return fig, losses_all_df
