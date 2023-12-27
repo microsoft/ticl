@@ -239,39 +239,38 @@ class FlexibleCategorical(torch.nn.Module):
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
 
-        if self.h['check_is_compatible']:
-            for b in range(y.shape[1]):
-                is_compatible, N = False, 0
-                while not is_compatible and N < 10:
-                    targets_in_train = torch.unique(y[:self.args['single_eval_pos'], b], sorted=True)
-                    targets_in_eval = torch.unique(y[self.args['single_eval_pos']:, b], sorted=True)
+        # if self.h['check_is_compatible']: always true
+        for b in range(y.shape[1]):
+            is_compatible, N = False, 0
+            while not is_compatible and N < 10:
+                targets_in_train = torch.unique(y[:self.args['single_eval_pos'], b], sorted=True)
+                targets_in_eval = torch.unique(y[self.args['single_eval_pos']:, b], sorted=True)
 
-                    is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                is_compatible = len(targets_in_train) == len(targets_in_eval) and (
+                    targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
-                    if not is_compatible:
-                        randperm = torch.randperm(x.shape[0])
-                        x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
-                    N = N + 1
                 if not is_compatible:
-                    if not is_compatible:
-                        # todo check that it really does this and how many together
-                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
+                    randperm = torch.randperm(x.shape[0])
+                    x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
+                N = N + 1
+            if not is_compatible:
+                if not is_compatible:
+                    # todo check that it really does this and how many together
+                    y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
-        if self.h['normalize_labels']:
-            # assert self.h['output_multiclass_ordered_p'] == 0., "normalize_labels destroys ordering of labels anyways."
-            for b in range(y.shape[1]):
-                valid_labels = y[:, b] != -100
-                if self.h.get('normalize_ignore_label_too', False):
-                    valid_labels[:] = True
-                y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
+        #if self.h['normalize_labels']: this was always true
+        for b in range(y.shape[1]):
+            valid_labels = y[:, b] != -100
+            if self.h.get('normalize_ignore_label_too', False):
+                valid_labels[:] = True
+            y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-                if y[valid_labels, b].numel() != 0 and self.h.get('rotate_normalized_labels', True):
-                    num_classes_float = (y[valid_labels, b].max() + 1).cpu()
-                    num_classes = num_classes_float.int().item()
-                    assert num_classes == num_classes_float.item()
-                    random_shift = torch.randint(0, num_classes, (1,), device=self.args['device'])
-                    y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
+            if y[valid_labels, b].numel() != 0 and self.h.get('rotate_normalized_labels', True):
+                num_classes_float = (y[valid_labels, b].max() + 1).cpu()
+                num_classes = num_classes_float.int().item()
+                assert num_classes == num_classes_float.item()
+                random_shift = torch.randint(0, num_classes, (1,), device=self.args['device'])
+                y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
         return x, y, y  # x.shape = (T,B,H)
 

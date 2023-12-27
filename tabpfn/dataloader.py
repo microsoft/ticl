@@ -1,10 +1,8 @@
+import tabpfn.priors as priors
+
 
 def get_mlp_prior_hyperparameters(config):
     config = {hp: (list(config[hp].values())[0]) if type(config[hp]) is dict else config[hp] for hp in config}
-
-    if 'random_feature_rotation' not in config:
-        config['random_feature_rotation'] = True
-
     return config
 
 
@@ -22,26 +20,18 @@ def make_get_batch(get_batch_base, **extra_kwargs):
 
 def get_dataloader(prior_type, config, steps_per_epoch, batch_size,
                    single_eval_pos_gen, bptt, device):
-    import tabpfn.priors as priors
+    get_batch_gp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': priors.fast_gp.get_batch_gp})
+    get_batch_mlp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': priors.mlp.get_batch_mlp})
 
-    get_batch_gp = make_get_batch(priors.fast_gp.get_batch_gp)
-    get_batch_mlp = make_get_batch(priors.mlp.get_batch_mlp)
-    get_batch_gp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': get_batch_gp})
-    get_batch_mlp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': get_batch_mlp})
-
-    extra_kwargs = {}
     if prior_type == 'prior_bag':
         # Prior bag combines priors
         prior_bag_hyperparameters = {'prior_bag_get_batch': (get_batch_gp, get_batch_mlp), 'prior_bag_exp_weights_1': 2.0}
         prior_hyperparameters = {**get_mlp_prior_hyperparameters(config), **get_gp_prior_hyperparameters(config), **prior_bag_hyperparameters}
 
-        prior_hyperparameters['normalize_labels'] = True
-        prior_hyperparameters['check_is_compatible'] = True
         prior_hyperparameters['prior_mlp_scale_weights_sqrt'] = config['prior_mlp_scale_weights_sqrt'] if 'prior_mlp_scale_weights_sqrt' in prior_hyperparameters else None
         prior_hyperparameters['rotate_normalized_labels'] = config['rotate_normalized_labels'] if 'rotate_normalized_labels' in prior_hyperparameters else True
 
-        get_batch_base = make_get_batch(priors.prior_bag.get_batch_bag, **extra_kwargs)
-        extra_kwargs = {'get_batch': get_batch_base, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
+        extra_kwargs = {'get_batch': priors.prior_bag.get_batch_bag, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
         DataLoader = priors.differentiable_prior.DataLoader
 
         extra_prior_kwargs_dict = {
@@ -51,7 +41,7 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size,
     elif prior_type == "boolean_only":
         DataLoader = priors.boolean_conjunctions.DataLoader
         extra_prior_kwargs_dict = {
-            'num_features': config['num_features'], 'hyperparameters': {}, 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None), **extra_kwargs
+            'num_features': config['num_features'], 'hyperparameters': {}, 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None)
         }
     elif prior_type == "bag_boolean":
         raise NotImplementedError()

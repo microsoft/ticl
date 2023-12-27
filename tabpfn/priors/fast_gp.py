@@ -128,10 +128,3 @@ def evaluate(x, y, y_non_noisy, use_mse=False, hyperparameters={}, get_model_on_
             losses_after_t.append(ls.mean())
             all_losses_after_t.append(ls.flatten())
         return torch.stack(all_losses_after_t).to('cpu'), torch.tensor(losses_after_t).to('cpu'), time.time() - start_time
-
-
-if __name__ == '__main__':
-    hps = (.1, .1, .1)
-    for redo_idx in range(1):
-        print(
-            evaluate(*get_batch(1000, 10, hyperparameters=hps, num_features=10), use_mse=False, hyperparameters=hps))

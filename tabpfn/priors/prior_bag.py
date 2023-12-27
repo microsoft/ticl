@@ -2,9 +2,6 @@ import torch
 
 from tabpfn.utils import default_device
 
-from .utils import get_batch_to_dataloader
-
-
 def get_batch_bag(batch_size, seq_len, num_features, device=default_device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
@@ -27,6 +24,3 @@ def get_batch_bag(batch_size, seq_len, num_features, device=default_device, hype
     x, y, y_ = zip(*sample)
     x, y, y_ = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach())
     return x, y, y_
-
-
-DataLoader = get_batch_to_dataloader(get_batch_bag)

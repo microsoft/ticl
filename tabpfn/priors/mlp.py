@@ -7,9 +7,6 @@ from torch import nn
 
 from tabpfn.utils import default_device
 
-from .utils import get_batch_to_dataloader
-
-
 class GaussianNoise(nn.Module):
     def __init__(self, std, device):
         super().__init__()
@@ -197,6 +194,3 @@ def get_batch_mlp(batch_size, seq_len, num_features, hyperparameters, device=def
     x = torch.cat(x, 1).detach()
 
     return x, y, y
-
-
-DataLoader = get_batch_to_dataloader(get_batch_mlp)
