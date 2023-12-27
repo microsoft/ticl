@@ -135,7 +135,7 @@ def main(argv):
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
     parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
     parser.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
-    parser.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only'].", default='prior_bag', type=str)
+    parser.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
 
     args = parser.parse_args(argv)
 
