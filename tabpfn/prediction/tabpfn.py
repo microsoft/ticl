@@ -149,7 +149,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y, overwrite_warning=False):
 
-        model_key = self.model_string+'|'+str(self.device)
+        model_key = self.model_string+'|'+str(self.device) + '|' + str(self.epoch)
         if model_key in self.models_in_memory:
             if self.verbose:
                 print(f"using model {model_key}")
