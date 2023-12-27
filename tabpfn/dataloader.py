@@ -1,4 +1,5 @@
 import tabpfn.priors as priors
+from functools import partial
 
 
 def get_mlp_prior_hyperparameters(config):
@@ -10,18 +11,9 @@ def get_gp_prior_hyperparameters(config):
     return {hp: (list(config[hp].values())[0]) if type(config[hp]) is dict else config[hp] for hp in config}
 
 
-def make_get_batch(get_batch_base, **extra_kwargs):
-    def new_get_batch(batch_size, seq_len, num_features, hyperparameters, device, **kwargs): 
-        kwargs = {**extra_kwargs, **kwargs}  # new args overwrite pre-specified args
-        return get_batch_base(
-            batch_size=batch_size, seq_len=seq_len, device=device, hyperparameters=hyperparameters, num_features=num_features, **kwargs)
-    return new_get_batch
-
-
-def get_dataloader(prior_type, config, steps_per_epoch, batch_size,
-                   single_eval_pos_gen, bptt, device):
-    get_batch_gp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': priors.fast_gp.get_batch_gp})
-    get_batch_mlp = make_get_batch(priors.flexible_categorical.get_batch_flexible, **{'get_batch': priors.mlp.get_batch_mlp})
+def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_pos_gen, bptt, device):
+    get_batch_gp = partial(priors.flexible_categorical.get_batch_flexible, get_batch=priors.fast_gp.get_batch_gp)
+    get_batch_mlp = partial(priors.flexible_categorical.get_batch_flexible, get_batch=priors.mlp.get_batch_mlp)
 
     if prior_type == 'prior_bag':
         # Prior bag combines priors
