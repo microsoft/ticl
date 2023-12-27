@@ -172,25 +172,19 @@ class MLP(torch.nn.Module):
 
         return x, y
 
+class MLPPrior:
+    def get_batch(self, batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
+        if 'multiclass_type' in hyperparameters and hyperparameters['multiclass_type'] == 'multi_node':
+            num_outputs = num_outputs * hyperparameters['num_classes']
 
-def get_batch_mlp(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
-    if 'multiclass_type' in hyperparameters and hyperparameters['multiclass_type'] == 'multi_node':
-        num_outputs = num_outputs * hyperparameters['num_classes']
+        if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
+            s = hyperparameters['prior_mlp_activations']()
+            hyperparameters['prior_mlp_activations'] = lambda: s
 
-    if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
-        s = hyperparameters['prior_mlp_activations']()
-        hyperparameters['prior_mlp_activations'] = lambda: s
+        sample = [MLP(hyperparameters, device, num_features, num_outputs, seq_len, sampling).to(device)() for _ in range(0, batch_size)]
+        x, y = zip(*sample)
+        
+        y = torch.cat(y, 1).detach().squeeze(2)
+        x = torch.cat(x, 1).detach()
 
-    if hyperparameters.get('new_mlp_per_example', False):
-        def get_model(): return MLP(hyperparameters, device, num_features, num_outputs, seq_len, sampling).to(device)
-    else:
-        model = MLP(hyperparameters, device, num_features, num_outputs, seq_len, sampling).to(device)
-        def get_model(): return model
-
-    sample = [get_model()() for _ in range(0, batch_size)]
-    x, y = zip(*sample)
-    
-    y = torch.cat(y, 1).detach().squeeze(2)
-    x = torch.cat(x, 1).detach()
-
-    return x, y, y
+        return x, y, y

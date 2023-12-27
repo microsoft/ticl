@@ -31,67 +31,64 @@ def get_model(x, y, hyperparameters):
         hyperparameters["lengthscale"]
     return model, likelihood
 
+class GPPrior:
+    def get_batch(self, batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
+                equidistant_x=False, fix_x=None, **kwargs):
+        with torch.no_grad():
+            if isinstance(hyperparameters, (tuple, list)):
+                hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
+                                    "normalize_by_used_features": hyperparameters[5], "order_y": hyperparameters[6], "sampling": hyperparameters[7]
+                                    }
+            elif hyperparameters is None:
+                hyperparameters = {"noise": .1, "outputscale": .1, "lengthscale": .1}
 
-@torch.no_grad()
-def get_batch_gp(batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
-              equidistant_x=False, fix_x=None, **kwargs):
-    if isinstance(hyperparameters, (tuple, list)):
-        hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
-                           "normalize_by_used_features": hyperparameters[5], "order_y": hyperparameters[6], "sampling": hyperparameters[7]
-                           }
-    elif hyperparameters is None:
-        hyperparameters = {"noise": .1, "outputscale": .1, "lengthscale": .1}
+            if 'verbose' in hyperparameters and hyperparameters['verbose']:
+                print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
+                        "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size, 'sampling': hyperparameters['sampling']})
 
-    if 'verbose' in hyperparameters and hyperparameters['verbose']:
-        print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
-              "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size, 'sampling': hyperparameters['sampling']})
+            # hyperparameters = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
+            #      hyperparameters.keys()}
+            assert not (equidistant_x and (fix_x is not None))
 
-    # hyperparameters = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
-    #      hyperparameters.keys()}
-    assert not (equidistant_x and (fix_x is not None))
+            with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))):
+                if equidistant_x:
+                    assert num_features == 1
+                    x = torch.linspace(0, 1., seq_len).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
+                elif fix_x is not None:
+                    assert fix_x.shape == (seq_len, num_features)
+                    x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
+                else:
+                    if hyperparameters.get('sampling', 'uniform') == 'uniform':
+                        x = torch.rand(batch_size, seq_len, num_features, device=device)
+                    else:
+                        x = torch.randn(batch_size, seq_len, num_features, device=device)
+                model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
+                model.to(device)
+                # trained_model = ExactGPModel(train_x, train_y, likelihood).cuda()
+                # trained_model.eval()
+                is_fitted = False
+                while not is_fitted:
+                    try:
+                        with gpytorch.settings.prior_mode(True):
+                            model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
+                            model.to(device)
 
-    with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))):
-        if equidistant_x:
-            assert num_features == 1
-            x = torch.linspace(0, 1., seq_len).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
-        elif fix_x is not None:
-            assert fix_x.shape == (seq_len, num_features)
-            x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
-        else:
-            if hyperparameters.get('sampling', 'uniform') == 'uniform':
-                x = torch.rand(batch_size, seq_len, num_features, device=device)
-            else:
-                x = torch.randn(batch_size, seq_len, num_features, device=device)
-        model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
-        model.to(device)
-        # trained_model = ExactGPModel(train_x, train_y, likelihood).cuda()
-        # trained_model.eval()
-        is_fitted = False
-        while not is_fitted:
-            try:
-                with gpytorch.settings.prior_mode(True):
-                    model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
-                    model.to(device)
+                            d = model(x)
+                            d = likelihood(d)
+                            sample = d.sample().transpose(0, 1)
+                            is_fitted = True
+                    except RuntimeError:  # This can happen when torch.linalg.eigh fails. Restart with new init resolves this.
+                        print('GP Fitting unsuccessful, retrying.. ')
+                        print(x)
+                        print(hyperparameters)
 
-                    d = model(x)
-                    d = likelihood(d)
-                    sample = d.sample().transpose(0, 1)
-                    is_fitted = True
-            except RuntimeError:  # This can happen when torch.linalg.eigh fails. Restart with new init resolves this.
-                print('GP Fitting unsuccessful, retrying.. ')
-                print(x)
-                print(hyperparameters)
+            if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
+                print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
+                        "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size})
 
-    if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
-        print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
-              "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size})
-
-    # TODO: Multi output
-    return x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
-
-
-DataLoader = get_batch_to_dataloader(get_batch_gp)
-DataLoader.num_outputs = 1
+            # TODO: Multi output
+            res =  x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
+        return res
 
 
 def get_model_on_device(x, y, hyperparameters, device):

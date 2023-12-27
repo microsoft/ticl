@@ -327,7 +327,6 @@ def get_base_config_paper():
 
     config['normalize_with_sqrt'] = False
 
-    config['new_mlp_per_example'] = True
     config['prior_mlp_scale_weights_sqrt'] = True
     config['batch_size_per_gp_sample'] = None
 
