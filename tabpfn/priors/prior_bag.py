@@ -1,6 +1,7 @@
 import torch
 
 from tabpfn.utils import default_device
+from tabpfn.priors.utils import eval_simple_dist
 
 class BagPrior:
     def __init__(self, base_priors, prior_exp_weights, verbose=False):
@@ -19,7 +20,7 @@ class BagPrior:
 
         args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample}
 
-        prior_bag_priors_p = [self.prior_exp_weights.get(prior_name, 1) for prior_name in self.prior_names]
+        prior_bag_priors_p = [eval_simple_dist(self.prior_exp_weights.get(prior_name, 1)) for prior_name in self.prior_names]
 
         weights = torch.tensor(prior_bag_priors_p, dtype=torch.float)
         batch_assignments = torch.multinomial(torch.softmax(weights, 0), num_models, replacement=True).numpy()

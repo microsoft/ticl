@@ -11,6 +11,14 @@ from tabpfn.utils import set_locals_in_self
 from torch.utils.data import DataLoader
 
 
+def eval_simple_dist(dist_dict):
+    if not isinstance(dist_dict, dict):
+        return dist_dict
+    if dist_dict['distribution'] == "uniform":
+        return np.random.uniform(dist_dict['min'], dist_dict['max'])
+    raise ValueError("Distribution not supported")
+
+
 def get_batch_to_dataloader(get_batch_method_):
     class DL(DataLoader):
         get_batch_method = get_batch_method_
