@@ -33,7 +33,7 @@ def get_model(x, y, hyperparameters):
 
 
 @torch.no_grad()
-def get_batch(batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
+def get_batch_gp(batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
               equidistant_x=False, fix_x=None, **kwargs):
     if isinstance(hyperparameters, (tuple, list)):
         hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
@@ -90,7 +90,7 @@ def get_batch(batch_size, seq_len, num_features, device=default_device, hyperpar
     return x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
 
 
-DataLoader = get_batch_to_dataloader(get_batch)
+DataLoader = get_batch_to_dataloader(get_batch_gp)
 DataLoader.num_outputs = 1
 
 

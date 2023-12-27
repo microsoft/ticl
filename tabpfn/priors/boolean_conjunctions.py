@@ -61,7 +61,7 @@ class BooleanConjunctionSampler:
         return *self.normalize_and_pad(x, y), sample_params
 
 
-def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
+def get_batch_boolean(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
     assert num_outputs == 1
     sample = [BooleanConjunctionSampler(hyperparameters, seq_len=seq_len, num_features=num_features, device=device)() for _ in range(0, batch_size)]
     x, y, _ = zip(*sample)
@@ -71,4 +71,4 @@ def get_batch(batch_size, seq_len, num_features, hyperparameters, device=default
     return x, y, y
 
 
-DataLoader = get_batch_to_dataloader(get_batch)
+DataLoader = get_batch_to_dataloader(get_batch_boolean)

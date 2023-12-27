@@ -8,11 +8,11 @@ from torch import nn
 
 from tabpfn.utils import set_locals_in_self
 
-from .prior import PriorDataLoader
+from torch.utils.data import DataLoader
 
 
 def get_batch_to_dataloader(get_batch_method_):
-    class DL(PriorDataLoader):
+    class DL(DataLoader):
         get_batch_method = get_batch_method_
 
         # Caution, you might need to set self.num_features manually if it is not part of the args.
@@ -47,62 +47,6 @@ def get_batch_to_dataloader(get_batch_method_):
             return iter(self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
     return DL
-
-
-def plot_features(data, targets, fig=None, categorical=True):
-    import matplotlib.gridspec as gridspec
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    if torch.is_tensor(data):
-        data = data.detach().cpu().numpy()
-        targets = targets.detach().cpu().numpy()
-    # data = np.concatenate([data, np.expand_dims(targets, -1)], -1)
-    # df = pd.DataFrame(data, columns=list(range(0, data.shape[1])))
-    # g = sns.pairplot(df, hue=data.shape[1]-1, palette="Set2", diag_kind="kde", height=2.5)
-    # plt.legend([], [], frameon=False)
-    # g._legend.remove()
-    # g = sns.PairGrid(df, hue=data.shape[1]-1)
-    # g.map_diag(sns.histplot)
-    # g.map_offdiag(sns.scatterplot)
-    # g._legend.remove()
-
-    fig2 = fig if fig else plt.figure(figsize=(8, 8))
-    spec2 = gridspec.GridSpec(ncols=data.shape[1], nrows=data.shape[1], figure=fig2)
-    for d in range(0, data.shape[1]):
-        for d2 in range(0, data.shape[1]):
-            if d > d2:
-                continue
-            sub_ax = fig2.add_subplot(spec2[d, d2])
-            sub_ax.set_xticks([])
-            sub_ax.set_yticks([])
-            if d == d2:
-                if categorical:
-                    sns.kdeplot(data[:, d], hue=targets[:], ax=sub_ax, legend=False, palette="deep")
-                else:
-                    sns.kdeplot(data[:, d], ax=sub_ax, legend=False)
-                sub_ax.set(ylabel=None)
-            else:
-                if categorical:
-                    sns.scatterplot(x=data[:, d], y=data[:, d2],
-                                    hue=targets[:], legend=False, palette="deep")
-                else:
-                    sns.scatterplot(x=data[:, d], y=data[:, d2],
-                                    hue=targets[:], legend=False)
-                # plt.scatter(data[:, d], data[:, d2],
-                #               c=targets[:])
-            # sub_ax.get_xaxis().set_ticks([])
-            # sub_ax.get_yaxis().set_ticks([])
-    plt.subplots_adjust(wspace=0.05, hspace=0.05)
-    fig2.show()
-
-
-def plot_prior(prior):
-    import matplotlib.pyplot as plt
-    s = np.array([prior() for _ in range(0, 1000)])
-    count, bins, ignored = plt.hist(s, 50, density=True)
-    print(s.min())
-    plt.show()
-
 
 def trunc_norm_sampler_f(mu, sigma): return lambda: stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma).rvs(1)[0]
 def beta_sampler_f(a, b): return lambda: np.random.beta(a, b)

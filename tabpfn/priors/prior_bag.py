@@ -5,7 +5,7 @@ from tabpfn.utils import default_device
 from .utils import get_batch_to_dataloader
 
 
-def get_batch(batch_size, seq_len, num_features, device=default_device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
+def get_batch_bag(batch_size, seq_len, num_features, device=default_device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
     assert num_models * \
@@ -29,4 +29,4 @@ def get_batch(batch_size, seq_len, num_features, device=default_device, hyperpar
     return x, y, y_
 
 
-DataLoader = get_batch_to_dataloader(get_batch)
+DataLoader = get_batch_to_dataloader(get_batch_bag)

@@ -277,7 +277,7 @@ class FlexibleCategorical(torch.nn.Module):
 
 
 @torch.no_grad()
-def get_batch(batch_size, seq_len, num_features, get_batch, device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
+def get_batch_flexible(batch_size, seq_len, num_features, get_batch, device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(32, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
     assert num_models > 0, f'Batch size ({batch_size}) is too small for batch_size_per_gp_sample ({batch_size_per_gp_sample})'
@@ -299,4 +299,4 @@ def get_batch(batch_size, seq_len, num_features, get_batch, device, hyperparamet
     return x, y, y_
 
 
-DataLoader = get_batch_to_dataloader(get_batch)
+DataLoader = get_batch_to_dataloader(get_batch_flexible)

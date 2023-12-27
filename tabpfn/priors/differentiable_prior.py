@@ -221,7 +221,7 @@ class DifferentiablePrior(torch.nn.Module):
 
 # TODO: Make this a class that keeps objects
 @torch.no_grad()
-def get_batch(batch_size, seq_len, num_features, get_batch, device=default_device, differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
+def get_batch_differentiable(batch_size, seq_len, num_features, get_batch, device=default_device, differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
     assert num_models * \
@@ -258,7 +258,7 @@ def get_batch(batch_size, seq_len, num_features, get_batch, device=default_devic
     return x, y, y_, (packed_hyperparameters if hyperparameters.get('differentiable_hps_as_style', True) else None)
 
 
-DataLoader = get_batch_to_dataloader(get_batch)
+DataLoader = get_batch_to_dataloader(get_batch_differentiable)
 
 
 def draw_random_style(dl, device):
