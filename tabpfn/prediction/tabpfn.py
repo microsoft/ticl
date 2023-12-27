@@ -76,7 +76,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
-                 subsample_features=False, verbose=False, scaling=True, epoch=-1):
+                 subsample_features=False, verbose=False, scale=True, epoch=-1):
         """
         Initializes the classifier and loads the model.
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the
@@ -124,7 +124,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.subsample_features = subsample_features
         self.epoch = epoch
         self.temperature = None
-        self.scaling = scaling
+        self.scale = scale
 
         assert self.no_preprocess_mode if not self.no_grad else True, \
             "If no_grad is false, no_preprocess_mode must be true, because otherwise no gradient can be computed."
@@ -234,7 +234,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          seed=self.seed,
                                          return_logits=return_logits,
                                          no_grad=self.no_grad,
-                                         batch_size_inference=self.batch_size_inference, scaling=self.scaling,
+                                         batch_size_inference=self.batch_size_inference, scale=self.scale,
                                          **get_params_from_config(self.c))
         prediction_ = prediction.squeeze(0)
 
@@ -266,7 +266,7 @@ def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits, mo
 
 
 def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, normalize_with_test, eval_position,
-                     categorical_feats, device, normalize_to_ranking, normalize_with_sqrt, scaling):
+                     categorical_feats, device, normalize_to_ranking, normalize_with_sqrt, scale):
     import warnings
 
     if eval_xs.shape[1] > 1:
@@ -283,7 +283,7 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
         elif preprocess_transform == 'robust' or preprocess_transform == 'robust_all':
             pt = RobustScaler(unit_variance=True)
 
-    if scaling:
+    if scale:
         eval_xs = normalize_data(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     else:
         eval_xs = torch.clip(eval_xs, min=-100, max=100)
@@ -324,7 +324,7 @@ def transformer_predict(
         num_classes=2, extend_features=True, normalize_with_test=False, normalize_to_ranking=False, softmax_temperature=0.0,
         multiclass_decoder='permutation', preprocess_transform='mix', categorical_feats=[], feature_shift_decoder=False,
         N_ensemble_configurations=10, batch_size_inference=16, differentiable_hps_as_style=False, average_logits=True,
-        fp16_inference=False, normalize_with_sqrt=False, seed=0, no_grad=True, return_logits=False, scaling=True, **kwargs):
+        fp16_inference=False, normalize_with_sqrt=False, seed=0, no_grad=True, return_logits=False, scale=True, **kwargs):
     
     num_classes = len(torch.unique(eval_ys))
 
@@ -378,7 +378,7 @@ def transformer_predict(
             eval_xs_ = preprocess_input(eval_xs_, eval_ys, preprocess_transform=preprocess_transform_configuration, max_features=max_features,
                                         normalize_with_test=normalize_with_test, eval_position=eval_position, categorical_feats=categorical_feats,
                                         device=device, normalize_to_ranking=normalize_to_ranking, normalize_with_sqrt=normalize_with_sqrt,
-                                        scaling=scaling)
+                                        scale=scale)
             if no_grad:
                 eval_xs_ = eval_xs_.detach()
             eval_xs_transformed[preprocess_transform_configuration] = eval_xs_
