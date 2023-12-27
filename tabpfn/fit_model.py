@@ -29,7 +29,6 @@ def str2bool(v):
 
 def main(argv):
     config = get_prior_config(config_type='causal')
-    config['differentiable'], config['flexible'] = True, True
     config['recompute_attn'] = True
     config['max_num_classes'] = 10
     config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])

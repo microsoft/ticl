@@ -117,7 +117,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     epochs = 0 if not should_train else config['epochs']
 
     dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], device=device,
-                             prior_type=config['prior_type'], flexible=config['flexible'], differentiable=config['differentiable'],
+                             prior_type=config['prior_type'],
                              single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']),
                                                                                      min_len=config.get('min_eval_pos', 0)),)
     dl = get_dataloader(config=config,
