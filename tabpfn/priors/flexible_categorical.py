@@ -274,28 +274,28 @@ class FlexibleCategorical(torch.nn.Module):
 
         return x, y, y  # x.shape = (T,B,H)
 
+class FlexibleCategoricalPrior:
+    def __init__(self, base_prior):
+        self.base_prior = base_prior
 
-@torch.no_grad()
-def get_batch_flexible(batch_size, seq_len, num_features, get_batch, device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
-    batch_size_per_gp_sample = batch_size_per_gp_sample or (min(32, batch_size))
-    num_models = batch_size // batch_size_per_gp_sample
-    assert num_models > 0, f'Batch size ({batch_size}) is too small for batch_size_per_gp_sample ({batch_size_per_gp_sample})'
-    assert num_models * \
-        batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+    def get_batch(self, batch_size, seq_len, num_features, device, hyperparameters=None, batch_size_per_gp_sample=None, **kwargs):
+        with torch.no_grad():
+            batch_size_per_gp_sample = batch_size_per_gp_sample or (min(32, batch_size))
+            num_models = batch_size // batch_size_per_gp_sample
+            assert num_models > 0, f'Batch size ({batch_size}) is too small for batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+            assert num_models * \
+                batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
 
-    # Sample one seq_len for entire batch
-    seq_len = hyperparameters['seq_len_used']() if callable(hyperparameters['seq_len_used']) else seq_len
+            # Sample one seq_len for entire batch
+            seq_len = hyperparameters['seq_len_used']() if callable(hyperparameters['seq_len_used']) else seq_len
 
-    args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, **kwargs}
+            args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, **kwargs}
 
-    models = [FlexibleCategorical(get_batch, hyperparameters, args).to(device) for _ in range(num_models)]
+            models = [FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args).to(device) for _ in range(num_models)]
 
-    sample = [model(batch_size=batch_size_per_gp_sample) for model in models]
+            sample = [model(batch_size=batch_size_per_gp_sample) for model in models]
 
-    x, y, y_ = zip(*sample)
-    x, y, y_ = torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach()
+            x, y, y_ = zip(*sample)
+            x, y, y_ = torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach()
 
-    return x, y, y_
-
-
-DataLoader = get_batch_to_dataloader(get_batch_flexible)
+        return x, y, y_

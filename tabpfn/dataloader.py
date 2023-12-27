@@ -1,6 +1,6 @@
 import tabpfn.priors as priors
-from functools import partial
-
+from tabpfn.priors.flexible_categorical import FlexibleCategoricalPrior
+from tabpfn.priors.prior_bag import BagPrior
 
 def get_mlp_prior_hyperparameters(config):
     config = {hp: (list(config[hp].values())[0]) if type(config[hp]) is dict else config[hp] for hp in config}
@@ -12,17 +12,20 @@ def get_gp_prior_hyperparameters(config):
 
 
 def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_pos_gen, bptt, device):
-    get_batch_gp = partial(priors.flexible_categorical.get_batch_flexible, get_batch=priors.fast_gp.get_batch_gp)
-    get_batch_mlp = partial(priors.flexible_categorical.get_batch_flexible, get_batch=priors.mlp.get_batch_mlp)
-
+    gp_flexible = FlexibleCategoricalPrior(priors.fast_gp.GPPrior())
+    mlp_flexible = FlexibleCategoricalPrior(priors.mlp.MLPPrior())
+    
     if prior_type == 'prior_bag':
         # Prior bag combines priors
-        prior_bag_hyperparameters = {'prior_bag_get_batch': (get_batch_gp, get_batch_mlp), 'prior_bag_exp_weights_1': 2.0}
+        # prior_hyperparameters = {**get_mlp_prior_hyperparameters(config), **get_gp_prior_hyperparameters(config)}
+        prior_bag_hyperparameters = {'prior_bag_get_batch': (gp_flexible.get_batch, mlp_flexible.get_batch), 'prior_bag_exp_weights_1': 2.0}
         prior_hyperparameters = {**get_mlp_prior_hyperparameters(config), **get_gp_prior_hyperparameters(config), **prior_bag_hyperparameters}
 
         prior_hyperparameters['prior_mlp_scale_weights_sqrt'] = config['prior_mlp_scale_weights_sqrt'] if 'prior_mlp_scale_weights_sqrt' in prior_hyperparameters else None
         prior_hyperparameters['rotate_normalized_labels'] = config['rotate_normalized_labels'] if 'rotate_normalized_labels' in prior_hyperparameters else True
 
+        #bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible}, prior_exp_weights={'mlp': 2.0}, verbose=True)
+        #extra_kwargs = {'get_batch': bag_prior.get_batch, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
         extra_kwargs = {'get_batch': priors.prior_bag.get_batch_bag, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
         DataLoader = priors.differentiable_prior.DataLoader
 

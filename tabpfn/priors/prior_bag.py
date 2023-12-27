@@ -8,6 +8,7 @@ class BagPrior:
         # let's make sure we get consistent sorting of the base priors by name
         self.prior_names = sorted(base_priors.keys())
         self.prior_exp_weights = prior_exp_weights
+        self.verbose = verbose
 
 
     def get_batch(self, *, batch_size, seq_len, num_features, device, hyperparameters, batch_size_per_gp_sample=None, **kwargs):
@@ -23,7 +24,7 @@ class BagPrior:
         weights = torch.tensor(prior_bag_priors_p, dtype=torch.float)
         batch_assignments = torch.multinomial(torch.softmax(weights, 0), num_models, replacement=True).numpy()
 
-        if 'verbose' in hyperparameters and hyperparameters['verbose']:
+        if self.verbose or 'verbose' in hyperparameters and hyperparameters['verbose']:
             print('PRIOR_BAG:', weights, batch_assignments)
 
         sample = [self.base_priors[self.prior_names[int(prior_idx)]].get_batch(hyperparameters=hyperparameters, **args, **kwargs) for prior_idx in batch_assignments]
@@ -45,7 +46,7 @@ def get_batch_bag(batch_size, seq_len, num_features, device=default_device, hype
     weights = torch.tensor(prior_bag_priors_p, dtype=torch.float)  # create a tensor of weights
     batch_assignments = torch.multinomial(torch.softmax(weights, 0), num_models, replacement=True).numpy()
 
-    if 'verbose' in hyperparameters and hyperparameters['verbose']:
+    if True or 'verbose' in hyperparameters and hyperparameters['verbose']:
         print('PRIOR_BAG:', weights, batch_assignments)
 
     sample = [prior_bag_priors_get_batch[int(prior_idx)](hyperparameters=hyperparameters, **args, **kwargs) for prior_idx in batch_assignments]
