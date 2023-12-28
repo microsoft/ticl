@@ -118,12 +118,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
 
-    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
-                             prior_type=config['prior_type'],
-                             single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['n_samples']),
-                                                                                     min_len=config.get('min_eval_pos', 0)),)
-    dl = get_dataloader(config=config,
-                        **dataloader_config)
+    dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
+                        prior_type=config['prior_type'])
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
@@ -136,7 +132,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
                            verbose=True, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
                            output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'],
-                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None, num_latents=config['num_latents'], shared_embedding=config.get('shared_embedding', False))
+                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
+                           num_latents=config['num_latents'], shared_embedding=config.get('shared_embedding', False))
 
     if 'losses' in config:
         # for continuing training

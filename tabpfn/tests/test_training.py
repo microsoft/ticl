@@ -28,7 +28,7 @@ def test_train_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
-    assert results['loss'] == pytest.approx(2.4078104496002197)
+    assert results['loss'] == pytest.approx(2.413173198699951)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
@@ -39,7 +39,7 @@ def test_train_synetune():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
         assert results['epoch'] == 10
-        assert results['loss'] == pytest.approx(2.4078104496002197)
+        assert results['loss'] == pytest.approx(2.413173198699951)
         assert count_parameters(results['model']) == 1544650
         assert isinstance(results['model'], MotherNet)
         results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
@@ -53,7 +53,7 @@ def test_train_reload():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--save-every', '1'])
         prev_file_name = f'{results["base_path"]}/models_diff/{results["model_string"]}_epoch_2.cpkt'
         assert results['epoch'] == 2
-        assert results['loss'] == 2.5080678462982178
+        assert results['loss'] == 2.4466938972473145
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
         results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
@@ -85,7 +85,7 @@ def test_train_double_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
-    assert results['loss'] == pytest.approx(2.2882533073425293)
+    assert results['loss'] == pytest.approx(2.303295612335205)
     assert count_parameters(results['model']) == 1775818
     assert isinstance(results['model'], MotherNet)
 
@@ -94,7 +94,7 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
-    assert results['loss'] == pytest.approx(2.320765733718872)
+    assert results['loss'] == pytest.approx(2.2781028747558594)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert results['model'].special_token
@@ -106,7 +106,7 @@ def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
-    assert results['loss'] == pytest.approx(2.4078104496002197)
+    assert results['loss'] == pytest.approx(2.413173198699951)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
 
@@ -115,7 +115,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == pytest.approx(2.36336612701416)
+    assert results['loss'] == pytest.approx(1.747198224067688)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], MotherNet)
 
@@ -125,7 +125,7 @@ def test_train_low_rank_ignored():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'False'])
-    assert results['loss'] == pytest.approx(2.4078104496002197)
+    assert results['loss'] == pytest.approx(2.413173198699951)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
 
@@ -136,7 +136,7 @@ def test_train_low_rank():
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(2.297915458679199)
+    assert results['loss'] == pytest.approx(2.3148508071899414)
     assert count_parameters(results['model']) == 926474
     assert isinstance(results['model'], MotherNet)
 
@@ -145,15 +145,16 @@ def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
-    assert results['loss'] == pytest.approx(2.3615238666534424)
+    assert results['loss'] == pytest.approx(2.3389315605163574)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
+
 
 def test_train_tabpfn_stepped_multiclass():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
-    assert results['loss'] == pytest.approx(2.3238935470581055)
+    assert results['loss'] == pytest.approx(1.1514606475830078)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -161,7 +162,7 @@ def test_train_tabpfn_boolean_prior():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only'])
-    assert results['loss'] == pytest.approx(2.340055227279663)
+    assert results['loss'] == pytest.approx(2.3410935401916504)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -180,7 +181,7 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == pytest.approx(2.7865326404571533, rel=1e-5)
+    assert results['loss'] == pytest.approx(3.188436269760132, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
@@ -199,7 +200,7 @@ def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
-    assert results['loss'] == pytest.approx(2.9849178791046143)
+    assert results['loss'] == pytest.approx(2.3175413608551025)
     assert count_parameters(results['model']) == 1744842
     assert isinstance(results['model'], TabPerceiver)
 
@@ -208,7 +209,7 @@ def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == pytest.approx(2.0050277709960938)
+    assert results['loss'] == pytest.approx(1.7616592645645142)
     assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
 
@@ -217,6 +218,6 @@ def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(2.189209461212158, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.3218555450439453, rel=1e-5)
     assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)
