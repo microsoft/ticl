@@ -60,7 +60,7 @@ def main(argv):
     config['normalize_with_sqrt'] = False
 
     config['prior_mlp_scale_weights_sqrt'] = True
-    config['batch_size_per_gp_sample'] = None
+    config['batch_size_per_prior_sample'] = None
 
     config['normalize_ignore_label_too'] = False
 

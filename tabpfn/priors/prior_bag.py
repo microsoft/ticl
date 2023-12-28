@@ -12,13 +12,13 @@ class BagPrior:
         self.verbose = verbose
 
 
-    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters, batch_size_per_gp_sample=None, epoch=None, single_eval_pos=None):
-        batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
-        num_models = batch_size // batch_size_per_gp_sample
+    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
+        batch_size_per_prior_sample = batch_size_per_prior_sample or (min(64, batch_size))
+        num_models = batch_size // batch_size_per_prior_sample
         assert num_models * \
-            batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+            batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
 
-        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
         prior_bag_priors_p = [eval_simple_dist(self.prior_exp_weights.get(prior_name, 1)) for prior_name in self.prior_names]
 

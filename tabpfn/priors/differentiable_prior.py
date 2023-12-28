@@ -222,13 +222,13 @@ class DifferentiablePrior(torch.nn.Module):
 # TODO: Make this a class that keeps objects
 @torch.no_grad()
 def get_batch_differentiable(batch_size, n_samples, num_features, get_batch, device=default_device,
-                             differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_gp_sample=None, epoch=None, single_eval_pos=None):
-    batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
-    num_models = batch_size // batch_size_per_gp_sample
+                             differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
+    batch_size_per_prior_sample = batch_size_per_prior_sample or (min(64, batch_size))
+    num_models = batch_size // batch_size_per_prior_sample
     assert num_models * \
-        batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
+        batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
 
-    args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+    args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
     models = [DifferentiablePrior(get_batch, hyperparameters, differentiable_hyperparameters, args) for _ in range(num_models)]
     sample = sum([[model()] for model in models], [])
@@ -249,11 +249,11 @@ def get_batch_differentiable(batch_size, n_samples, num_features, get_batch, dev
     hyperparameter_matrix = [[hp for hp in hp_ if hp is not None] for hp_ in hyperparameter_matrix]
     if len(hyperparameter_matrix[0]) > 0:
         packed_hyperparameters = torch.tensor(hyperparameter_matrix)
-        packed_hyperparameters = torch.repeat_interleave(packed_hyperparameters, repeats=batch_size_per_gp_sample, dim=0).detach()
+        packed_hyperparameters = torch.repeat_interleave(packed_hyperparameters, repeats=batch_size_per_prior_sample, dim=0).detach()
     else:
         packed_hyperparameters = None
 
-    # list(itertools.chain.from_iterable(itertools.repeat(x, batch_size_per_gp_sample) for x in packed_hyperparameters)))#torch.repeat_interleave(torch.stack(packed_hyperparameters, 0).detach(), repeats=batch_size_per_gp_sample, dim=0))
+    # list(itertools.chain.from_iterable(itertools.repeat(x, batch_size_per_prior_sample) for x in packed_hyperparameters)))#torch.repeat_interleave(torch.stack(packed_hyperparameters, 0).detach(), repeats=batch_size_per_prior_sample, dim=0))
     x, y, y_, packed_hyperparameters = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach(), packed_hyperparameters)
     return x, y, y_, (packed_hyperparameters if hyperparameters.get('differentiable_hps_as_style', True) else None)
 

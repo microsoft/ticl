@@ -16,12 +16,12 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
         DataLoader = priors.differentiable_prior.DataLoader
 
         extra_prior_kwargs_dict = {
-            'num_features': config['num_features'], 'hyperparameters': hyperparameters, 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None), **extra_kwargs
+            'num_features': config['num_features'], 'hyperparameters': hyperparameters, 'batch_size_per_prior_sample': config.get('batch_size_per_prior_sample', None), **extra_kwargs
         }
     elif prior_type == "boolean_only":
         DataLoader = priors.boolean_conjunctions.DataLoader
         extra_prior_kwargs_dict = {
-            'num_features': config['num_features'], 'hyperparameters': {}, 'batch_size_per_gp_sample': config.get('batch_size_per_gp_sample', None)
+            'num_features': config['num_features'], 'hyperparameters': {}, 'batch_size_per_prior_sample': config.get('batch_size_per_prior_sample', None)
         }
     elif prior_type == "bag_boolean":
         raise NotImplementedError()
