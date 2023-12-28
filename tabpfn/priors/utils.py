@@ -19,36 +19,36 @@ def eval_simple_dist(dist_dict):
     raise ValueError("Distribution not supported")
 
 
-def get_batch_to_dataloader(get_batch_method_):
-    class DL(DataLoader):
-        get_batch_method = get_batch_method_
+class PriorDataLoader(DataLoader):
+    def __init__(self, prior, num_steps, batch_size, eval_pos_n_samples_sampler, device, num_features, hyperparameters,
+                    batch_size_per_prior_sample):
+        self.prior = prior
+        self.num_steps = num_steps
+        self.batch_size = batch_size
+        self.eval_pos_n_samples_sampler = eval_pos_n_samples_sampler
+        self.device = device
+        self.num_features = num_features
+        self.hyperparameters = hyperparameters
+        self.batch_size_per_prior_sample = batch_size_per_prior_sample
+        self.epoch_count = 0
 
-        # Caution, you might need to set self.num_features manually if it is not part of the args.
-        def __init__(self, num_steps, **get_batch_kwargs):
-            set_locals_in_self(locals())
+    def gbm(self, epoch=None):
+        single_eval_pos, n_samples = self.eval_pos_n_samples_sampler()
+        batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=n_samples, num_features=self.num_features, device=self.device,
+                                     hyperparameters=self.hyperparameters, batch_size_per_prior_sample=self.batch_size_per_prior_sample, epoch=epoch,
+                                     single_eval_pos=single_eval_pos)
+        x, y, target_y, style = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
+        return (style, x, y), target_y, single_eval_pos
+    
+    def __len__(self):
+        return self.num_steps
 
-            # The stuff outside the or is set as class attribute before instantiation.
-            self.num_features = get_batch_kwargs.get('num_features') or self.num_features
-            self.epoch_count = 0
-            # print('DataLoader.__dict__', self.__dict__)
+    def get_test_batch(self):  # does not increase epoch_count
+        return self.gbm(epoch=self.epoch_count)
 
-        @staticmethod
-        def gbm(*args, eval_pos_n_samples_sampler, **kwargs):
-            kwargs['single_eval_pos'], kwargs['n_samples'] = eval_pos_n_samples_sampler()
-            batch = get_batch_method_(*args, **kwargs)
-            x, y, target_y, style = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
-            return (style, x, y), target_y, kwargs['single_eval_pos']
-        def __len__(self):
-            return self.num_steps
-
-        def get_test_batch(self):  # does not increase epoch_count
-            return self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count)
-
-        def __iter__(self):
-            self.epoch_count += 1
-            return iter(self.gbm(**self.get_batch_kwargs, epoch=self.epoch_count - 1) for _ in range(self.num_steps))
-
-    return DL
+    def __iter__(self):
+        self.epoch_count += 1
+        return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 def trunc_norm_sampler_f(mu, sigma): return lambda: stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma).rvs(1)[0]
 def beta_sampler_f(a, b): return lambda: np.random.beta(a, b)

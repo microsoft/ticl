@@ -5,7 +5,7 @@ from torch import nn
 
 from tabpfn.utils import default_device
 
-from .utils import (beta_sampler_f, gamma_sampler_f, get_batch_to_dataloader,
+from .utils import (beta_sampler_f, gamma_sampler_f,
                     trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f)
 
 
@@ -219,46 +219,47 @@ class DifferentiablePrior(torch.nn.Module):
         return x, y, y_, sampled_hyperparameters_indicators
 
 
-# TODO: Make this a class that keeps objects
-@torch.no_grad()
-def get_batch_differentiable(batch_size, n_samples, num_features, get_batch, device=default_device,
-                             differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
-    batch_size_per_prior_sample = batch_size_per_prior_sample or (min(64, batch_size))
-    num_models = batch_size // batch_size_per_prior_sample
-    assert num_models * \
-        batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
+class DifferentiableSamplerPrior:
+    def __init__(self, base_prior, differentiable_hyperparameters):
+        self.base_prior = base_prior
+        self.differentiable_hyperparameters = differentiable_hyperparameters
 
-    args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device,
+                  hyperparameters=None, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
+        with torch.no_grad():
+            batch_size_per_prior_sample = batch_size_per_prior_sample or (min(64, batch_size))
+            num_models = batch_size // batch_size_per_prior_sample
+            assert num_models * \
+                batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
 
-    models = [DifferentiablePrior(get_batch, hyperparameters, differentiable_hyperparameters, args) for _ in range(num_models)]
-    sample = sum([[model()] for model in models], [])
+            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-    x, y, y_, hyperparameter_dict = zip(*sample)
+            models = [DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args) for _ in range(num_models)]
+            sample = sum([[model()] for model in models], [])
 
-    if 'verbose' in hyperparameters and hyperparameters['verbose']:
-        print('Hparams', hyperparameter_dict[0].keys())
+            x, y, y_, hyperparameter_dict = zip(*sample)
 
-    hyperparameter_matrix = []
-    for batch in hyperparameter_dict:
-        hyperparameter_matrix.append([batch[hp] for hp in batch])
+            if 'verbose' in hyperparameters and hyperparameters['verbose']:
+                print('Hparams', hyperparameter_dict[0].keys())
 
-    transposed_hyperparameter_matrix = list(zip(*hyperparameter_matrix))
-    assert all([all([hp is None for hp in hp_]) or all([hp is not None for hp in hp_]) for hp_ in transposed_hyperparameter_matrix]
-               ), 'it should always be the case that when a hyper-parameter is None, once it is always None'
-    # we remove columns that are only None (i.e. not sampled)
-    hyperparameter_matrix = [[hp for hp in hp_ if hp is not None] for hp_ in hyperparameter_matrix]
-    if len(hyperparameter_matrix[0]) > 0:
-        packed_hyperparameters = torch.tensor(hyperparameter_matrix)
-        packed_hyperparameters = torch.repeat_interleave(packed_hyperparameters, repeats=batch_size_per_prior_sample, dim=0).detach()
-    else:
-        packed_hyperparameters = None
+            hyperparameter_matrix = []
+            for batch in hyperparameter_dict:
+                hyperparameter_matrix.append([batch[hp] for hp in batch])
 
-    # list(itertools.chain.from_iterable(itertools.repeat(x, batch_size_per_prior_sample) for x in packed_hyperparameters)))#torch.repeat_interleave(torch.stack(packed_hyperparameters, 0).detach(), repeats=batch_size_per_prior_sample, dim=0))
-    x, y, y_, packed_hyperparameters = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach(), packed_hyperparameters)
-    return x, y, y_, (packed_hyperparameters if hyperparameters.get('differentiable_hps_as_style', True) else None)
+            transposed_hyperparameter_matrix = list(zip(*hyperparameter_matrix))
+            assert all([all([hp is None for hp in hp_]) or all([hp is not None for hp in hp_]) for hp_ in transposed_hyperparameter_matrix]
+                    ), 'it should always be the case that when a hyper-parameter is None, once it is always None'
+            # we remove columns that are only None (i.e. not sampled)
+            hyperparameter_matrix = [[hp for hp in hp_ if hp is not None] for hp_ in hyperparameter_matrix]
+            if len(hyperparameter_matrix[0]) > 0:
+                packed_hyperparameters = torch.tensor(hyperparameter_matrix)
+                packed_hyperparameters = torch.repeat_interleave(packed_hyperparameters, repeats=batch_size_per_prior_sample, dim=0).detach()
+            else:
+                packed_hyperparameters = None
 
-
-DataLoader = get_batch_to_dataloader(get_batch_differentiable)
+            # list(itertools.chain.from_iterable(itertools.repeat(x, batch_size_per_prior_sample) for x in packed_hyperparameters)))#torch.repeat_interleave(torch.stack(packed_hyperparameters, 0).detach(), repeats=batch_size_per_prior_sample, dim=0))
+            x, y, y_, packed_hyperparameters = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach(), packed_hyperparameters)
+        return x, y, y_, (packed_hyperparameters if hyperparameters.get('differentiable_hps_as_style', True) else None)
 
 
 def draw_random_style(dl, device):

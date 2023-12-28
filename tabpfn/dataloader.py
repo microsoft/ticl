@@ -1,6 +1,9 @@
 import tabpfn.priors as priors
 from tabpfn.priors.flexible_categorical import FlexibleCategoricalPrior
 from tabpfn.priors.prior_bag import BagPrior
+from tabpfn.priors.boolean_conjunctions import BooleanConjunctionSampler
+from tabpfn.priors.utils import PriorDataLoader
+from tabpfn.priors.differentiable_prior import DifferentiableSamplerPrior
 
 def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_pos_gen, n_samples, device):
     gp_flexible = FlexibleCategoricalPrior(priors.fast_gp.GPPrior())
@@ -12,14 +15,13 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
         hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
                              prior_exp_weights={'mlp': config['differentiable_hyperparameters']['prior_bag_exp_weights_1']}, verbose=True)
-        extra_kwargs = {'get_batch': bag_prior.get_batch, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}
-        DataLoader = priors.differentiable_prior.DataLoader
+        prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
 
         extra_prior_kwargs_dict = {
-            'num_features': config['num_features'], 'hyperparameters': hyperparameters, 'batch_size_per_prior_sample': config.get('batch_size_per_prior_sample', None), **extra_kwargs
+            'num_features': config['num_features'], 'hyperparameters': hyperparameters, 'batch_size_per_prior_sample': config.get('batch_size_per_prior_sample', None)
         }
     elif prior_type == "boolean_only":
-        DataLoader = priors.boolean_conjunctions.DataLoader
+        prior = BooleanConjunctionSampler()
         extra_prior_kwargs_dict = {
             'num_features': config['num_features'], 'hyperparameters': {}, 'batch_size_per_prior_sample': config.get('batch_size_per_prior_sample', None)
         }
@@ -34,4 +36,4 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
         single_eval_pos = single_eval_pos_gen()
         return single_eval_pos, n_samples
 
-    return DataLoader(num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_n_samples_sampler=eval_pos_n_samples_sampler, device=device, **extra_prior_kwargs_dict)
+    return PriorDataLoader(prior=prior, num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_n_samples_sampler=eval_pos_n_samples_sampler, device=device, **extra_prior_kwargs_dict)

@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from tabpfn.utils import default_device, normalize_data
-from tabpfn.priors.utils import get_batch_to_dataloader
 
 
 def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):
@@ -67,6 +66,3 @@ class BooleanConjunctionSampler:
         x = torch.cat(x, 1).detach()
 
         return x, y, y
-
-
-DataLoader = get_batch_to_dataloader(BooleanConjunctionSampler().get_batch)
