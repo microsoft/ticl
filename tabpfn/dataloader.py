@@ -15,7 +15,7 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, d
     if prior_type == 'prior_bag':
         # Prior bag combines priors
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
-                             prior_exp_weights={'mlp': config['differentiable_hyperparameters']['prior_bag_exp_weights_1']}, verbose=True)
+                             prior_exp_weights={'mlp': config['differentiable_hyperparameters']['prior_bag_exp_weights_1']})
         prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionSampler()
