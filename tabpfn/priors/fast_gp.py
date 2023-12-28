@@ -6,8 +6,6 @@ from torch import nn
 
 from tabpfn.utils import default_device
 
-from .utils import get_batch_to_dataloader
-
 
 # We will use the simplest form of GP model, exact inference
 class ExactGPModel(gpytorch.models.ExactGP):

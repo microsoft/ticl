@@ -9,7 +9,7 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers, to_ranking_low_mem)
 
-from .utils import CategoricalActivation, get_batch_to_dataloader, randomize_classes, uniform_int_sampler_f
+from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
 time_it = False
 
