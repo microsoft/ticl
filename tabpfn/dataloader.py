@@ -21,7 +21,6 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
 
         prior_hyperparameters['prior_mlp_scale_weights_sqrt'] = config['prior_mlp_scale_weights_sqrt'] if 'prior_mlp_scale_weights_sqrt' in prior_hyperparameters else None
         prior_hyperparameters['rotate_normalized_labels'] = config['rotate_normalized_labels'] if 'rotate_normalized_labels' in prior_hyperparameters else True
-
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
                              prior_exp_weights={'mlp': config['differentiable_hyperparameters']['prior_bag_exp_weights_1']}, verbose=True)
         extra_kwargs = {'get_batch': bag_prior.get_batch, 'differentiable_hyperparameters': config['differentiable_hyperparameters']}

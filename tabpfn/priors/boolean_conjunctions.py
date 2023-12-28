@@ -20,55 +20,53 @@ def sample_boolean_data_enumerate(hyperparameters, seq_len, num_features):
 class BooleanConjunctionSampler:
     # This is a class mostly for debugging purposes
     # the object stores the sampled hyperparameters
-    def __init__(self, hyperparameters, seq_len, num_features, device):
-        self.num_features = num_features
-        self.seq_len = seq_len
-        self.device = device
+    def __init__(self, hyperparameters=None):
+        if hyperparameters is None:
+            hyperparameters = {}
         self.max_rank = hyperparameters.get("max_rank", 10)
         self.verbose = hyperparameters.get("verbose", False)
 
-    def sample(self):
+    def sample(self, seq_len, num_features, device):
         # num_features is always 100, i.e. the number of inputs of the transformer model
         # num_features_active is the number of synthetic datasets features
         # num_features_important is the number of features that actually determine the output
-        num_features_active = np.random.randint(1, self.num_features) if self.num_features > 1 else 1
+        num_features_active = np.random.randint(1, num_features) if num_features > 1 else 1
         num_features_important = np.random.randint(1, num_features_active) if num_features_active > 1 else 1
         rank = np.random.randint(1, min(self.max_rank, num_features_important)) if num_features_important > 1 else 1
         num_terms = 0
-        features_in_terms = torch.zeros(num_features_important, dtype=bool, device=self.device)
-        inputs = 2 * torch.randint(0, 2, (self.seq_len, num_features_active), device=self.device) - 1
+        features_in_terms = torch.zeros(num_features_important, dtype=bool, device=device)
+        inputs = 2 * torch.randint(0, 2, (seq_len, num_features_active), device=device) - 1
         important_indices = torch.randperm(num_features_active)[:num_features_important]
         inputs_important = inputs[:, important_indices]
-        outputs = torch.zeros(self.seq_len, dtype=bool, device=self.device)
+        outputs = torch.zeros(seq_len, dtype=bool, device=device)
         while 3 * torch.sum(outputs) < len(inputs):
-            selected_bits = torch.multinomial(torch.ones(num_features_important, device=self.device), rank, replacement=False)
+            selected_bits = torch.multinomial(torch.ones(num_features_important, device=device), rank, replacement=False)
             features_in_terms[selected_bits] = True
-            signs = torch.randint(2, (rank,), device=self.device) * 2 - 1
+            signs = torch.randint(2, (rank,), device=device) * 2 - 1
             outputs = outputs + ((signs * inputs_important[:, selected_bits]) == 1).all(dim=1)
             num_terms += 1
         sample_params = {'num_terms': num_terms, 'features_in_terms': features_in_terms, 'rank': rank, 'important_indices': important_indices,
-                         'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': self.num_features}
+                         'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': num_features}
         return inputs, outputs, sample_params
     
-    def normalize_and_pad(self, x, y):
-        x = torch.cat([x, torch.zeros(x.shape[0], self.num_features - x.shape[1], device=self.device)], dim=1)
+    def normalize_and_pad(self, x, y, num_features, device):
+        x = torch.cat([x, torch.zeros(x.shape[0], num_features - x.shape[1], device=device)], dim=1)
         xs, ys =  ((x + 1) / 2).unsqueeze(1), y.int().unsqueeze(1).unsqueeze(2)
         xs = normalize_data(xs)
         return xs, ys
     
-    def __call__(self):
-        x, y, sample_params, = self.sample()
-        return *self.normalize_and_pad(x, y), sample_params
+    def __call__(self, seq_len, num_features, device):
+        x, y, sample_params, = self.sample(seq_len, num_features, device)
+        return *self.normalize_and_pad(x, y, num_features, device), sample_params
+
+    def get_batch(self, batch_size, seq_len, num_features, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
+        assert num_outputs == 1
+        sample = [self(seq_len=seq_len, num_features=num_features, device=device) for _ in range(0, batch_size)]
+        x, y, _ = zip(*sample)
+        y = torch.cat(y, 1).detach().squeeze(2)
+        x = torch.cat(x, 1).detach()
+
+        return x, y, y
 
 
-def get_batch_boolean(batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
-    assert num_outputs == 1
-    sample = [BooleanConjunctionSampler(hyperparameters, seq_len=seq_len, num_features=num_features, device=device)() for _ in range(0, batch_size)]
-    x, y, _ = zip(*sample)
-    y = torch.cat(y, 1).detach().squeeze(2)
-    x = torch.cat(x, 1).detach()
-
-    return x, y, y
-
-
-DataLoader = get_batch_to_dataloader(get_batch_boolean)
+DataLoader = get_batch_to_dataloader(BooleanConjunctionSampler().get_batch)

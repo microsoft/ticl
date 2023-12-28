@@ -9,7 +9,7 @@ def test_boolean_data(num_features, seq_len, device):
     if device == "cuda" and not torch.cuda.is_available():
         raise pytest.skip("CUDA not available")
     # test call (which has padding)
-    x, y, sample_params = BooleanConjunctionSampler({}, seq_len=seq_len, num_features=num_features, device=device)()
+    x, y, sample_params = BooleanConjunctionSampler()(seq_len=seq_len, num_features=num_features, device=device)
     assert x.shape == (seq_len, 1, num_features)
     assert y.shape == (seq_len, 1, 1)
     assert sample_params['num_features'] == num_features
