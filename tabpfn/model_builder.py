@@ -81,7 +81,7 @@ def get_y_encoder(config):
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
-    config = {**config}
+    config = config.copy()
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
@@ -111,7 +111,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['min_lr'] = config.get('min_lr', None)
     config['stop_after_epochs'] = config.get('stop_after_epochs', None)
     config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
-    config['n_samples'] = int(config.get('n_samples', config['bptt']))
+    if 'n_samples' not in config:
+        config['n_samples'] = config['bptt']
 
     config['eval_positions'] = [config['n_samples'] * 0.95]
     model_maker = config.get('model_maker', False)
