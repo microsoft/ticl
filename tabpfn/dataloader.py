@@ -34,5 +34,4 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
         single_eval_pos = single_eval_pos_gen()
         return single_eval_pos, bptt
 
-    return DataLoader(num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_seq_len_sampler=eval_pos_seq_len_sampler,
-                      seq_len_maximum=bptt, device=device, **extra_prior_kwargs_dict)
+    return DataLoader(num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_seq_len_sampler=eval_pos_seq_len_sampler, device=device, **extra_prior_kwargs_dict)

@@ -173,7 +173,7 @@ class MLP(torch.nn.Module):
         return x, y
 
 class MLPPrior:
-    def get_batch(self, batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
+    def get_batch(self, batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
         if 'multiclass_type' in hyperparameters and hyperparameters['multiclass_type'] == 'multi_node':
             num_outputs = num_outputs * hyperparameters['num_classes']
 

@@ -33,7 +33,7 @@ def get_model(x, y, hyperparameters):
 
 class GPPrior:
     def get_batch(self, batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
-                equidistant_x=False, fix_x=None, **kwargs):
+                equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             if isinstance(hyperparameters, (tuple, list)):
                 hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
