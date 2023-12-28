@@ -265,7 +265,7 @@ class FlexibleCategorical(torch.nn.Module):
                 valid_labels[:] = True
             y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-            if y[valid_labels, b].numel() != 0 and self.h.get('rotate_normalized_labels', True):
+            if y[valid_labels, b].numel() != 0:
                 num_classes_float = (y[valid_labels, b].max() + 1).cpu()
                 num_classes = num_classes_float.int().item()
                 assert num_classes == num_classes_float.item()
