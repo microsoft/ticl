@@ -87,7 +87,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
         config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize']
-                                                    * config['bptt'] * config['bptt']) / 10824640000))
+                                                    * config['n_samples'] * config['n_samples']) / 10824640000))
 
     criterion = get_criterion(config['max_num_classes'])
 
@@ -111,14 +111,15 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['min_lr'] = config.get('min_lr', None)
     config['stop_after_epochs'] = config.get('stop_after_epochs', None)
     config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
+    config['n_samples'] = int(config.get('n_samples', config['bptt']))
 
-    config['eval_positions'] = [int(config['bptt'] * 0.95)]
+    config['eval_positions'] = [config['n_samples'] * 0.95]
     model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
 
-    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], bptt=config['bptt'], device=device,
+    dataloader_config = dict(steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
                              prior_type=config['prior_type'],
-                             single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['bptt']),
+                             single_eval_pos_gen=get_uniform_single_eval_pos_sampler(config.get('max_eval_pos', config['n_samples']),
                                                                                      min_len=config.get('min_eval_pos', 0)),)
     dl = get_dataloader(config=config,
                         **dataloader_config)

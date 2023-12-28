@@ -3,15 +3,15 @@ import torch
 import pytest
 
 @pytest.mark.parametrize('num_features', [1, 2, 10, 100])
-@pytest.mark.parametrize('seq_len', [10, 100, 1000])
+@pytest.mark.parametrize('n_samples', [10, 100, 1000])
 @pytest.mark.parametrize('device', ['cpu', 'cuda'])
-def test_boolean_data(num_features, seq_len, device):
+def test_boolean_data(num_features, n_samples, device):
     if device == "cuda" and not torch.cuda.is_available():
         raise pytest.skip("CUDA not available")
     # test call (which has padding)
-    x, y, sample_params = BooleanConjunctionSampler()(seq_len=seq_len, num_features=num_features, device=device)
-    assert x.shape == (seq_len, 1, num_features)
-    assert y.shape == (seq_len, 1, 1)
+    x, y, sample_params = BooleanConjunctionSampler()(n_samples=n_samples, num_features=num_features, device=device)
+    assert x.shape == (n_samples, 1, num_features)
+    assert y.shape == (n_samples, 1, 1)
     assert sample_params['num_features'] == num_features
     assert sample_params['num_features_active'] <= sample_params['num_features']
     assert sample_params['num_features_important'] <= sample_params['num_features_active']

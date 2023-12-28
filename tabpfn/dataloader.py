@@ -2,7 +2,7 @@ import tabpfn.priors as priors
 from tabpfn.priors.flexible_categorical import FlexibleCategoricalPrior
 from tabpfn.priors.prior_bag import BagPrior
 
-def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_pos_gen, bptt, device):
+def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_pos_gen, n_samples, device):
     gp_flexible = FlexibleCategoricalPrior(priors.fast_gp.GPPrior())
     mlp_flexible = FlexibleCategoricalPrior(priors.mlp.MLPPrior())
     
@@ -30,8 +30,8 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, single_eval_
 
     single_eval_pos_gen = single_eval_pos_gen if callable(single_eval_pos_gen) else lambda: single_eval_pos_gen
 
-    def eval_pos_seq_len_sampler():
+    def eval_pos_n_samples_sampler():
         single_eval_pos = single_eval_pos_gen()
-        return single_eval_pos, bptt
+        return single_eval_pos, n_samples
 
-    return DataLoader(num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_seq_len_sampler=eval_pos_seq_len_sampler, device=device, **extra_prior_kwargs_dict)
+    return DataLoader(num_steps=steps_per_epoch, batch_size=batch_size, eval_pos_n_samples_sampler=eval_pos_n_samples_sampler, device=device, **extra_prior_kwargs_dict)

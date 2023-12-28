@@ -278,7 +278,7 @@ class FlexibleCategoricalPrior:
     def __init__(self, base_prior):
         self.base_prior = base_prior
 
-    def get_batch(self, batch_size, seq_len, num_features, device, hyperparameters=None, batch_size_per_gp_sample=None, epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, batch_size_per_gp_sample=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             batch_size_per_gp_sample = batch_size_per_gp_sample or (min(32, batch_size))
             num_models = batch_size // batch_size_per_gp_sample
@@ -286,10 +286,10 @@ class FlexibleCategoricalPrior:
             assert num_models * \
                 batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
 
-            # Sample one seq_len for entire batch
-            seq_len = hyperparameters['seq_len_used']() if callable(hyperparameters['seq_len_used']) else seq_len
+            # Sample one n_samples for entire batch
+            n_samples = hyperparameters['n_samples_used']() if callable(hyperparameters['n_samples_used']) else n_samples
 
-            args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
             models = [FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args).to(device) for _ in range(num_models)]
 

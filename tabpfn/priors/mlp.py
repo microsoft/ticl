@@ -24,19 +24,19 @@ def causes_sampler_f(num_causes):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, hyperparameters, device, num_features, num_outputs, seq_len, sampling):
+    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling):
         super(MLP, self).__init__()
         self.device = device
         self.num_features = num_features
         self.num_outputs = num_outputs
-        self.seq_len = seq_len
+        self.n_samples = n_samples
         self.sampling = sampling
         self.hyperparameters = hyperparameters
 
         with torch.no_grad():
 
             for key in hyperparameters:
-                if key not in ['num_features', 'num_outputs', 'seq_len', 'sampling', 'device']:
+                if key not in ['num_features', 'num_outputs', 'n_samples', 'sampling', 'device']:
                     setattr(self, key, hyperparameters[key])
 
             assert (self.num_layers >= 2)
@@ -54,9 +54,9 @@ class MLP(torch.nn.Module):
             if self.pre_sample_causes:
                 self.causes_mean, self.causes_std = causes_sampler_f(self.num_causes)
                 self.causes_mean = torch.tensor(self.causes_mean, device=device).unsqueeze(0).unsqueeze(0).tile(
-                    (seq_len, 1, 1))
+                    (n_samples, 1, 1))
                 self.causes_std = torch.tensor(self.causes_std, device=device).unsqueeze(0).unsqueeze(0).tile(
-                    (seq_len, 1, 1))
+                    (n_samples, 1, 1))
 
             def generate_module(layer_idx, out_dim):
                 # Determine std of each noise term in initialization, so that is shared in runs
@@ -93,7 +93,7 @@ class MLP(torch.nn.Module):
                         p *= torch.bernoulli(torch.zeros_like(p) + 1. - dropout_prob)
 
     def forward(self):
-        seq_len = self.seq_len
+        n_samples = self.n_samples
         device = self.device
         num_outputs = self.num_outputs
         num_features = self.num_features
@@ -102,7 +102,7 @@ class MLP(torch.nn.Module):
             if self.pre_sample_causes:
                 causes = torch.normal(self.causes_mean, self.causes_std.abs()).float()
             else:
-                causes = torch.normal(0., 1., (seq_len, 1, self.num_causes), device=device).float()
+                causes = torch.normal(0., 1., (n_samples, 1, self.num_causes), device=device).float()
             return causes
 
         if self.sampling == 'normal':
@@ -116,18 +116,18 @@ class MLP(torch.nn.Module):
                     if self.pre_sample_causes:
                         return torch.normal(self.causes_mean[:, :, n], self.causes_std[:, :, n].abs()).float()
                     else:
-                        return torch.normal(0., 1., (seq_len, 1), device=device).float()
+                        return torch.normal(0., 1., (n_samples, 1), device=device).float()
                 elif random.random() > multi_p:
-                    x = torch.multinomial(torch.rand((random.randint(2, 10))), seq_len, replacement=True).to(device).unsqueeze(-1).float()
+                    x = torch.multinomial(torch.rand((random.randint(2, 10))), n_samples, replacement=True).to(device).unsqueeze(-1).float()
                     x = (x - torch.mean(x)) / torch.std(x)
                     return x
                 else:
-                    x = torch.minimum(torch.tensor(np.random.zipf(2.0 + random.random() * 2, size=(seq_len)),
+                    x = torch.minimum(torch.tensor(np.random.zipf(2.0 + random.random() * 2, size=(n_samples)),
                                                     device=device).unsqueeze(-1).float(), torch.tensor(10.0, device=device))
                     return x - torch.mean(x)
             causes = torch.cat([sample_cause(n).unsqueeze(-1) for n in range(self.num_causes)], -1)
         elif self.sampling == 'uniform':
-            causes = torch.rand((seq_len, 1, self.num_causes), device=device)
+            causes = torch.rand((n_samples, 1, self.num_causes), device=device)
         else:
             raise ValueError(f'Sampling is set to invalid setting: {self.sampling}.')
 
@@ -173,7 +173,7 @@ class MLP(torch.nn.Module):
         return x, y
 
 class MLPPrior:
-    def get_batch(self, batch_size, seq_len, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
         if 'multiclass_type' in hyperparameters and hyperparameters['multiclass_type'] == 'multi_node':
             num_outputs = num_outputs * hyperparameters['num_classes']
 
@@ -181,7 +181,7 @@ class MLPPrior:
             s = hyperparameters['prior_mlp_activations']()
             hyperparameters['prior_mlp_activations'] = lambda: s
 
-        sample = [MLP(hyperparameters, device, num_features, num_outputs, seq_len, sampling).to(device)() for _ in range(0, batch_size)]
+        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, sampling).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

@@ -8,7 +8,7 @@ from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter, rep
 from tabpfn.priors.utils import uniform_int_sampler_f
 
 
-def get_general_config(max_features, bptt, eval_positions=None):
+def get_general_config(max_features, n_samples, eval_positions=None):
     """"
     Returns the general PFN training hyperparameters.
     """
@@ -21,9 +21,9 @@ def get_general_config(max_features, bptt, eval_positions=None):
         "num_features": max_features,
         "nhead": CSH.CategoricalHyperparameter('nhead', [4]),
         "nhid_factor": 2,
-        "bptt": bptt,
+        "n_samples": n_samples,
         "eval_positions": None,
-        "seq_len_used": bptt,
+        "n_samples_used": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "epochs": 80,
         "num_steps": 100,
@@ -343,5 +343,5 @@ def get_base_config_paper():
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
     config['max_eval_pos'] = 1000
-    config['bptt'] = 1024+128
+    config['n_samples'] = 1024+128
     return config

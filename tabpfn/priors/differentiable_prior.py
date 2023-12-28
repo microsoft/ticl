@@ -221,14 +221,14 @@ class DifferentiablePrior(torch.nn.Module):
 
 # TODO: Make this a class that keeps objects
 @torch.no_grad()
-def get_batch_differentiable(batch_size, seq_len, num_features, get_batch, device=default_device,
+def get_batch_differentiable(batch_size, n_samples, num_features, get_batch, device=default_device,
                              differentiable_hyperparameters={}, hyperparameters=None, batch_size_per_gp_sample=None, epoch=None, single_eval_pos=None):
     batch_size_per_gp_sample = batch_size_per_gp_sample or (min(64, batch_size))
     num_models = batch_size // batch_size_per_gp_sample
     assert num_models * \
         batch_size_per_gp_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_gp_sample ({batch_size_per_gp_sample})'
 
-    args = {'device': device, 'seq_len': seq_len, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+    args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_gp_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
     models = [DifferentiablePrior(get_batch, hyperparameters, differentiable_hyperparameters, args) for _ in range(num_models)]
     sample = sum([[model()] for model in models], [])

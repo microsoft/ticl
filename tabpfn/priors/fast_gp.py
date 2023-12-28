@@ -32,7 +32,7 @@ def get_model(x, y, hyperparameters):
     return model, likelihood
 
 class GPPrior:
-    def get_batch(self, batch_size, seq_len, num_features, device=default_device, hyperparameters=None,
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
                 equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             if isinstance(hyperparameters, (tuple, list)):
@@ -53,15 +53,15 @@ class GPPrior:
             with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))):
                 if equidistant_x:
                     assert num_features == 1
-                    x = torch.linspace(0, 1., seq_len).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
+                    x = torch.linspace(0, 1., n_samples).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
                 elif fix_x is not None:
-                    assert fix_x.shape == (seq_len, num_features)
+                    assert fix_x.shape == (n_samples, num_features)
                     x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
                 else:
                     if hyperparameters.get('sampling', 'uniform') == 'uniform':
-                        x = torch.rand(batch_size, seq_len, num_features, device=device)
+                        x = torch.rand(batch_size, n_samples, num_features, device=device)
                     else:
-                        x = torch.randn(batch_size, seq_len, num_features, device=device)
+                        x = torch.randn(batch_size, n_samples, num_features, device=device)
                 model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
                 model.to(device)
                 # trained_model = ExactGPModel(train_x, train_y, likelihood).cuda()

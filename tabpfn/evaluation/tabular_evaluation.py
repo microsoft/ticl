@@ -19,12 +19,12 @@ from tabpfn.prediction import transformer_predict
 from tabpfn.evaluation.baselines.baseline_prediction_interface import baseline_predict
 
 
-def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):
+def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):
     """
     Evaluates a list of datasets for a model function.
 
     :param datasets: List of datasets
-    :param bptt: maximum sequence length
+    :param n_samples: maximum sequence length
     :param eval_positions: List of positions where to evaluate models
     :param verbose: If True, is verbose.
     :param metric_used: Which metric is optimized for.
@@ -32,25 +32,25 @@ def evaluate(datasets, bptt, eval_positions, metric_used, model, device='cpu', v
     :param kwargs:
     :return:
     """
-    overall_result = {'metric_used': get_scoring_string(metric_used), 'bptt': bptt, 'eval_positions': eval_positions}
+    overall_result = {'metric_used': get_scoring_string(metric_used), 'n_samples': n_samples, 'eval_positions': eval_positions}
 
     aggregated_metric_datasets, num_datasets = torch.tensor(0.0), 0
 
     # For each dataset
     for [ds_name, X, y, categorical_feats, _, _] in datasets:
-        dataset_bptt = min(len(X), bptt)
-        # if verbose and dataset_bptt < bptt:
-        #    print(f'Dataset too small for given bptt, reducing to {len(X)} ({bptt})')
+        dataset_n_samples = min(len(X), n_samples)
+        # if verbose and dataset_n_samples < n_samples:
+        #    print(f'Dataset too small for given n_samples, reducing to {len(X)} ({n_samples})')
 
         aggregated_metric, num = torch.tensor(0.0), 0
         ds_result = {}
 
         for eval_position in (eval_positions if verbose else eval_positions):
-            eval_position_real = int(dataset_bptt * 0.5) if 2 * eval_position > dataset_bptt else eval_position
-            eval_position_bptt = int(eval_position_real * 2.0)
+            eval_position_real = int(dataset_n_samples * 0.5) if 2 * eval_position > dataset_n_samples else eval_position
+            eval_position_n_samples = int(eval_position_real * 2.0)
 
             r = evaluate_position(X, y, model=model, num_classes=len(torch.unique(y)), categorical_feats=categorical_feats,
-                                  bptt=eval_position_bptt, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device, **kwargs)
+                                  n_samples=eval_position_n_samples, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device, **kwargs)
 
             if r is None:
                 print('Execution failed', ds_name)
@@ -119,7 +119,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, bptt, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
     if callable(model):
         device = "cpu"
         model_callable = model
@@ -134,14 +134,14 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
         results = []
         for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
             result = _eval_single_dataset_wrapper(
-                datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
+                datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
                 overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
                 split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
             results.append(result)
     else:
         results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(
-            datasets=[ds], model=model_callable, model_name=model_name, bptt=bptt, base_path=base_path,
+            datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path,
             eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
             save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
             verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
@@ -157,13 +157,13 @@ def check_file_exists(path):
     return None
 
 
-def generate_valid_split(X, y, bptt, eval_position, is_classification, split_number=1):
+def generate_valid_split(X, y, n_samples, eval_position, is_classification, split_number=1):
     """Generates a deteministic train-(test/valid) split. Both splits must contain the same classes and all classes in
     the entire datasets. If no such split can be sampled in 7 passes, returns None.
 
     :param X: torch tensor, feature values
     :param y: torch tensor, class values
-    :param bptt: Number of samples in train + test
+    :param n_samples: Number of samples in train + test
     :param eval_position: Number of samples in train, i.e. from which index values are in test
     :param split_number: The split id
     :return:
@@ -177,8 +177,8 @@ def generate_valid_split(X, y, bptt, eval_position, is_classification, split_num
         if seed > 20:
             return None, None  # No split could be generated in 7 passes, return None
         random.seed(seed)
-        i = random.randint(0, len(X) - bptt) if len(X) - bptt > 0 else 0
-        y_ = y[i:i + bptt]
+        i = random.randint(0, len(X) - n_samples) if len(X) - n_samples > 0 else 0
+        y_ = y[i:i + n_samples]
 
         if is_classification:
             # Checks if all classes from dataset are contained and classes in train and test are equal (contain same
@@ -191,21 +191,21 @@ def generate_valid_split(X, y, bptt, eval_position, is_classification, split_num
         else:
             done = True
 
-    eval_xs = torch.stack([X[i:i + bptt].clone()], 1)
-    eval_ys = torch.stack([y[i:i + bptt].clone()], 1)
+    eval_xs = torch.stack([X[i:i + n_samples].clone()], 1)
+    eval_ys = torch.stack([y[i:i + n_samples].clone()], 1)
 
     return eval_xs, eval_ys
 
 
-def evaluate_position(X, y, categorical_feats, model, bptt, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False, max_time=300, split_number=1, metric_used=None, device='cpu', per_step_normalization=False, verbose=0, **kwargs):
+def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False, max_time=300, split_number=1, metric_used=None, device='cpu', per_step_normalization=False, verbose=0, **kwargs):
     """
-    Evaluates a dataset with a 'bptt' number of training samples.
+    Evaluates a dataset with a 'n_samples' number of training samples.
 
     :param X: Dataset X
     :param y: Dataset labels
     :param categorical_feats: Indices of categorical features.
     :param model: Model function
-    :param bptt: Sequence length.
+    :param n_samples: Sequence length.
     :param eval_position: Number of training samples.
     :param overwrite: Wheater to ove
     :param overwrite: If True, results on disk are overwritten.
@@ -219,7 +219,7 @@ def evaluate_position(X, y, categorical_feats, model, bptt, eval_position, overw
     :return:
     """
 
-    path = os.path.join(base_path, f'results/tabular/{path_interfix}/results_{method}_{ds_name}_{eval_position}_{bptt}_{split_number}.npy')
+    path = os.path.join(base_path, f'results/tabular/{path_interfix}/results_{method}_{ds_name}_{eval_position}_{n_samples}_{split_number}.npy')
     # log_path =
     # Load results if on disk
     if not overwrite:
@@ -234,9 +234,9 @@ def evaluate_position(X, y, categorical_feats, model, bptt, eval_position, overw
 
     # Generate data splits
     eval_xs, eval_ys = generate_valid_split(
-        X, y, bptt, eval_position, is_classification=tabular_metrics.is_classification(metric_used), split_number=split_number)
+        X, y, n_samples, eval_position, is_classification=tabular_metrics.is_classification(metric_used), split_number=split_number)
     if eval_xs is None:
-        print(f"No dataset could be generated {ds_name} {bptt}")
+        print(f"No dataset could be generated {ds_name} {n_samples}")
         return None
 
     eval_ys = (eval_ys > torch.unique(eval_ys).unsqueeze(0)).sum(axis=1).unsqueeze(-1)

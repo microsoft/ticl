@@ -33,8 +33,8 @@ def get_batch_to_dataloader(get_batch_method_):
             # print('DataLoader.__dict__', self.__dict__)
 
         @staticmethod
-        def gbm(*args, eval_pos_seq_len_sampler, **kwargs):
-            kwargs['single_eval_pos'], kwargs['seq_len'] = eval_pos_seq_len_sampler()
+        def gbm(*args, eval_pos_n_samples_sampler, **kwargs):
+            kwargs['single_eval_pos'], kwargs['n_samples'] = eval_pos_n_samples_sampler()
             batch = get_batch_method_(*args, **kwargs)
             x, y, target_y, style = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
             return (style, x, y), target_y, kwargs['single_eval_pos']
@@ -69,9 +69,9 @@ def scaled_beta_sampler_f(a, b, scale, minimum): return lambda: minimum + round(
 
 def order_by_y(x, y):
     order = torch.argsort(y if random.randint(0, 1) else -y, dim=0)[:, 0, 0]
-    order = order.reshape(2, -1).transpose(0, 1).reshape(-1)  # .reshape(seq_len)
-    x = x[order]  # .reshape(2, -1).transpose(0, 1).reshape(-1).flip([0]).reshape(seq_len, 1, -1)
-    y = y[order]  # .reshape(2, -1).transpose(0, 1).reshape(-1).reshape(seq_len, 1, -1)
+    order = order.reshape(2, -1).transpose(0, 1).reshape(-1)  # .reshape(n_samples)
+    x = x[order]  # .reshape(2, -1).transpose(0, 1).reshape(-1).flip([0]).reshape(n_samples, 1, -1)
+    y = y[order]  # .reshape(2, -1).transpose(0, 1).reshape(-1).reshape(n_samples, 1, -1)
 
     return x, y
 

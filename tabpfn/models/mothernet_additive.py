@@ -61,23 +61,23 @@ class MotherNetAdditive(nn.Module):
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
-    def generate_global_att_query_matrix(num_global_att_tokens, seq_len, num_query_tokens):
-        train_size = seq_len + num_global_att_tokens - num_query_tokens
-        sz = seq_len + num_global_att_tokens
+    def generate_global_att_query_matrix(num_global_att_tokens, n_samples, num_query_tokens):
+        train_size = n_samples + num_global_att_tokens - num_query_tokens
+        sz = n_samples + num_global_att_tokens
         mask = torch.zeros(num_query_tokens, sz) == 0
         mask[:, train_size:].zero_()
         mask[:, train_size:] |= torch.eye(num_query_tokens) == 1
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
-    def generate_global_att_trainset_matrix(num_global_att_tokens, seq_len, num_query_tokens):
-        trainset_size = seq_len - num_query_tokens
+    def generate_global_att_trainset_matrix(num_global_att_tokens, n_samples, num_query_tokens):
+        trainset_size = n_samples - num_query_tokens
         mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
         return bool_mask_to_att_mask(mask)
 
     @staticmethod
-    def generate_global_att_globaltokens_matrix(num_global_att_tokens, seq_len, num_query_tokens):
-        mask = torch.zeros(num_global_att_tokens, num_global_att_tokens+seq_len-num_query_tokens) == 0
+    def generate_global_att_globaltokens_matrix(num_global_att_tokens, n_samples, num_query_tokens):
+        mask = torch.zeros(num_global_att_tokens, num_global_att_tokens+n_samples-num_query_tokens) == 0
         return bool_mask_to_att_mask(mask)
 
     def init_weights(self):

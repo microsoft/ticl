@@ -23,20 +23,6 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 
 
-def get_openai_lr(transformer_model):
-    num_params = sum(p.numel() for p in transformer_model.parameters())
-    return 0.003239 - 0.0001395 * math.log(num_params)
-
-
-def get_weighted_single_eval_pos_sampler(max_len):
-    """
-    This gives a sampler that can be used for `single_eval_pos` which yields good performance for all positions p,
-    where p <= `max_len`. At most `max_len` - 1 examples are shown to the Transformer.
-    :return: Sampler that can be fed to `train()` as `single_eval_pos_gen`.
-    """
-    return lambda: random.choices(range(max_len), [1 / (max_len - i) for i in range(max_len)])[0]
-
-
 def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
     """
     Just sample any evaluation position with the same weight
@@ -290,7 +276,7 @@ def compare_dicts(left, right, prefix=None, all=False):
             d.pop("losses", None)
             d.pop("learning_rates", None)
             d.pop("wallclock_times", None)
-            d.pop("bptt_extra_samples", None)
+            d.pop("n_samples_extra_samples", None)
             d.pop("num_classes", None)
             d.pop("differentiable_hyperparameters", None)
             d.pop("num_features_used", None)
