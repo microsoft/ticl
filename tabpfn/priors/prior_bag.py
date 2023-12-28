@@ -1,14 +1,13 @@
 import torch
 
-from tabpfn.utils import default_device
 from tabpfn.priors.utils import eval_simple_dist
 
 class BagPrior:
-    def __init__(self, base_priors, prior_exp_weights, verbose=False):
+    def __init__(self, base_priors, prior_weights, verbose=False):
         self.base_priors = base_priors
         # let's make sure we get consistent sorting of the base priors by name
         self.prior_names = sorted(base_priors.keys())
-        self.prior_exp_weights = prior_exp_weights
+        self.prior_weights = prior_weights
         self.verbose = verbose
 
 
@@ -18,15 +17,14 @@ class BagPrior:
         assert num_models * \
             batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
 
-        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features,
+                'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-        prior_bag_priors_p = [eval_simple_dist(self.prior_exp_weights.get(prior_name, 1)) for prior_name in self.prior_names]
-
-        weights = torch.tensor(prior_bag_priors_p, dtype=torch.float)
-        batch_assignments = torch.multinomial(torch.softmax(weights, 0), num_models, replacement=True).numpy()
-
+        weights = torch.tensor([self.prior_weights[prior_name] for prior_name in self.prior_names], dtype=torch.float)
+        weights = weights / torch.sum(weights)
+        batch_assignments = torch.multinomial(weights, num_models, replacement=True).numpy()
         if self.verbose or 'verbose' in hyperparameters and hyperparameters['verbose']:
-            print('PRIOR_BAG:', weights, batch_assignments)
+            print('PRIOR_BAG:', weights, batch_assignments, torch.softmax(weights, 0))
 
         sample = [self.base_priors[self.prior_names[int(prior_idx)]].get_batch(hyperparameters=hyperparameters, **args) for prior_idx in batch_assignments]
         x, y, y_ = zip(*sample)

@@ -15,12 +15,15 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, d
     if prior_type == 'prior_bag':
         # Prior bag combines priors
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
-                             prior_exp_weights={'mlp': config['differentiable_hyperparameters']['prior_bag_exp_weights_1']})
+                             prior_weights={'mlp': 0.961, 'gp': 0.039})
         prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionSampler()
     elif prior_type == "bag_boolean":
-        raise NotImplementedError()
+        boolean = BooleanConjunctionSampler()
+        bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible, 'boolean': prior},
+                             prior_weights={'mlp': 0.9, 'gp': 0.02, 'boolean': 0.08}, verbose=True)
+        prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
     
