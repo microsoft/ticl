@@ -166,6 +166,16 @@ def test_train_tabpfn_boolean_prior():
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
+def test_train_tabpfn_boolean_mixed_prior():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['-C', '-E', '30', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+                       'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
+                       'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
+    assert results['loss'] == pytest.approx(2.285581588745117)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
 
 def test_train_tabpfn_refactored():
     pytest.skip("This is not working yet")

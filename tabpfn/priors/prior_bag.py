@@ -24,7 +24,7 @@ class BagPrior:
         weights = weights / torch.sum(weights)
         batch_assignments = torch.multinomial(weights, num_models, replacement=True).numpy()
         if self.verbose or 'verbose' in hyperparameters and hyperparameters['verbose']:
-            print('PRIOR_BAG:', weights, batch_assignments, torch.softmax(weights, 0))
+            print('PRIOR_BAG:', weights, batch_assignments)
 
         sample = [self.base_priors[self.prior_names[int(prior_idx)]].get_batch(hyperparameters=hyperparameters, **args) for prior_idx in batch_assignments]
         x, y, y_ = zip(*sample)
