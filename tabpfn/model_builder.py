@@ -109,10 +109,13 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['adam_beta1'] = config.get('adam_beta1', 0.9)
     config['spike_tolerance'] = config.get('spike_tolerance', 4)
     config['min_lr'] = config.get('min_lr', None)
+    config['min_eval_pos'] = config.get('min_eval_pos', 2)
     config['stop_after_epochs'] = config.get('stop_after_epochs', None)
     config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
     if 'n_samples' not in config:
         config['n_samples'] = config['bptt']
+    if 'batch_size_per_prior_sample' not in config:
+        config['batch_size_per_prior_sample'] = config['batch_size_per_gp_sample']
 
     config['eval_positions'] = [config['n_samples'] * 0.95]
     model_maker = config.get('model_maker', False)
