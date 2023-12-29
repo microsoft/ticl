@@ -163,7 +163,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.c = c
         self.max_num_features = self.c['num_features']
         self.max_num_classes = self.c['max_num_classes']
-        self.differentiable_hps_as_style = self.c['differentiable_hps_as_style']
 
         self.model = model
         if self.no_grad:
@@ -230,7 +229,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          softmax_temperature=self.temperature,
                                          multiclass_decoder=self.multiclass_decoder,
                                          feature_shift_decoder=self.feature_shift_decoder,
-                                         differentiable_hps_as_style=self.differentiable_hps_as_style,
                                          seed=self.seed,
                                          return_logits=return_logits,
                                          no_grad=self.no_grad,
@@ -323,7 +321,7 @@ def transformer_predict(
         model, eval_xs, eval_ys, eval_position, device='cpu', max_features=100, style=None, inference_mode=False,
         num_classes=2, extend_features=True, normalize_with_test=False, normalize_to_ranking=False, softmax_temperature=0.0,
         multiclass_decoder='permutation', preprocess_transform='mix', categorical_feats=[], feature_shift_decoder=False,
-        N_ensemble_configurations=10, batch_size_inference=16, differentiable_hps_as_style=False, average_logits=True,
+        N_ensemble_configurations=10, batch_size_inference=16, average_logits=True,
         fp16_inference=False, normalize_with_sqrt=False, seed=0, no_grad=True, return_logits=False, scale=True, **kwargs):
     
     num_classes = len(torch.unique(eval_ys))
@@ -336,8 +334,7 @@ def transformer_predict(
     model.eval()
 
     import itertools
-    if not differentiable_hps_as_style:
-        style = None
+    style = None
 
     num_styles = 1
     style = None

@@ -115,7 +115,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == pytest.approx(2.4339354038238525)
+    assert results['loss'] == pytest.approx(2.361926555633545)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], MotherNet)
 
@@ -158,6 +158,7 @@ def test_train_tabpfn_stepped_multiclass():
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
+
 def test_train_tabpfn_boolean_prior():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -165,6 +166,7 @@ def test_train_tabpfn_boolean_prior():
     assert results['loss'] == pytest.approx(2.3410935401916504)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
+
 
 def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
@@ -219,7 +221,7 @@ def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == pytest.approx(2.361926555633545)
+    assert results['loss'] == pytest.approx(2.08772349357605)
     assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
 

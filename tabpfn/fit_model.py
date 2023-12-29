@@ -63,8 +63,6 @@ def main(argv):
 
     config['normalize_ignore_label_too'] = False
 
-    config['differentiable_hps_as_style'] = False
-
     config['random_feature_rotation'] = True
 
     config["mix_activations"] = False  # False heisst eig True

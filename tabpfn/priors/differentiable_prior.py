@@ -234,7 +234,7 @@ class DifferentiableSamplerPrior:
                 print('Hparams', hyperparameter_dict.keys())
 
             x, y, y_, packed_hyperparameters = (x.detach(), y.detach(), y_.detach(), hyperparameter_dict)
-        return x, y, y_, (packed_hyperparameters if hyperparameters.get('differentiable_hps_as_style', True) else None)
+        return x, y, y_, None
 
 
 def draw_random_style(dl, device):
