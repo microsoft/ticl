@@ -30,5 +30,4 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, d
     # fixme get rid of passing whole config as hyperparameters here
     return PriorDataLoader(prior=prior, num_steps=steps_per_epoch, batch_size=batch_size, n_samples=n_samples, min_eval_pos=config['min_eval_pos'],
                            max_eval_pos=config['max_eval_pos'], device=device,
-                           num_features=config['num_features'], hyperparameters=hyperparameters,
-                           batch_size_per_prior_sample=config['batch_size_per_prior_sample'])
+                           num_features=config['num_features'], hyperparameters=hyperparameters)

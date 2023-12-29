@@ -11,18 +11,13 @@ class BagPrior:
         self.verbose = verbose
 
 
-    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
-        batch_size_per_prior_sample = batch_size_per_prior_sample or (min(64, batch_size))
-        num_models = batch_size // batch_size_per_prior_sample
-        assert num_models * \
-            batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
-
+    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters,  epoch=None, single_eval_pos=None):
         args = {'device': device, 'n_samples': n_samples, 'num_features': num_features,
-                'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+                'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
         weights = torch.tensor([self.prior_weights[prior_name] for prior_name in self.prior_names], dtype=torch.float)
         weights = weights / torch.sum(weights)
-        batch_assignments = torch.multinomial(weights, num_models, replacement=True).numpy()
+        batch_assignments = torch.multinomial(weights, 1, replacement=True).numpy()
         if self.verbose or 'verbose' in hyperparameters and hyperparameters['verbose']:
             print('PRIOR_BAG:', weights, batch_assignments)
 

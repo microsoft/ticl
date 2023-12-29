@@ -20,8 +20,7 @@ def eval_simple_dist(dist_dict):
 
 
 class PriorDataLoader(DataLoader):
-    def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features, hyperparameters,
-                    batch_size_per_prior_sample):
+    def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features, hyperparameters):
         self.prior = prior
         self.num_steps = num_steps
         self.batch_size = batch_size
@@ -31,14 +30,13 @@ class PriorDataLoader(DataLoader):
         self.device = device
         self.num_features = num_features
         self.hyperparameters = hyperparameters
-        self.batch_size_per_prior_sample = batch_size_per_prior_sample
         self.epoch_count = 0
 
     def gbm(self, epoch=None):
         # Actually can only sample up to max_eval_pos-1 but that's how it was in the original code
         single_eval_pos = np.random.randint(self.min_eval_pos, self.max_eval_pos)
         batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=self.n_samples, num_features=self.num_features, device=self.device,
-                                     hyperparameters=self.hyperparameters, batch_size_per_prior_sample=self.batch_size_per_prior_sample, epoch=epoch,
+                                     hyperparameters=self.hyperparameters, epoch=epoch,
                                      single_eval_pos=single_eval_pos)
         x, y, target_y, style = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
         return (style, x, y), target_y, single_eval_pos

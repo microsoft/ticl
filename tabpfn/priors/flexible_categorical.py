@@ -278,24 +278,14 @@ class FlexibleCategoricalPrior:
     def __init__(self, base_prior):
         self.base_prior = base_prior
 
-    def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, batch_size_per_prior_sample=None, epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
-            batch_size_per_prior_sample = batch_size_per_prior_sample or (min(32, batch_size))
-            num_models = batch_size // batch_size_per_prior_sample
-            assert num_models > 0, f'Batch size ({batch_size}) is too small for batch_size_per_prior_sample ({batch_size_per_prior_sample})'
-            assert num_models * \
-                batch_size_per_prior_sample == batch_size, f'Batch size ({batch_size}) not divisible by batch_size_per_prior_sample ({batch_size_per_prior_sample})'
-
             # Sample one n_samples for entire batch
             n_samples = hyperparameters['n_samples_used']() if callable(hyperparameters['n_samples_used']) else n_samples
 
-            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size_per_prior_sample, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            models = [FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args).to(device) for _ in range(num_models)]
-
-            sample = [model(batch_size=batch_size_per_prior_sample) for model in models]
-
-            x, y, y_ = zip(*sample)
-            x, y, y_ = torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach()
+            x, y, y_ = FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args).to(device)(batch_size=batch_size)
+            x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_
