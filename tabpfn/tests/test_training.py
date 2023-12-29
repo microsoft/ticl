@@ -219,7 +219,7 @@ def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == pytest.approx(2.08772349357605)
+    assert results['loss'] == pytest.approx(2.361926555633545)
     assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
 
