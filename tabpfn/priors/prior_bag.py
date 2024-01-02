@@ -11,7 +11,7 @@ class BagPrior:
         self.verbose = verbose
 
 
-    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters,  epoch=None, single_eval_pos=None):
+    def get_batch(self, *, batch_size, n_samples, num_features, device, hyperparameters, epoch=None, single_eval_pos=None):
         args = {'device': device, 'n_samples': n_samples, 'num_features': num_features,
                 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
@@ -21,7 +21,6 @@ class BagPrior:
         if self.verbose or 'verbose' in hyperparameters and hyperparameters['verbose']:
             print('PRIOR_BAG:', weights, batch_assignments)
 
-        sample = [self.base_priors[self.prior_names[int(prior_idx)]].get_batch(hyperparameters=hyperparameters, **args) for prior_idx in batch_assignments]
-        x, y, y_ = zip(*sample)
-        x, y, y_ = (torch.cat(x, 1).detach(), torch.cat(y, 1).detach(), torch.cat(y_, 1).detach())
-        return x, y, y_
+        x, y, y_ = self.base_priors[self.prior_names[int(batch_assignments[0])]].get_batch(hyperparameters=hyperparameters, **args)
+        return x.detach(), y.detach(), y_.detach()
+
