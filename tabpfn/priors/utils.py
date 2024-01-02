@@ -6,8 +6,6 @@ import scipy.stats as stats
 import torch
 from torch import nn
 
-from tabpfn.utils import set_locals_in_self
-
 from torch.utils.data import DataLoader
 
 

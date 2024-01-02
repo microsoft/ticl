@@ -44,18 +44,6 @@ class SeqBN(nn.Module):
         return flat_x.view(*x.shape)
 
 
-def set_locals_in_self(locals):
-    """
-    Call this function like `set_locals_in_self(locals())` to set all local variables as object variables.
-    Especially useful right at the beginning of `__init__`.
-    :param locals: `locals()`
-    """
-    self = locals['self']
-    for var_name, val in locals.items():
-        if var_name != 'self':
-            setattr(self, var_name, val)
-
-
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
 
