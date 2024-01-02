@@ -2,6 +2,10 @@ import numpy as np
 import torch
 from tabpfn.utils import default_device, normalize_data
 
+def safe_randint(low, high):
+    if low == high:
+        return low
+    return np.random.randint(low, high)
 
 def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):
     # unused, might be better? unclear.
@@ -29,9 +33,9 @@ class BooleanConjunctionSampler:
         # num_features is always 100, i.e. the number of inputs of the transformer model
         # num_features_active is the number of synthetic datasets features
         # num_features_important is the number of features that actually determine the output
-        num_features_active = np.random.randint(1, num_features) if num_features > 1 else 1
-        num_features_important = np.random.randint(1, num_features_active) if num_features_active > 1 else 1
-        rank = np.random.randint(1, min(self.max_rank, num_features_important)) if num_features_important > 1 else 1
+        num_features_active = safe_randint(1, num_features)
+        num_features_important = safe_randint(1, num_features_active)
+        rank = safe_randint(1, min(self.max_rank, num_features_important))
         num_terms = 0
         features_in_terms = torch.zeros(num_features_important, dtype=bool, device=device)
         inputs = 2 * torch.randint(0, 2, (n_samples, num_features_active), device=device) - 1
