@@ -47,24 +47,6 @@ class SeqBN(nn.Module):
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
 
-# Copied from StackOverflow, but we do an eval on the values additionally
-class StoreDictKeyPair(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        self._nargs = nargs
-        super(StoreDictKeyPair, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        my_dict = {}
-        for kv in values:
-            k, v = kv.split("=")
-            try:
-                my_dict[k] = eval(v)
-            except NameError:
-                my_dict[k] = v
-        setattr(namespace, self.dest, my_dict)
-        print("dict values: {}".format(my_dict))
-
-
 def get_nan_value(v, set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
         return v
