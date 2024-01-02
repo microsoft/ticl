@@ -4,7 +4,7 @@ import ConfigSpace as CS
 import torch
 from ConfigSpace import hyperparameters as CSH
 
-from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter, replace_differentiable_distributions
+from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter
 from tabpfn.priors.utils import uniform_int_sampler_f
 
 
@@ -281,14 +281,10 @@ def fill_in_configsample(config, configsample):
     return hierarchical_configsample
 
 
-def evaluate_hypers(config, sample_diff_hps=False):
+def evaluate_hypers(config):
     """"
     Samples a hyperparameter configuration from a sampleable configuration (can be used in HP search).
     """
-    if sample_diff_hps:
-        # I do a deepcopy here, such that the config stays the same and can still be used with diff. hps
-        config = deepcopy(config)
-        replace_differentiable_distributions(config)
     cs = create_configspace_from_hierarchical(config)
     cs_sample = cs.sample_configuration()
     return fill_in_configsample(config, cs_sample)

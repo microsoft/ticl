@@ -233,49 +233,5 @@ class DifferentiableSamplerPrior:
             if 'verbose' in hyperparameters and hyperparameters['verbose']:
                 print('Hparams', hyperparameter_dict.keys())
 
-            x, y, y_, packed_hyperparameters = (x.detach(), y.detach(), y_.detach(), hyperparameter_dict)
+            x, y, y_ = x.detach(), y.detach(), y_.detach()
         return x, y, y_, None
-
-
-def draw_random_style(dl, device):
-    (hp_embedding, _, _), _, _ = next(iter(dl))
-    return hp_embedding.to(device)[0:1, :]
-
-
-def merge_style_with_info(diff_hparams_keys, diff_hparams_f, style, transform=True):
-    params = dict(zip(diff_hparams_keys, zip(diff_hparams_f, style.detach().cpu().numpy().tolist()[0])))
-
-    def t(v):
-        if transform:
-            return v[0][1](v[1])
-        else:
-            return v[1]
-    return {k: t(v) for k, v in params.items()}
-
-
-def replace_differentiable_distributions(config):
-    import ConfigSpace.hyperparameters as CSH
-    diff_config = config['differentiable_hyperparameters']
-    for name, diff_hp_dict in diff_config.items():
-        distribution = diff_hp_dict['distribution']
-        if distribution == 'uniform':
-            diff_hp_dict['sample'] = CSH.UniformFloatHyperparameter(name, diff_hp_dict['min'], diff_hp_dict['max'])
-        elif distribution == 'meta_beta':
-            diff_hp_dict['k'] = CSH.UniformFloatHyperparameter(name+'_k', diff_hp_dict['min'], diff_hp_dict['max'])
-            diff_hp_dict['b'] = CSH.UniformFloatHyperparameter(name+'_b', diff_hp_dict['min'], diff_hp_dict['max'])
-        elif distribution == 'meta_gamma':
-            diff_hp_dict['alpha'] = CSH.UniformFloatHyperparameter(name+'_k', 0.0, math.log(diff_hp_dict['max_alpha']))
-            diff_hp_dict['scale'] = CSH.UniformFloatHyperparameter(name+'_b', 0.0, diff_hp_dict['max_scale'])
-        elif distribution == 'meta_choice':
-            for i in range(1, len(diff_hp_dict['choice_values'])):
-                diff_hp_dict[f'choice_{i}_weight'] = CSH.UniformFloatHyperparameter(name+f'choice_{i}_weight', -3.0, 5.0)
-        elif distribution == 'meta_choice_mixed':
-            for i in range(1, len(diff_hp_dict['choice_values'])):
-                diff_hp_dict[f'choice_{i}_weight'] = CSH.UniformFloatHyperparameter(name+f'choice_{i}_weight', -3.0, 5.0)
-        elif distribution == 'meta_trunc_norm_log_scaled':
-            diff_hp_dict['log_mean'] = CSH.UniformFloatHyperparameter(name+'_log_mean', math.log(diff_hp_dict['min_mean']), math.log(diff_hp_dict['max_mean']))
-            min_std = diff_hp_dict['min_std'] if 'min_std' in diff_hp_dict else 0.1
-            max_std = diff_hp_dict['max_std'] if 'max_std' in diff_hp_dict else 1.0
-            diff_hp_dict['log_std'] = CSH.UniformFloatHyperparameter(name+'_log_std', math.log(min_std), math.log(max_std))
-        else:
-            raise ValueError(f'Unknown distribution {distribution}')
