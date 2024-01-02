@@ -11,8 +11,6 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
 
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
-time_it = False
-
 
 class BalancedBinarize(nn.Module):
     def __init__(self):
@@ -169,15 +167,8 @@ class FlexibleCategorical(torch.nn.Module):
         return x
 
     def forward(self, batch_size):
-        start = time.time()
-
         x, y, y_ = self.get_batch(hyperparameters=self.h, **self.args_passed)
         assert x.shape[2] == self.h['num_features_used']
-
-        if time_it:
-            print('Flex Forward Block 1', round(time.time() - start, 3))
-
-        start = time.time()
 
         if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
             if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
@@ -201,40 +192,27 @@ class FlexibleCategorical(torch.nn.Module):
                 if random.random() < p:
                     x[:, :, col] = m(x[:, :, col])
 
-        if time_it:
-            print('Flex Forward Block 2', round(time.time() - start, 3))
-            start = time.time()
-
         if self.h['normalize_to_ranking']:
             x = to_ranking_low_mem(x)
         else:
             x = remove_outliers(x)
         x, y = normalize_data(x), normalize_data(y)
 
-        if time_it:
-            print('Flex Forward Block 3', round(time.time() - start, 3))
-            start = time.time()
-
         # Cast to classification if enabled
         y = self.class_assigner(y).float()
 
-        if time_it:
-            print('Flex Forward Block 4', round(time.time() - start, 3))
-            start = time.time()
         if self.h['normalize_by_used_features']:
             x = normalize_by_used_features_f(
                 x, self.h['num_features_used'], self.args['num_features'],
                 normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
-        if time_it:
-            print('Flex Forward Block 5', round(time.time() - start, 3))
+
 
         start = time.time()
         # Append empty features if enabled
         x = torch.cat(
             [x, torch.zeros((x.shape[0], x.shape[1], self.args['num_features'] - self.h['num_features_used']),
                             device=self.args['device'])], -1)
-        if time_it:
-            print('Flex Forward Block 6', round(time.time() - start, 3))
+
 
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
