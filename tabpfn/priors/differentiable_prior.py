@@ -27,12 +27,7 @@ class DifferentiableHyperparameter(nn.Module):
             setattr(self, key, args[key])
 
         def get_sampler():
-            # if self.distribution == "beta":
-            #    return beta_sampler_f(self.a, self.b), 0, 1
-            # elif self.distribution == "gamma":
-            #    return gamma_sampler_f(self.a, self.b), 0, 1
-            # elif self.distribution == "beta_int":
-            #    return scaled_beta_sampler_f(self.a, self.b, self.scale, self.min), self.scale + self.min, self.min, self.a / (self.a + self.b)
+
             if self.distribution == "uniform":
                 if not hasattr(self, 'sample'):
                     return uniform_sampler_f(self.min, self.max), self.min, self.max, (self.max+self.min) / 2, math.sqrt(1/12*(self.max-self.min)*(self.max-self.min))
@@ -139,15 +134,10 @@ class DifferentiableHyperparameter(nn.Module):
                 else:
                     ind = None
                 return ind, x  # normalize indicator to [-1, 1]
-            # def sample_standard(sampler_f, embedding):
-            #     s = torch.tensor([sampler_f()], device = self.device)
-            #     return s, embedding(s)
+
             self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler()
             self.sampler = lambda: return_two(self.sampler_f(), min=self.sampler_min, max=self.sampler_max, mean=self.sampler_mean, std=self.sampler_std)
-            # self.embedding_layer = nn.Linear(1, self.embedding_dim, device=self.device)
-            # self.embed = lambda x : self.embedding_layer(
-            #     (x - self.sampler_min) / (self.sampler_max - self.sampler_min))
-            # self.sampler = lambda : sample_standard(self.sampler_f, self.embedding)
+
 
     def forward(self):
         s, s_passed = self.sampler()
