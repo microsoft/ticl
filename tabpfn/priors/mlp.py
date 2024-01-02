@@ -32,19 +32,26 @@ class MLP(torch.nn.Module):
         self.n_samples = n_samples
         self.sampling = sampling
         self.hyperparameters = hyperparameters
+        self.is_causal = hyperparameters['is_causal']
+        self.num_causes = hyperparameters['num_causes']
+        self.prior_mlp_hidden_dim = hyperparameters['prior_mlp_hidden_dim']
+        self.prior_mlp_activations = hyperparameters['prior_mlp_activations']
+        self.num_layers = hyperparameters['num_layers']
+        self.noise_std = hyperparameters['noise_std']
+        self.y_is_effect = hyperparameters['y_is_effect']
+        self.pre_sample_weights = hyperparameters['pre_sample_weights']
+        self.prior_mlp_dropout_prob = hyperparameters['prior_mlp_dropout_prob']
+        self.pre_sample_causes = hyperparameters['pre_sample_causes']
+        self.verbose = hyperparameters['verbose']
+        self.block_wise_dropout = hyperparameters['block_wise_dropout']
+        self.init_std = hyperparameters['init_std']
+        self.prior_mlp_scale_weights_sqrt = hyperparameters['prior_mlp_scale_weights_sqrt']
+        self.random_feature_rotation = hyperparameters['random_feature_rotation']
+        self.sort_features = hyperparameters['sort_features']
+        self.in_clique = hyperparameters['in_clique']
 
         with torch.no_grad():
-
-            for key in hyperparameters:
-                if key not in ['num_features', 'num_outputs', 'n_samples', 'sampling', 'device']:
-                    setattr(self, key, hyperparameters[key])
-
             assert (self.num_layers >= 2)
-
-            if 'verbose' in hyperparameters and self.verbose:
-                print({k: hyperparameters[k] for k in ['is_causal', 'num_causes', 'prior_mlp_hidden_dim', 'num_layers',
-                        'noise_std', 'y_is_effect', 'pre_sample_weights', 'prior_mlp_dropout_prob', 'pre_sample_causes']})
-
             if self.is_causal:
                 self.prior_mlp_hidden_dim = max(self.prior_mlp_hidden_dim, num_outputs + 2 * num_features)
             else:
