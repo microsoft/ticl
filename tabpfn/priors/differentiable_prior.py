@@ -11,11 +11,11 @@ from .utils import (beta_sampler_f, gamma_sampler_f,
 def get_sampler(distribution, min, max, sample):
     if distribution == "uniform":
         if sample is None:
-            return uniform_sampler_f(min, max), min, max, (max+min) / 2, math.sqrt(1/12*(max-min)*(max-min))
+            return uniform_sampler_f(min, max)
         else:
             return lambda: sample, min, max, None, None
     elif distribution == "uniform_int":
-        return uniform_int_sampler_f(min, max), min, max, (max+min) / 2, math.sqrt(1/12*(max-min)*(max-min))
+        return uniform_int_sampler_f(min, max)
 
 
 def sample_meta(f, hparams, **kwargs):
@@ -127,7 +127,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 self.sampler = sample_meta(make_choice_mixed, self.hparams)
         else:
-            self.sampler, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
+            self.sampler = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
 
     def forward(self):
         s_passed = self.sampler()
