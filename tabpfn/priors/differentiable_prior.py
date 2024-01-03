@@ -18,12 +18,6 @@ def get_sampler(distribution, min, max, sample):
         return uniform_int_sampler_f(min, max)
 
 
-def sample_meta(f, hparams, **kwargs):
-    def sampler():
-        passed = {hp: hparams[hp]() for hp in hparams}
-        meta_passed = f(**passed, **kwargs)
-        return meta_passed
-    return sampler
 
 
 def make_beta(b, k, scale):
@@ -49,21 +43,44 @@ def make_trunc_norm(mean, std, do_round, lower_bound):
         return lambda: lower_bound + round(trunc_norm_sampler_f(mean, std)())
     else:
         return lambda: lower_bound + trunc_norm_sampler_f(mean, std)()
+    
+
+def make_choice_mixed(*, choice_values, **choices):
+    weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
+
+    def sample():
+        s = torch.multinomial(weights, 1, replacement=True).numpy()[0]
+        return choice_values[s]()
+    return lambda: sample
+    
+
+def make_choice(*, choice_values, **choices):
+    choices = torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float)
+    weights = torch.softmax(choices, 0)  # create a tensor of weights
+    sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
+    return choice_values[sample]
+            
+        
+def sample_meta(f, hparams, **kwargs):
+    def sampler():
+        passed = {hp: hparams[hp]() for hp in hparams}
+        meta_passed = f(**passed, **kwargs)
+        return meta_passed
+    return sampler
 
 class DifferentiableHyperparameter(nn.Module):
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
-    def __init__(self, distribution, embedding_dim, device, **args):
+    def __init__(self, distribution, device, **args):
         super(DifferentiableHyperparameter, self).__init__()
 
         self.distribution = distribution
-        self.embedding_dim = embedding_dim
         self.device = device
         for key in args:
             setattr(self, key, args[key])
 
         if self.distribution.startswith("meta"):
             self.hparams = {}
-            args_passed = {'device': device, 'embedding_dim': embedding_dim}
+            args_passed = {'device': device}
             if self.distribution == "meta_beta":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if hasattr(self, 'b') and hasattr(self, 'k'):
@@ -105,27 +122,13 @@ class DifferentiableHyperparameter(nn.Module):
                 self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
                         distribution="uniform", min=-3.0, max=5.0, **args_passed) for i in range(1, len(self.choice_values))}
 
-                def make_choice(**choices):
-                    choices = torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float)
-                    weights = torch.softmax(choices, 0)  # create a tensor of weights
-                    sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
-                    return self.choice_values[sample]
-
-                self.sampler = sample_meta(make_choice, self.hparams)
+                self.sampler = sample_meta(make_choice, self.hparams, choice_values=self.choice_values)
 
             elif self.distribution == "meta_choice_mixed":
                 self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
                         distribution="uniform", min=-5.0, max=6.0, **args_passed) for i in range(1, len(self.choice_values))}
 
-                def make_choice_mixed(**choices):
-                    weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
-
-                    def sample():
-                        s = torch.multinomial(weights, 1, replacement=True).numpy()[0]
-                        return self.choice_values[s]()
-                    return lambda: sample
-
-                self.sampler = sample_meta(make_choice_mixed, self.hparams)
+                self.sampler = sample_meta(make_choice_mixed, self.hparams, choice_values=self.choice_values)
         else:
             self.sampler = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
 
@@ -135,12 +138,12 @@ class DifferentiableHyperparameter(nn.Module):
 
 
 class DifferentiableHyperparameterList(nn.Module):
-    def __init__(self, hyperparameters, embedding_dim, device):
+    def __init__(self, hyperparameters, device):
         super().__init__()
 
         self.device = device
         hyperparameters = {k: v for (k, v) in hyperparameters.items() if v}
-        self.hyperparameters = nn.ModuleDict({hp: DifferentiableHyperparameter(embedding_dim=embedding_dim, name=hp,
+        self.hyperparameters = nn.ModuleDict({hp: DifferentiableHyperparameter(name=hp,
                                              device=device, **hyperparameters[hp]) for hp in hyperparameters})
 
     def sample_parameter_object(self):
@@ -156,7 +159,7 @@ class DifferentiablePrior(torch.nn.Module):
         self.args = args
         self.get_batch = get_batch
         self.differentiable_hyperparameters = DifferentiableHyperparameterList(
-            differentiable_hyperparameters, embedding_dim=self.h['emsize'], device=self.args['device'])
+            differentiable_hyperparameters, device=self.args['device'])
 
     def forward(self):
         # Sample hyperparameters
