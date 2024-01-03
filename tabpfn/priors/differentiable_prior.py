@@ -34,11 +34,12 @@ def return_two(x, min, max, mean, std):
 
 
 def sample_meta(f, hparams):
-    indicators, passed = unpack_dict_of_tuples({hp: hparams[hp]() for hp in hparams})
-    # sampled_embeddings = list(itertools.chain.from_iterable([sampled_embeddings[k] for k in sampled_embeddings]))
-    meta_passed = f(**passed)
-    return indicators, meta_passed
-
+    def sampler():
+        indicators, passed = unpack_dict_of_tuples({hp: hparams[hp]() for hp in hparams})
+        # sampled_embeddings = list(itertools.chain.from_iterable([sampled_embeddings[k] for k in sampled_embeddings]))
+        meta_passed = f(**passed)
+        return indicators, meta_passed
+    return sampler
 
 class DifferentiableHyperparameter(nn.Module):
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
@@ -64,7 +65,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 def make_beta(b, k):
                     return lambda b=b, k=k: self.scale * beta_sampler_f(b, k)()
-                self.sampler = lambda: sample_meta(make_beta, self.hparams)
+                self.sampler = sample_meta(make_beta, self.hparams)
             if self.distribution == "meta_gamma":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if hasattr(self, 'alpha') and hasattr(self, 'scale'):
@@ -75,7 +76,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 def make_gamma(alpha, scale):
                     return lambda alpha=alpha, scale=scale: self.lower_bound + round(gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))()) if self.round else self.lower_bound + gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))()
-                self.sampler = lambda: sample_meta(make_gamma, self.hparams)
+                self.sampler = sample_meta(make_gamma, self.hparams)
             elif self.distribution == "meta_trunc_norm_log_scaled":
                 # these choices are copied down below, don't change these without changing `replace_differentiable_distributions`
                 self.min_std = self.min_std if hasattr(self, 'min_std') else 0.01
@@ -91,7 +92,7 @@ class DifferentiableHyperparameter(nn.Module):
                     return ((lambda: self.lower_bound + round(trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))())) if self.round
                             else (lambda: self.lower_bound + trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))()))
 
-                self.sampler = lambda: sample_meta(make_trunc_norm, self.hparams)
+                self.sampler = sample_meta(make_trunc_norm, self.hparams)
             elif self.distribution == "meta_trunc_norm":
                 self.min_std = self.min_std if hasattr(self, 'min_std') else 0.01
                 self.max_std = self.max_std if hasattr(self, 'max_std') else 1.0
@@ -103,7 +104,7 @@ class DifferentiableHyperparameter(nn.Module):
                         trunc_norm_sampler_f(mean, std)())) if self.round
                         else (
                         lambda make_trunc_norm=make_trunc_norm: self.lower_bound + trunc_norm_sampler_f(mean, std)()))
-                self.sampler = lambda: sample_meta(make_trunc_norm, self.hparams)
+                self.sampler = sample_meta(make_trunc_norm, self.hparams)
 
             elif self.distribution == "meta_choice":
                 self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
@@ -115,7 +116,7 @@ class DifferentiableHyperparameter(nn.Module):
                     sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
                     return self.choice_values[sample]
 
-                self.sampler = lambda: sample_meta(make_choice, self.hparams)
+                self.sampler = sample_meta(make_choice, self.hparams)
 
             elif self.distribution == "meta_choice_mixed":
                 self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
@@ -129,7 +130,7 @@ class DifferentiableHyperparameter(nn.Module):
                         return self.choice_values[s]()
                     return lambda: sample
 
-                self.sampler = lambda: sample_meta(make_choice, self.hparams)
+                self.sampler = sample_meta(make_choice, self.hparams)
         else:
             self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
             self.sampler = lambda: return_two(self.sampler_f(), min=self.sampler_min, max=self.sampler_max, mean=self.sampler_mean, std=self.sampler_std)
