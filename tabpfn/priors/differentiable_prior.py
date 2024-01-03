@@ -24,21 +24,11 @@ def get_sampler(distribution, min, max, sample):
         return uniform_int_sampler_f(min, max), min, max, (max+min) / 2, math.sqrt(1/12*(max-min)*(max-min))
 
 
-def return_two(x, min, max, mean, std):
-    # Returns (a hyperparameter value, and an indicator value passed to the model)
-    if mean is not None:
-        ind = (x-mean)/std  # (2 * (x-min) / (max-min) - 1)
-    else:
-        ind = None
-    return ind, x  # normalize indicator to [-1, 1]
-
-
 def sample_meta(f, hparams, **kwargs):
     def sampler():
-        indicators, passed = unpack_dict_of_tuples({hp: hparams[hp]() for hp in hparams})
-        # sampled_embeddings = list(itertools.chain.from_iterable([sampled_embeddings[k] for k in sampled_embeddings]))
+        passed = {hp: hparams[hp]() for hp in hparams}
         meta_passed = f(**passed, **kwargs)
-        return indicators, meta_passed
+        return meta_passed
     return sampler
 
 
@@ -144,12 +134,12 @@ class DifferentiableHyperparameter(nn.Module):
                 self.sampler = sample_meta(make_choice_mixed, self.hparams)
         else:
             self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
-            self.sampler = lambda: return_two(self.sampler_f(), min=self.sampler_min, max=self.sampler_max, mean=self.sampler_mean, std=self.sampler_std)
+            self.sampler = self.sampler_f
 
 
     def forward(self):
-        s, s_passed = self.sampler()
-        return s, s_passed
+        s_passed = self.sampler()
+        return s_passed
 
 
 class DifferentiableHyperparameterList(nn.Module):
@@ -181,7 +171,7 @@ class DifferentiableHyperparameterList(nn.Module):
         return sampled_hyperparameters_keys, sampled_hyperparameters_f
 
     def sample_parameter_object(self):
-        s_passed = {hp: hp_sampler()[1] for hp, hp_sampler in self.hyperparameters.items()}
+        s_passed = {hp: hp_sampler() for hp, hp_sampler in self.hyperparameters.items()}
         return s_passed
 
 
