@@ -58,7 +58,13 @@ def meta_trunc_norm_log_scaled(log_mean, log_std, do_round, lower_bound):
         return lambda: lower_bound + round(trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))())
     else:    
         return lambda: lower_bound + trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))()
-    
+
+
+def make_trunc_norm(mean, std, do_round, lower_bound):
+    if do_round:
+        return lambda: lower_bound + round(trunc_norm_sampler_f(mean, std)())
+    else:
+        return lambda: lower_bound + trunc_norm_sampler_f(mean, std)()
 
 class DifferentiableHyperparameter(nn.Module):
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
@@ -109,13 +115,7 @@ class DifferentiableHyperparameter(nn.Module):
                 self.max_std = self.max_std if hasattr(self, 'max_std') else 1.0
                 self.hparams = {"mean": DifferentiableHyperparameter(distribution="uniform", min=self.min_mean, max=self.max_mean, **args_passed),
                                 "std": DifferentiableHyperparameter(distribution="uniform", min=self.min_std, max=self.max_std, **args_passed)}
-
-                def make_trunc_norm(mean, std):
-                    return ((lambda: self.lower_bound + round(
-                        trunc_norm_sampler_f(mean, std)())) if self.do_round
-                        else (
-                        lambda make_trunc_norm=make_trunc_norm: self.lower_bound + trunc_norm_sampler_f(mean, std)()))
-                self.sampler = sample_meta(make_trunc_norm, self.hparams)
+                self.sampler = sample_meta(make_trunc_norm, self.hparams, do_round=self.round, lower_bound=self.lower_bound)
 
             elif self.distribution == "meta_choice":
                 self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
