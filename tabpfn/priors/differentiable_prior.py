@@ -51,20 +51,17 @@ def make_choice(*, choice_values, **choices):
             
         
 def sample_meta(f, hparams, **kwargs):
-    def sampler():
-        passed = {hp: hparams[hp]() for hp in hparams}
-        meta_passed = f(**passed, **kwargs)
-        return meta_passed
-    return sampler
+    passed = {hp: hparams[hp]() for hp in hparams}
+    meta_passed = f(**passed, **kwargs)
+    return meta_passed
 
 class UniformHyperparameter:
     def __init__(self, name, min, max):
         self.min = min
         self.max = max
         self.name = name
-        self.sampler = uniform_sampler_f(self.min, self.max)
     def __call__(self):
-        return self.sampler()
+        return uniform_sampler_f(self.min, self.max)()
 
 class MetaBetaHyperparameter:
     def __init__(self, name, min, max, scale):
@@ -72,10 +69,9 @@ class MetaBetaHyperparameter:
         self.name = name
         self.b = UniformHyperparameter('b', min=min, max=max)
         self.k = UniformHyperparameter('k', min=min, max=max)
-        self.sampler = sample_meta(make_beta, {'b': self.b, 'k': self.k}, scale=self.scale)
 
     def __call__(self):
-        return self.sampler()
+        return sample_meta(make_beta, {'b': self.b, 'k': self.k}, scale=self.scale)
 
 class MetaGammaHyperparameter:
     def __init__(self, name, max_alpha, max_scale, lower_bound, round):
@@ -84,10 +80,9 @@ class MetaGammaHyperparameter:
         self.scale = UniformHyperparameter('scale', min=0, max=max_scale)
         self.lower_bound = lower_bound
         self.round = round
-        self.sampler = sample_meta(make_gamma, {"alpha": self.alpha, "scale": self.scale}, lower_bound=self.lower_bound, do_round=self.round)
 
     def __call__(self):
-        return self.sampler()
+        return sample_meta(make_gamma, {"alpha": self.alpha, "scale": self.scale}, lower_bound=self.lower_bound, do_round=self.round)
     
 class MetaTruncNormLogScaledHyperparameter:
     def __init__(self, name, min_mean, max_mean, lower_bound, round, min_std, max_std):
@@ -96,9 +91,8 @@ class MetaTruncNormLogScaledHyperparameter:
         self.round = round
         self.log_mean = UniformHyperparameter('log_mean', min=math.log(min_mean), max=math.log(max_mean))
         self.log_std = UniformHyperparameter('log_std', min=math.log(min_std), max=math.log(max_std))
-        self.sampler = sample_meta(meta_trunc_norm_log_scaled, {"log_mean": self.log_mean, "log_std": self.log_std}, lower_bound=self.lower_bound, do_round=self.round)
     def __call__(self):
-        return self.sampler()
+        return sample_meta(meta_trunc_norm_log_scaled, {"log_mean": self.log_mean, "log_std": self.log_std}, lower_bound=self.lower_bound, do_round=self.round)
     
 class MetaTruncNormHyperparameter:
     def __init__(self, name, min_mean, max_mean, lower_bound, round, min_std, max_std):
@@ -107,27 +101,25 @@ class MetaTruncNormHyperparameter:
         self.round = round
         self.mean = UniformHyperparameter('mean', min=min_mean, max=max_mean)
         self.std = UniformHyperparameter('std', min=min_std, max=max_std)
-        self.sampler = sample_meta(make_trunc_norm, {"mean": self.log_mean, "std": self.std}, lower_bound=self.lower_bound, do_round=self.round)
+
     def __call__(self):
-        return self.sampler()
+        return sample_meta(make_trunc_norm, {"mean": self.log_mean, "std": self.std}, lower_bound=self.lower_bound, do_round=self.round)
     
 class MetaChoiceHyperparameter:
     def __init__(self, name, choice_values):
         self.name = name
         self.choice_values = choice_values
         self.choices = {f"choice_{i}_weight": UniformHyperparameter(f"choice_{i}_weight", min=-3.0, max=5.0) for i in range(1, len(choice_values))}
-        self.sampler = sample_meta(make_choice, self.choices, choice_values=self.choice_values)
     def __call__(self):
-        return self.sampler()
+        return sample_meta(make_choice, self.choices, choice_values=self.choice_values)
     
 class MetaChoiceMixedHyperparameter:
     def __init__(self, name, choice_values):
         self.name = name
         self.choice_values = choice_values
         self.choices = {f"choice_{i}_weight": UniformHyperparameter(f"choice_{i}_weight", min=-5.0, max=6.0) for i in range(1, len(choice_values))}
-        self.sampler = sample_meta(make_choice_mixed, self.choices, choice_values=self.choice_values)
     def __call__(self):
-        return self.sampler()
+        return sample_meta(make_choice_mixed, self.choices, choice_values=self.choice_values)
 
 
 def parse_distribution(name, distribution, min=None, max=None, scale=None, lower_bound=None, round=None, min_mean=None, max_mean=None, min_std=0.01, max_std=1.0, choice_values=None,
