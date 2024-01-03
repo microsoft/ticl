@@ -68,11 +68,9 @@ def sample_meta(f, hparams, **kwargs):
         return meta_passed
     return sampler
 
-class DifferentiableHyperparameter(nn.Module):
+class DifferentiableHyperparameter:
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
     def __init__(self, distribution, **args):
-        super(DifferentiableHyperparameter, self).__init__()
-
         self.distribution = distribution
         for key in args:
             setattr(self, key, args[key])
@@ -131,21 +129,20 @@ class DifferentiableHyperparameter(nn.Module):
         else:
             self.sampler = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
 
-    def forward(self):
+    def __call__(self):
         s_passed = self.sampler()
         return s_passed
 
 
-class DifferentiablePrior(torch.nn.Module):
+class DifferentiablePrior:
     def __init__(self, get_batch, hyperparameters, differentiable_hyperparameters, args):
-        super(DifferentiablePrior, self).__init__()
 
         self.h = hyperparameters
         self.args = args
         self.get_batch = get_batch
         self.differentiable_hyperparameters = {hp: DifferentiableHyperparameter(name=hp, **differentiable_hyperparameters[hp]) for hp in differentiable_hyperparameters}
 
-    def forward(self):
+    def __call__(self):
         # Sample hyperparameters
         sampled_hyperparameters_passed = {hp: hp_sampler() for hp, hp_sampler in self.differentiable_hyperparameters.items()}
         hyperparameters = {**self.h, **sampled_hyperparameters_passed}
