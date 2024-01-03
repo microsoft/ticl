@@ -169,8 +169,7 @@ class DifferentiableHyperparameterList(nn.Module):
             # Function remaps hyperparameters from [-1, 1] range to true value
             _, _, s_mean, s_std = hp_val.sampler_min, hp_val.sampler_max, hp_val.sampler_mean, hp_val.sampler_std
             sampled_hyperparameters_f.append((lambda x: (x-s_mean)/s_std, lambda y: (y * s_std)+s_mean))
-            # sampled_hyperparameters_f.append(((lambda x: ((x - s_min) / (s_max - s_min) * (2) - 1)
-            #                                  , (lambda y: ((y + 1) * (1 / 2) * (s_max - s_min) + s_min))))
+
         for hp in self.hyperparameters:
             hp_val = self.hyperparameters[hp]
             if hasattr(hp_val, 'hparams'):
@@ -182,19 +181,8 @@ class DifferentiableHyperparameterList(nn.Module):
         return sampled_hyperparameters_keys, sampled_hyperparameters_f
 
     def sample_parameter_object(self):
-        sampled_hyperparameters, s_passed = {}, {}
-        for hp in self.hyperparameters:
-            sampled_hyperparameters_, s_passed_ = self.hyperparameters[hp]()
-            s_passed[hp] = s_passed_
-            if isinstance(sampled_hyperparameters_, dict):
-                sampled_hyperparameters_ = {hp + '_' + str(key): val for key, val in sampled_hyperparameters_.items()}
-                sampled_hyperparameters.update(sampled_hyperparameters_)
-            else:
-                sampled_hyperparameters[hp] = sampled_hyperparameters_
-
-        # s_passed contains the values passed to the get_batch function
-        # sampled_hyperparameters contains the indicator of the sampled value, i.e. only number that describe the sampled object
-        return s_passed, sampled_hyperparameters  # self.pack_parameter_object(sampled_embeddings)
+        s_passed = {hp: hp_sampler()[1] for hp, hp_sampler in self.hyperparameters.items()}
+        return s_passed
 
 
 class DifferentiablePrior(torch.nn.Module):
@@ -209,7 +197,7 @@ class DifferentiablePrior(torch.nn.Module):
 
     def forward(self):
         # Sample hyperparameters
-        sampled_hyperparameters_passed, _ = self.differentiable_hyperparameters.sample_parameter_object()
+        sampled_hyperparameters_passed = self.differentiable_hyperparameters.sample_parameter_object()
         hyperparameters = {**self.h, **sampled_hyperparameters_passed}
         x, y, y_ = self.get_batch(hyperparameters=hyperparameters, **self.args)
 
