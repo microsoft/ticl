@@ -209,12 +209,11 @@ class DifferentiablePrior(torch.nn.Module):
 
     def forward(self):
         # Sample hyperparameters
-        sampled_hyperparameters_passed, sampled_hyperparameters_indicators = self.differentiable_hyperparameters.sample_parameter_object()
-
+        sampled_hyperparameters_passed, _ = self.differentiable_hyperparameters.sample_parameter_object()
         hyperparameters = {**self.h, **sampled_hyperparameters_passed}
         x, y, y_ = self.get_batch(hyperparameters=hyperparameters, **self.args)
 
-        return x, y, y_, sampled_hyperparameters_indicators
+        return x, y, y_
 
 
 class DifferentiableSamplerPrior:
@@ -226,10 +225,6 @@ class DifferentiableSamplerPrior:
                   hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_, hyperparameter_dict = DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args)()
-
-            if 'verbose' in hyperparameters and hyperparameters['verbose']:
-                print('Hparams', hyperparameter_dict.keys())
-
+            x, y, y_ = DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args)()
             x, y, y_ = x.detach(), y.detach(), y_.detach()
         return x, y, y_, None
