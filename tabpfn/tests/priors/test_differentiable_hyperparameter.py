@@ -46,3 +46,13 @@ def test_differentiable_hyper_meta_meta_choice():
     samples = [hyperparameter() for _ in range(11)]
     assert samples[0] ==  0.01
     assert samples[10] == 0.0001
+
+
+def test_differentiable_hyper_meta_meta_choice_mixed():
+    L.seed_everything(42)
+    hyperparameter = DifferentiableHyperparameter(name='test', distribution='meta_choice_mixed', choice_values=[lambda: "a", lambda: "b", lambda: "c"])
+    samples = [hyperparameter() for _ in range(11)]
+    assert samples[0]()() ==  "c"
+    assert samples[0]()() ==  "c"
+    assert samples[10]()() == "a"
+    assert samples[10]()() == "b"
