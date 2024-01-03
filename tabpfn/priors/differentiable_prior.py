@@ -8,12 +8,6 @@ from tabpfn.utils import default_device
 from .utils import (beta_sampler_f, gamma_sampler_f,
                     trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f)
 
-
-def unpack_dict_of_tuples(d):
-    # Returns list of dicts where each dict i contains values of tuple position i
-    # {'a': (1,2), 'b': (3,4)} -> [{'a': 1, 'b': 3}, {'a': 2, 'b': 4}]
-    return [dict(zip(d.keys(), v)) for v in list(zip(*list(d.values())))]
-
 def get_sampler(distribution, min, max, sample):
     if distribution == "uniform":
         if sample is None:
@@ -133,9 +127,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 self.sampler = sample_meta(make_choice_mixed, self.hparams)
         else:
-            self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
-            self.sampler = self.sampler_f
-
+            self.sampler, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
 
     def forward(self):
         s_passed = self.sampler()
@@ -150,25 +142,6 @@ class DifferentiableHyperparameterList(nn.Module):
         hyperparameters = {k: v for (k, v) in hyperparameters.items() if v}
         self.hyperparameters = nn.ModuleDict({hp: DifferentiableHyperparameter(embedding_dim=embedding_dim, name=hp,
                                              device=device, **hyperparameters[hp]) for hp in hyperparameters})
-
-    def get_hyperparameter_info(self):
-        sampled_hyperparameters_f, sampled_hyperparameters_keys = [], []
-
-        def append_hp(hp_key, hp_val):
-            sampled_hyperparameters_keys.append(hp_key)
-            # Function remaps hyperparameters from [-1, 1] range to true value
-            _, _, s_mean, s_std = hp_val.sampler_min, hp_val.sampler_max, hp_val.sampler_mean, hp_val.sampler_std
-            sampled_hyperparameters_f.append((lambda x: (x-s_mean)/s_std, lambda y: (y * s_std)+s_mean))
-
-        for hp in self.hyperparameters:
-            hp_val = self.hyperparameters[hp]
-            if hasattr(hp_val, 'hparams'):
-                for hp_ in hp_val.hparams:
-                    append_hp(f'{hp}_{hp_}', hp_val.hparams[hp_])
-            else:
-                append_hp(hp, hp_val)
-
-        return sampled_hyperparameters_keys, sampled_hyperparameters_f
 
     def sample_parameter_object(self):
         s_passed = {hp: hp_sampler() for hp, hp_sampler in self.hyperparameters.items()}
