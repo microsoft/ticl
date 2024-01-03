@@ -4,7 +4,6 @@ import ConfigSpace as CS
 import torch
 from ConfigSpace import hyperparameters as CSH
 
-from tabpfn.priors.differentiable_prior import DifferentiableHyperparameter
 from tabpfn.priors.utils import uniform_int_sampler_f
 
 
@@ -227,23 +226,6 @@ def get_prior_config_causal(max_features=100):
               **config_mlp}
 
     return config
-
-
-def sample_differentiable(config):
-    """"
-    Returns sampled hyperparameters from a differentiable wrapper, that is it makes a non-differentiable out of
-    differentiable.
-    """
-    # config is a dict of dicts, dicts that have a 'distribution' key are treated as distributions to be sampled
-    result = deepcopy(config)
-    del result['differentiable_hyperparameters']
-
-    for k, v in config['differentiable_hyperparameters'].items():
-        s_indicator, s_hp = DifferentiableHyperparameter(**v, embedding_dim=None,
-                                                         device=None)()  # both of these are actually not used to the best of my knowledge
-        result[k] = s_hp
-
-    return result
 
 
 def list_all_hps_in_nested(config):

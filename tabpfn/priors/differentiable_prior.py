@@ -70,17 +70,16 @@ def sample_meta(f, hparams, **kwargs):
 
 class DifferentiableHyperparameter(nn.Module):
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
-    def __init__(self, distribution, device, **args):
+    def __init__(self, distribution, **args):
         super(DifferentiableHyperparameter, self).__init__()
 
         self.distribution = distribution
-        self.device = device
         for key in args:
             setattr(self, key, args[key])
 
         if self.distribution.startswith("meta"):
             self.hparams = {}
-            args_passed = {'device': device}
+            args_passed = {}
             if self.distribution == "meta_beta":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if hasattr(self, 'b') and hasattr(self, 'k'):
@@ -137,20 +136,6 @@ class DifferentiableHyperparameter(nn.Module):
         return s_passed
 
 
-class DifferentiableHyperparameterList(nn.Module):
-    def __init__(self, hyperparameters, device):
-        super().__init__()
-
-        self.device = device
-        hyperparameters = {k: v for (k, v) in hyperparameters.items() if v}
-        self.hyperparameters = nn.ModuleDict({hp: DifferentiableHyperparameter(name=hp,
-                                             device=device, **hyperparameters[hp]) for hp in hyperparameters})
-
-    def sample_parameter_object(self):
-        s_passed = {hp: hp_sampler() for hp, hp_sampler in self.hyperparameters.items()}
-        return s_passed
-
-
 class DifferentiablePrior(torch.nn.Module):
     def __init__(self, get_batch, hyperparameters, differentiable_hyperparameters, args):
         super(DifferentiablePrior, self).__init__()
@@ -158,12 +143,11 @@ class DifferentiablePrior(torch.nn.Module):
         self.h = hyperparameters
         self.args = args
         self.get_batch = get_batch
-        self.differentiable_hyperparameters = DifferentiableHyperparameterList(
-            differentiable_hyperparameters, device=self.args['device'])
+        self.differentiable_hyperparameters = {hp: DifferentiableHyperparameter(name=hp, **differentiable_hyperparameters[hp]) for hp in differentiable_hyperparameters}
 
     def forward(self):
         # Sample hyperparameters
-        sampled_hyperparameters_passed = self.differentiable_hyperparameters.sample_parameter_object()
+        sampled_hyperparameters_passed = {hp: hp_sampler() for hp, hp_sampler in self.differentiable_hyperparameters.items()}
         hyperparameters = {**self.h, **sampled_hyperparameters_passed}
         x, y, y_ = self.get_batch(hyperparameters=hyperparameters, **self.args)
 
