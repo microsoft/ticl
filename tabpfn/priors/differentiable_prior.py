@@ -6,18 +6,7 @@ from torch import nn
 from tabpfn.utils import default_device
 
 from .utils import (beta_sampler_f, gamma_sampler_f,
-                    trunc_norm_sampler_f, uniform_int_sampler_f, uniform_sampler_f)
-
-def get_sampler(distribution, min, max, sample):
-    if distribution == "uniform":
-        if sample is None:
-            return uniform_sampler_f(min, max)
-        else:
-            return lambda: sample, min, max, None, None
-    elif distribution == "uniform_int":
-        return uniform_int_sampler_f(min, max)
-
-
+                    trunc_norm_sampler_f, uniform_sampler_f)
 
 
 def make_beta(b, k, scale):
@@ -68,6 +57,14 @@ def sample_meta(f, hparams, **kwargs):
         return meta_passed
     return sampler
 
+class UniformHyperparameter:
+    def __init__(self, min, max):
+        self.min = min
+        self.max = max
+
+    def __call__(self):
+        return uniform_sampler_f(self.min, self.max)()
+
 class DifferentiableHyperparameter:
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
     def __init__(self, distribution, **args):
@@ -77,14 +74,13 @@ class DifferentiableHyperparameter:
 
         if self.distribution.startswith("meta"):
             self.hparams = {}
-            args_passed = {}
             if self.distribution == "meta_beta":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if hasattr(self, 'b') and hasattr(self, 'k'):
                     self.hparams = {'b': lambda: (None, self.b), 'k': lambda: (None, self.k)}
                 else:
-                    self.hparams = {"b": DifferentiableHyperparameter(distribution="uniform", min=self.min, max=self.max, **args_passed),
-                                    "k": DifferentiableHyperparameter(distribution="uniform", min=self.min, max=self.max, **args_passed)}
+                    self.hparams = {"b": UniformHyperparameter(min=self.min, max=self.max),
+                                    "k": UniformHyperparameter(min=self.min, max=self.max)}
 
                 self.sampler = sample_meta(make_beta, self.hparams, scale=self.scale)
             if self.distribution == "meta_gamma":
@@ -92,8 +88,8 @@ class DifferentiableHyperparameter:
                 if hasattr(self, 'alpha') and hasattr(self, 'scale'):
                     self.hparams = {'alpha': lambda: (None, self.alpha), 'scale': lambda: (None, self.scale)}
                 else:
-                    self.hparams = {"alpha": DifferentiableHyperparameter(distribution="uniform", min=0.0, max=math.log(
-                        self.max_alpha), **args_passed), "scale": DifferentiableHyperparameter(distribution="uniform", min=0.0, max=self.max_scale, **args_passed)}
+                    self.hparams = {"alpha": UniformHyperparameter(min=0.0, max=math.log(
+                        self.max_alpha)), "scale": UniformHyperparameter(min=0.0, max=self.max_scale)}
 
                 self.sampler = sample_meta(make_gamma, self.hparams, do_round=self.round, lower_bound=self.lower_bound)
             elif self.distribution == "meta_trunc_norm_log_scaled":
@@ -102,8 +98,8 @@ class DifferentiableHyperparameter:
                 self.max_std = self.max_std if hasattr(self, 'max_std') else 1.0
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if not hasattr(self, 'log_mean'):
-                    self.hparams = {"log_mean": DifferentiableHyperparameter(distribution="uniform", min=math.log(self.min_mean), max=math.log(
-                        self.max_mean), **args_passed), "log_std": DifferentiableHyperparameter(distribution="uniform", min=math.log(self.min_std), max=math.log(self.max_std), **args_passed)}
+                    self.hparams = {"log_mean": UniformHyperparameter(min=math.log(self.min_mean), max=math.log(
+                        self.max_mean)), "log_std": UniformHyperparameter(min=math.log(self.min_std), max=math.log(self.max_std))}
                 else:
                     self.hparams = {'log_mean': lambda: (None, self.log_mean), 'log_std': lambda: (None, self.log_std)}
 
@@ -111,27 +107,24 @@ class DifferentiableHyperparameter:
             elif self.distribution == "meta_trunc_norm":
                 self.min_std = self.min_std if hasattr(self, 'min_std') else 0.01
                 self.max_std = self.max_std if hasattr(self, 'max_std') else 1.0
-                self.hparams = {"mean": DifferentiableHyperparameter(distribution="uniform", min=self.min_mean, max=self.max_mean, **args_passed),
-                                "std": DifferentiableHyperparameter(distribution="uniform", min=self.min_std, max=self.max_std, **args_passed)}
+                self.hparams = {"mean": UniformHyperparameter(min=self.min_mean, max=self.max_mean),
+                                "std": UniformHyperparameter(min=self.min_std, max=self.max_std)}
                 self.sampler = sample_meta(make_trunc_norm, self.hparams, do_round=self.round, lower_bound=self.lower_bound)
 
             elif self.distribution == "meta_choice":
-                self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
-                        distribution="uniform", min=-3.0, max=5.0, **args_passed) for i in range(1, len(self.choice_values))}
+                self.hparams = {f"choice_{i}_weight": UniformHyperparameter(min=-3.0, max=5.0) for i in range(1, len(self.choice_values))}
 
                 self.sampler = sample_meta(make_choice, self.hparams, choice_values=self.choice_values)
 
             elif self.distribution == "meta_choice_mixed":
-                self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
-                        distribution="uniform", min=-5.0, max=6.0, **args_passed) for i in range(1, len(self.choice_values))}
+                self.hparams = {f"choice_{i}_weight": UniformHyperparameter(min=-5.0, max=6.0) for i in range(1, len(self.choice_values))}
 
                 self.sampler = sample_meta(make_choice_mixed, self.hparams, choice_values=self.choice_values)
-        else:
-            self.sampler = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
+        elif distribution == "uniform":
+            self.sampler = uniform_sampler_f(self.min, self.max)
 
     def __call__(self):
-        s_passed = self.sampler()
-        return s_passed
+        return self.sampler()
 
 
 class DifferentiablePrior:
