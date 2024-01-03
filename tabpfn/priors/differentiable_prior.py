@@ -14,6 +14,31 @@ def unpack_dict_of_tuples(d):
     # {'a': (1,2), 'b': (3,4)} -> [{'a': 1, 'b': 3}, {'a': 2, 'b': 4}]
     return [dict(zip(d.keys(), v)) for v in list(zip(*list(d.values())))]
 
+def get_sampler(distribution, min, max, sample):
+    if distribution == "uniform":
+        if sample is None:
+            return uniform_sampler_f(min, max), min, max, (max+min) / 2, math.sqrt(1/12*(max-min)*(max-min))
+        else:
+            return lambda: sample, min, max, None, None
+    elif distribution == "uniform_int":
+        return uniform_int_sampler_f(min, max), min, max, (max+min) / 2, math.sqrt(1/12*(max-min)*(max-min))
+
+
+def return_two(x, min, max, mean, std):
+    # Returns (a hyperparameter value, and an indicator value passed to the model)
+    if mean is not None:
+        ind = (x-mean)/std  # (2 * (x-min) / (max-min) - 1)
+    else:
+        ind = None
+    return ind, x  # normalize indicator to [-1, 1]
+
+
+def sample_meta(f, hparams):
+    indicators, passed = unpack_dict_of_tuples({hp: hparams[hp]() for hp in hparams})
+    # sampled_embeddings = list(itertools.chain.from_iterable([sampled_embeddings[k] for k in sampled_embeddings]))
+    meta_passed = f(**passed)
+    return indicators, meta_passed
+
 
 class DifferentiableHyperparameter(nn.Module):
     # We can sample this and get a hyperparameter value and a normalized hyperparameter indicator
@@ -26,25 +51,8 @@ class DifferentiableHyperparameter(nn.Module):
         for key in args:
             setattr(self, key, args[key])
 
-        def get_sampler():
-
-            if self.distribution == "uniform":
-                if not hasattr(self, 'sample'):
-                    return uniform_sampler_f(self.min, self.max), self.min, self.max, (self.max+self.min) / 2, math.sqrt(1/12*(self.max-self.min)*(self.max-self.min))
-                else:
-                    return lambda: self.sample, self.min, self.max, None, None
-            elif self.distribution == "uniform_int":
-                return uniform_int_sampler_f(self.min, self.max), self.min, self.max, (self.max+self.min) / 2, math.sqrt(1/12*(self.max-self.min)*(self.max-self.min))
-
         if self.distribution.startswith("meta"):
             self.hparams = {}
-
-            def sample_meta(f):
-                indicators, passed = unpack_dict_of_tuples({hp: self.hparams[hp]() for hp in self.hparams})
-                # sampled_embeddings = list(itertools.chain.from_iterable([sampled_embeddings[k] for k in sampled_embeddings]))
-                meta_passed = f(**passed)
-                return indicators, meta_passed
-
             args_passed = {'device': device, 'embedding_dim': embedding_dim}
             if self.distribution == "meta_beta":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
@@ -56,7 +64,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 def make_beta(b, k):
                     return lambda b=b, k=k: self.scale * beta_sampler_f(b, k)()
-                self.sampler = lambda make_beta=make_beta: sample_meta(make_beta)
+                self.sampler = lambda: sample_meta(make_beta, self.hparams)
             if self.distribution == "meta_gamma":
                 # Truncated normal where std and mean are drawn randomly logarithmically scaled
                 if hasattr(self, 'alpha') and hasattr(self, 'scale'):
@@ -67,7 +75,7 @@ class DifferentiableHyperparameter(nn.Module):
 
                 def make_gamma(alpha, scale):
                     return lambda alpha=alpha, scale=scale: self.lower_bound + round(gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))()) if self.round else self.lower_bound + gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))()
-                self.sampler = lambda make_gamma=make_gamma: sample_meta(make_gamma)
+                self.sampler = lambda: sample_meta(make_gamma, self.hparams)
             elif self.distribution == "meta_trunc_norm_log_scaled":
                 # these choices are copied down below, don't change these without changing `replace_differentiable_distributions`
                 self.min_std = self.min_std if hasattr(self, 'min_std') else 0.01
@@ -83,7 +91,7 @@ class DifferentiableHyperparameter(nn.Module):
                     return ((lambda: self.lower_bound + round(trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))())) if self.round
                             else (lambda: self.lower_bound + trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))()))
 
-                self.sampler = lambda make_trunc_norm=make_trunc_norm: sample_meta(make_trunc_norm)
+                self.sampler = lambda: sample_meta(make_trunc_norm, self.hparams)
             elif self.distribution == "meta_trunc_norm":
                 self.min_std = self.min_std if hasattr(self, 'min_std') else 0.01
                 self.max_std = self.max_std if hasattr(self, 'max_std') else 1.0
@@ -95,12 +103,10 @@ class DifferentiableHyperparameter(nn.Module):
                         trunc_norm_sampler_f(mean, std)())) if self.round
                         else (
                         lambda make_trunc_norm=make_trunc_norm: self.lower_bound + trunc_norm_sampler_f(mean, std)()))
-                self.sampler = lambda: sample_meta(make_trunc_norm)
+                self.sampler = lambda: sample_meta(make_trunc_norm, self.hparams)
+
             elif self.distribution == "meta_choice":
-                if hasattr(self, 'choice_1_weight'):
-                    self.hparams = {f'choice_{i}_weight': lambda: (None, getattr(self, f'choice_{i}_weight')) for i in range(1, len(self.choice_values))}
-                else:
-                    self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
+                self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
                         distribution="uniform", min=-3.0, max=5.0, **args_passed) for i in range(1, len(self.choice_values))}
 
                 def make_choice(**choices):
@@ -109,12 +115,10 @@ class DifferentiableHyperparameter(nn.Module):
                     sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
                     return self.choice_values[sample]
 
-                self.sampler = lambda make_choice=make_choice: sample_meta(make_choice)
+                self.sampler = lambda: sample_meta(make_choice, self.hparams)
+
             elif self.distribution == "meta_choice_mixed":
-                if hasattr(self, 'choice_1_weight'):
-                    self.hparams = {f'choice_{i}_weight': lambda: (None, getattr(self, f'choice_{i}_weight')) for i in range(1, len(self.choice_values))}
-                else:
-                    self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
+                self.hparams = {f"choice_{i}_weight": DifferentiableHyperparameter(
                         distribution="uniform", min=-5.0, max=6.0, **args_passed) for i in range(1, len(self.choice_values))}
 
                 def make_choice(**choices):
@@ -125,17 +129,9 @@ class DifferentiableHyperparameter(nn.Module):
                         return self.choice_values[s]()
                     return lambda: sample
 
-                self.sampler = lambda make_choice=make_choice: sample_meta(make_choice)
+                self.sampler = lambda: sample_meta(make_choice, self.hparams)
         else:
-            def return_two(x, min, max, mean, std):
-                # Returns (a hyperparameter value, and an indicator value passed to the model)
-                if mean is not None:
-                    ind = (x-mean)/std  # (2 * (x-min) / (max-min) - 1)
-                else:
-                    ind = None
-                return ind, x  # normalize indicator to [-1, 1]
-
-            self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler()
+            self.sampler_f, self.sampler_min, self.sampler_max, self.sampler_mean, self.sampler_std = get_sampler(self.distribution, self.min, self.max, getattr(self, 'sample', None))
             self.sampler = lambda: return_two(self.sampler_f(), min=self.sampler_min, max=self.sampler_max, mean=self.sampler_mean, std=self.sampler_std)
 
 
