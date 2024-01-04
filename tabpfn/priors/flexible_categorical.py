@@ -239,8 +239,6 @@ class FlexibleCategorical(torch.nn.Module):
         #if self.h['normalize_labels']: this was always true
         for b in range(y.shape[1]):
             valid_labels = y[:, b] != -100
-            if self.h.get('normalize_ignore_label_too', False):
-                valid_labels[:] = True
             y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
             if y[valid_labels, b].numel() != 0:

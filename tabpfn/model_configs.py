@@ -148,7 +148,6 @@ def get_base_config_paper():
 
     config['normalize_with_sqrt'] = False
     config['prior_mlp_scale_weights_sqrt'] = True
-    config['normalize_ignore_label_too'] = False
     config['random_feature_rotation'] = True
     config['output_attention'] = True
     config['y_encoder'] = "one_hot"

@@ -42,7 +42,6 @@ def main(argv):
     config['set_value_to_nan'] = .1  # diff: 1.
     config['normalize_with_sqrt'] = False
     config['prior_mlp_scale_weights_sqrt'] = True
-    config['normalize_ignore_label_too'] = False
     config['random_feature_rotation'] = True
     config['output_attention'] = True
     config['y_encoder'] = "one_hot"
