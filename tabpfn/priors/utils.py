@@ -1,12 +1,9 @@
-import math
 import random
 
 import numpy as np
 import scipy.stats as stats
 import torch
 from torch import nn
-
-from torch.utils.data import DataLoader
 
 
 def eval_simple_dist(dist_dict):
@@ -15,40 +12,6 @@ def eval_simple_dist(dist_dict):
     if dist_dict['distribution'] == "uniform":
         return np.random.uniform(dist_dict['min'], dist_dict['max'])
     raise ValueError("Distribution not supported")
-
-
-class PriorDataLoader(DataLoader):
-    def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features, hyperparameters):
-        self.prior = prior
-        self.num_steps = num_steps
-        self.batch_size = batch_size
-        self.min_eval_pos = min_eval_pos
-        self.max_eval_pos = max_eval_pos
-        self.n_samples = n_samples
-        self.device = device
-        self.num_features = num_features
-        self.hyperparameters = hyperparameters
-        self.epoch_count = 0
-
-    def gbm(self, epoch=None):
-        # Actually can only sample up to max_eval_pos-1 but that's how it was in the original code
-        single_eval_pos = np.random.randint(self.min_eval_pos, self.max_eval_pos)
-        batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=self.n_samples, num_features=self.num_features, device=self.device,
-                                     hyperparameters=self.hyperparameters, epoch=epoch,
-                                     single_eval_pos=single_eval_pos)
-        # we return sampled hyperparameters from get_batch for testing but we don't want to use them as style.
-        x, y, target_y, _ = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
-        return (None, x, y), target_y, single_eval_pos
-    
-    def __len__(self):
-        return self.num_steps
-
-    def get_test_batch(self):  # does not increase epoch_count
-        return self.gbm(epoch=self.epoch_count)
-
-    def __iter__(self):
-        self.epoch_count += 1
-        return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 def trunc_norm_sampler_f(mu, sigma): return lambda: stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma).rvs(1)[0]
 def beta_sampler_f(a, b, scale=1): return lambda: np.random.beta(a, b) * scale

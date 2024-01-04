@@ -13,6 +13,7 @@ def get_general_config(max_features, n_samples):
         "nhid_factor": 2,
         "n_samples": n_samples,
         "eval_positions": None,
+        "max_eval_pos": n_samples,
         "n_samples_used": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "epochs": 80,
