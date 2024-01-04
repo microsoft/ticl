@@ -146,13 +146,13 @@ def parse_distribution(name, distribution, min=None, max=None, scale=None, lower
 class SamplerPrior:
     def __init__(self, base_prior, differentiable_hyperparameters):
         self.base_prior = base_prior
-        self.differentiable_hyperparameters = differentiable_hyperparameters
+        self.hyper_dists = {hp: parse_distribution(name=hp, **dist) for hp, dist in differentiable_hyperparameters.items()}
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device,
                   hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            sampled_hypers = {hp: parse_distribution(name=hp, **dist)() for hp, dist in self.differentiable_hyperparameters.items()}
+            sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
             combined_hypers = {**hyperparameters, **sampled_hypers}
             x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
