@@ -6,7 +6,7 @@ import torch
 from syne_tune import Reporter
 
 from tabpfn.model_builder import get_model
-from tabpfn.model_configs import evaluate_hypers, get_base_config_paper
+from tabpfn.model_configs import get_base_config_paper
 from tabpfn.utils import (get_model_string, init_device, init_mlflow, load_model_state, make_base_parser, make_training_callback,
                           synetune_handle_checkpoint)
 
@@ -33,7 +33,8 @@ def main(argv):
 
     config['nhead'] = config['emsize'] // 128
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
-    config_sample = evaluate_hypers(config)
+    import pdb; pdb.set_trace()
+    config_sample = config
 
     if args.load_file is not None:
         model_state, optimizer_state, scheduler, config = load_model_state(args.load_file, config)

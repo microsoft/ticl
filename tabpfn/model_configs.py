@@ -13,7 +13,7 @@ def get_general_config(max_features, n_samples, eval_positions=None):
     """
     config_general = {
         "lr": CSH.UniformFloatHyperparameter('lr', lower=0.0001, upper=0.00015, log=True),
-        "dropout": CSH.CategoricalHyperparameter('dropout', [0.0]),
+        "dropout": 0.0,
         "emsize": CSH.CategoricalHyperparameter('emsize', [2 ** i for i in range(8, 9)]),  # upper bound is -1
         "batch_size": CSH.CategoricalHyperparameter('batch_size', [2 ** i for i in range(6, 8)]),
         "nlayers": CSH.CategoricalHyperparameter('nlayers', [12]),
@@ -40,15 +40,15 @@ def get_flexible_categorical_config(max_features):
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
     config_flexible_categorical = {
-        "nan_prob_unknown_reason_reason_prior": CSH.CategoricalHyperparameter('nan_prob_unknown_reason_reason_prior', [0.5]),
+        "nan_prob_unknown_reason_reason_prior": 0.5,
         "categorical_feature_p": CSH.CategoricalHyperparameter('categorical_feature_p', [0.0, 0.1, 0.2]),
         "nan_prob_no_reason": CSH.CategoricalHyperparameter('nan_prob_no_reason', [0.0, 0.1]),
         "nan_prob_unknown_reason": CSH.CategoricalHyperparameter('nan_prob_unknown_reason', [0.0]),
-        "nan_prob_a_reason": CSH.CategoricalHyperparameter('nan_prob_a_reason', [0.0]),
+        "nan_prob_a_reason": 0.0,
         # "num_classes": lambda : random.randint(2, 10), "balanced": False,
         "max_num_classes": 2,
         "num_classes": 2,
-        "noise_type": CSH.CategoricalHyperparameter('noise_type', ["Gaussian"]),  # NN
+        "noise_type": "Gaussian",  # NN
         "balanced": True,
         "normalize_to_ranking": CSH.CategoricalHyperparameter('normalize_to_ranking', [False]),
         "set_value_to_nan": CSH.CategoricalHyperparameter('set_value_to_nan', [0.5, 0.2, 0.0]),
@@ -162,52 +162,6 @@ def get_diff_config():
     return config_diff
 
 
-def get_prior_config(config_type):
-    if config_type == 'causal':
-        return get_prior_config_causal()
-    elif config_type == 'gp':
-        return get_prior_config_gp()
-    elif config_type == 'bnn':
-        return get_prior_config_bnn()
-
-
-def get_prior_config_gp(max_features=100):
-    config_general = get_general_config(max_features, 50, eval_positions=[30])
-    config_general_real_world = {**config_general}
-
-    config_flexible_categorical = get_flexible_categorical_config(max_features)
-    config_flexible_categorical_real_world = {**config_flexible_categorical}
-
-    config_gp = {}
-
-    config_diff = get_diff_config()
-
-    config = {**config_general_real_world, **config_flexible_categorical_real_world, **config_diff, **config_gp}
-
-    config['differentiable_hyperparameters']['prior_bag_exp_weights_1'] = {'distribution': 'uniform', 'min': 0.0,
-                                                                           'max': .01}  # Never select MLP
-
-
-def get_prior_config_bnn(max_features=100):
-    config_general = get_general_config(max_features, 50, eval_positions=[30])
-    config_general_real_world = {**config_general}
-
-    config_flexible_categorical = get_flexible_categorical_config(max_features)
-    config_flexible_categorical_real_world = {**config_flexible_categorical}
-
-    config_gp = {}
-    config_mlp = {}
-
-    config_diff = get_diff_config()
-
-    config = {**config_general_real_world, **config_flexible_categorical_real_world, **config_diff, **config_gp,
-              **config_mlp}
-
-    config['differentiable_hyperparameters']['prior_bag_exp_weights_1'] = {'distribution': 'uniform',
-                                                                           'min': 1000.0,
-                                                                           'max': 1001.0}  # Always select MLP
-
-
 def get_prior_config_causal(max_features=100):
     config_general = get_general_config(max_features, 50, eval_positions=[30])
     config_general_real_world = {**config_general}
@@ -243,37 +197,8 @@ def list_all_hps_in_nested(config):
     else:
         return []
 
-
-def create_configspace_from_hierarchical(config):
-    cs = CS.ConfigurationSpace()
-    for hp in list_all_hps_in_nested(config):
-        cs.add_hyperparameter(hp)
-    return cs
-
-
-def fill_in_configsample(config, configsample):
-    # config is our dict that defines config distribution
-    # configsample is a CS.Configuration
-    hierarchical_configsample = deepcopy(config)
-    for k, v in config.items():
-        if isinstance(v, CSH.Hyperparameter):
-            hierarchical_configsample[k] = configsample[v.name]
-        elif isinstance(v, dict):
-            hierarchical_configsample[k] = fill_in_configsample(v, configsample)
-    return hierarchical_configsample
-
-
-def evaluate_hypers(config):
-    """"
-    Samples a hyperparameter configuration from a sampleable configuration (can be used in HP search).
-    """
-    cs = create_configspace_from_hierarchical(config)
-    cs_sample = cs.sample_configuration()
-    return fill_in_configsample(config, cs_sample)
-
-
 def get_base_config_paper():
-    config = get_prior_config(config_type='causal')
+    config = get_prior_config_causal()
     config['prior_type'] = 'prior_bag'
     config['recompute_attn'] = True
     config['max_num_classes'] = 10

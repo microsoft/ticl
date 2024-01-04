@@ -13,7 +13,7 @@ from syne_tune import Reporter
 
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 from tabpfn.model_builder import get_model, save_model
-from tabpfn.model_configs import evaluate_hypers, get_prior_config
+from tabpfn.model_configs import get_prior_config_causal
 from tabpfn.priors.utils import uniform_int_sampler_f
 from tabpfn.utils import compare_dicts
 
@@ -28,7 +28,7 @@ def str2bool(v):
 
 
 def main(argv):
-    config = get_prior_config(config_type='causal')
+    config = get_prior_config_causal()
     config['recompute_attn'] = True
     config['max_num_classes'] = 10
     config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
@@ -217,8 +217,6 @@ def main(argv):
     config['stop_after_epochs'] = args.stop_after_epochs
     save_every = args.save_every
 
-    config_sample = evaluate_hypers(config)
-
     model_state, optimizer_state, scheduler = None, None, None
     if warm_start_weights is not None:
         model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
@@ -226,16 +224,16 @@ def main(argv):
         module_prefix = 'module.'
         model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
         if args.continue_run:
-            config_sample = old_config
-            config_sample['device'] = device
-            config_sample['warm_start_from'] = warm_start_weights
+            config = old_config
+            config['device'] = device
+            config['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
-            config_sample['stop_after_epochs'] = args.stop_after_epochs
+            config['stop_after_epochs'] = args.stop_after_epochs
             if not args.restart_scheduler:
                 scheduler = old_scheduler
         else:
             print("WARNING warm starting with new settings")
-            compare_dicts(config_sample, old_config, all=True)
+            compare_dicts(config, old_config, all=True)
 
     report = Reporter()
 
@@ -248,7 +246,7 @@ def main(argv):
             with open(f"{checkpoint_dir}/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
-        mm = config_sample['model_maker']
+        mm = config['model_maker']
         model_maker_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
 
         default_args_dict = vars(parser.parse_args([]))
@@ -266,7 +264,7 @@ def main(argv):
                         config_string += f"_{short_name}{v:.4g}"
                     else:
                         config_string += f"_{short_name}{v}"
-        gpu_string = f"_{config_sample['num_gpus']}_gpu{'s' if config_sample['num_gpus'] > 1 else ''}" if config_sample['device'] != 'cpu' else '_cpu'
+        gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
         model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         if checkpoint_dir is not None:
@@ -313,12 +311,12 @@ def main(argv):
                 with open(log_file, 'a') as f:
                     f.write(f'Saving model to {file_name}\n')
                 print(f'Saving model to {file_name}')
-                config_sample['epoch_in_training'] = epoch
-                config_sample['learning_rates'] = model.learning_rates
-                config_sample['losses'] = model.losses
-                config_sample['wallclock_times'] = model.wallclock_times
+                config['epoch_in_training'] = epoch
+                config['learning_rates'] = model.learning_rates
+                config['losses'] = model.losses
+                config['wallclock_times'] = model.wallclock_times
 
-                save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+                save_model(model, optimizer, scheduler, base_path, file_name, config)
                 # remove checkpoints that are worse than current
                 if epoch != "on_exit" and epoch - save_every > 0:
                     this_loss = model.losses[-1]
@@ -365,13 +363,13 @@ def main(argv):
 
         with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
-            mlflow.log_params({k: v for k, v in config_sample.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
-            total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
+            mlflow.log_params({k: v for k, v in config.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+            total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=args.continue_run or args.load_strict)
 
     else:
-        total_loss, model, dl, epoch = get_model(config_sample, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
+        total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                  optimizer_state=optimizer_state, scheduler=scheduler,
                                                  load_model_strict=args.continue_run or args.load_strict)
 

@@ -64,7 +64,6 @@ class MetaBetaHyperparameter:
     def __call__(self):
         return beta_sampler_f(a=self.b(), b=self.k(), scale=self.scale)
 
-
 class MetaGammaHyperparameter:
     def __init__(self, name, max_alpha, max_scale, lower_bound, round):
         self.name = name
