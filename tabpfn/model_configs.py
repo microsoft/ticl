@@ -1,8 +1,4 @@
-from copy import deepcopy
-
-import ConfigSpace as CS
 import torch
-from ConfigSpace import hyperparameters as CSH
 
 from tabpfn.priors.utils import uniform_int_sampler_f
 
@@ -12,13 +8,8 @@ def get_general_config(max_features, n_samples, eval_positions=None):
     Returns the general PFN training hyperparameters.
     """
     config_general = {
-        "lr": CSH.UniformFloatHyperparameter('lr', lower=0.0001, upper=0.00015, log=True),
         "dropout": 0.0,
-        "emsize": CSH.CategoricalHyperparameter('emsize', [2 ** i for i in range(8, 9)]),  # upper bound is -1
-        "batch_size": CSH.CategoricalHyperparameter('batch_size', [2 ** i for i in range(6, 8)]),
-        "nlayers": CSH.CategoricalHyperparameter('nlayers', [12]),
         "num_features": max_features,
-        "nhead": CSH.CategoricalHyperparameter('nhead', [4]),
         "nhid_factor": 2,
         "n_samples": n_samples,
         "eval_positions": None,
@@ -41,21 +32,14 @@ def get_flexible_categorical_config(max_features):
     """
     config_flexible_categorical = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
-        "categorical_feature_p": CSH.CategoricalHyperparameter('categorical_feature_p', [0.0, 0.1, 0.2]),
-        "nan_prob_no_reason": CSH.CategoricalHyperparameter('nan_prob_no_reason', [0.0, 0.1]),
-        "nan_prob_unknown_reason": CSH.CategoricalHyperparameter('nan_prob_unknown_reason', [0.0]),
         "nan_prob_a_reason": 0.0,
-        # "num_classes": lambda : random.randint(2, 10), "balanced": False,
         "max_num_classes": 2,
         "num_classes": 2,
         "noise_type": "Gaussian",  # NN
         "balanced": True,
-        "normalize_to_ranking": CSH.CategoricalHyperparameter('normalize_to_ranking', [False]),
-        "set_value_to_nan": CSH.CategoricalHyperparameter('set_value_to_nan', [0.5, 0.2, 0.0]),
         "normalize_by_used_features": True,
         "num_features_used":
             {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
-        # hp.choice('conv_activation', [{'distribution': 'uniform', 'min': 2.0, 'max': 8.0}, None]),
     }
     return config_flexible_categorical
 
@@ -65,12 +49,6 @@ def get_diff_flex():
     Returns the configuration parameters for a differentiable wrapper around the tabular multiclass wrapper.
     """
     diff_flex = {
-        # "ordinal_pct": {'distribution': 'uniform', 'min': 0.0, 'max': 0.5},
-        # "num_categorical_features_sampler_a": hp.choice('num_categorical_features_sampler_a',
-        #                                                 [{'distribution': 'uniform', 'min': 0.3, 'max': 0.9}, None]),
-        # "num_categorical_features_sampler_b": {'distribution': 'uniform', 'min': 0.3, 'max': 0.9},
-
-        # CSH.CategoricalHyperparameter('output_multiclass_ordered_p', [0.0, 0.1, 0.2]),
         "output_multiclass_ordered_p": {'distribution': 'uniform', 'min': 0.0, 'max': 0.5},
         "multiclass_type": {'distribution': 'meta_choice', 'choice_values': ['value', 'rank']},
     }
@@ -98,19 +76,11 @@ def get_diff_causal():
     Returns the configuration parameters for a differentiable wrapper around MLP / Causal mixture.
     """
     diff_causal = {
-        # "mix_activations": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-        # "num_layers": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 6, 'min_mean': 1, 'round': True,
-        #               'lower_bound': 2},
         "num_layers": {'distribution': 'meta_gamma', 'max_alpha': 2, 'max_scale': 3, 'round': True,
                        'lower_bound': 2},
-        # Better beta?
-        # "prior_mlp_hidden_dim": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 130, 'min_mean': 5,
-        #                         'round': True, 'lower_bound': 4},
         "prior_mlp_hidden_dim": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 100, 'round': True, 'lower_bound': 4},
-
         "prior_mlp_dropout_prob": {'distribution': 'meta_beta', 'scale': 0.6, 'min': 0.1, 'max': 5.0},
         # This mustn't be too high since activations get too large otherwise
-
         "noise_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': .3, 'min_mean': 0.0001, 'round': False,
                       'lower_bound': 0.0},
         "init_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 10.0, 'min_mean': 0.01, 'round': False,
@@ -168,8 +138,7 @@ def get_prior_config_causal(max_features=100):
 
     config_flexible_categorical = get_flexible_categorical_config(max_features)
     config_flexible_categorical_real_world = {**config_flexible_categorical}
-    config_flexible_categorical_real_world[
-        'num_categorical_features_sampler_a'] = -1.0  # Categorical features disabled by default
+    config_flexible_categorical_real_world['num_categorical_features_sampler_a'] = -1.0  # Categorical features disabled by default
 
     config_gp = {}
     config_mlp = {}
@@ -181,21 +150,6 @@ def get_prior_config_causal(max_features=100):
 
     return config
 
-
-def list_all_hps_in_nested(config):
-    """"
-    Returns a list of hyperparameters from a neszed dict of hyperparameters.
-    """
-
-    if isinstance(config, CSH.Hyperparameter):
-        return [config]
-    elif isinstance(config, dict):
-        result = []
-        for k, v in config.items():
-            result += list_all_hps_in_nested(v)
-        return result
-    else:
-        return []
 
 def get_base_config_paper():
     config = get_prior_config_causal()
