@@ -143,23 +143,7 @@ def parse_distribution(name, distribution, min=None, max=None, scale=None, lower
         raise ValueError(f"Distribution {distribution} not supported.")
 
 
-class DifferentiablePrior:
-    def __init__(self, get_batch, hyperparameters, differentiable_hyperparameters, args):
-
-        self.h = hyperparameters
-        self.args = args
-        self.get_batch = get_batch
-        self.differentiable_hyperparameters = {hp: parse_distribution(name=hp, **differentiable_hyperparameters[hp]) for hp in differentiable_hyperparameters}
-
-    def __call__(self):
-        # Sample hyperparameters
-        sampled_hyperparameters_passed = {hp: hp_sampler() for hp, hp_sampler in self.differentiable_hyperparameters.items()}
-        hyperparameters = {**self.h, **sampled_hyperparameters_passed}
-        x, y, y_ = self.get_batch(hyperparameters=hyperparameters, **self.args)
-
-        return x, y, y_, hyperparameters
-
-class DifferentiableSamplerPrior:
+class SamplerPrior:
     def __init__(self, base_prior, differentiable_hyperparameters):
         self.base_prior = base_prior
         self.differentiable_hyperparameters = differentiable_hyperparameters
@@ -168,6 +152,8 @@ class DifferentiableSamplerPrior:
                   hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_, sampled_hypers = DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args)()
+            sampled_hypers = {hp: parse_distribution(name=hp, **dist)() for hp, dist in self.differentiable_hyperparameters.items()}
+            combined_hypers = {**hyperparameters, **sampled_hypers}
+            x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
         return x, y, y_, sampled_hypers

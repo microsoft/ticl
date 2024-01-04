@@ -5,7 +5,7 @@ import tabpfn.priors as priors
 from tabpfn.priors.flexible_categorical import FlexibleCategoricalPrior
 from tabpfn.priors.prior_bag import BagPrior
 from tabpfn.priors.boolean_conjunctions import BooleanConjunctionSampler
-from tabpfn.priors.differentiable_prior import DifferentiableSamplerPrior
+from tabpfn.priors.differentiable_prior import SamplerPrior
 
 class PriorDataLoader(DataLoader):
     def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features, hyperparameters):
@@ -53,14 +53,14 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, d
         # Prior bag combines priors
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
                              prior_weights={'mlp': 0.961, 'gp': 0.039})
-        prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
+        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionSampler()
     elif prior_type == "bag_boolean":
         boolean = BooleanConjunctionSampler()
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible, 'boolean': boolean},
                              prior_weights={'mlp': 0.9, 'gp': 0.02, 'boolean': 0.08})
-        prior = DifferentiableSamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
+        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'])
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
     
