@@ -50,7 +50,7 @@ class PriorDataLoader(DataLoader):
         return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 def trunc_norm_sampler_f(mu, sigma): return lambda: stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma).rvs(1)[0]
-def beta_sampler_f(a, b): return lambda: np.random.beta(a, b)
+def beta_sampler_f(a, b, scale=1): return lambda: np.random.beta(a, b) * scale
 def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
 def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
 def uniform_int_sampler_f(a, b): return lambda: round(np.random.uniform(a, b))

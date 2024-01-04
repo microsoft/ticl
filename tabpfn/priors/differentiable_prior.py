@@ -9,10 +9,6 @@ from .utils import (beta_sampler_f, gamma_sampler_f,
                     trunc_norm_sampler_f, uniform_sampler_f)
 
 
-def make_beta(b, k, scale):
-    return lambda b=b, k=k: scale * beta_sampler_f(b, k)()
-
-
 def make_gamma(alpha, scale, do_round, lower_bound):
     if do_round:
         return lambda alpha=alpha, scale=scale: lower_bound + round(gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))())
@@ -71,7 +67,8 @@ class MetaBetaHyperparameter:
         self.k = UniformHyperparameter('k', min=min, max=max)
 
     def __call__(self):
-        return sample_meta(make_beta, {'b': self.b, 'k': self.k}, scale=self.scale)
+        return beta_sampler_f(a=self.b(), b=self.k(), scale=self.scale)
+
 
 class MetaGammaHyperparameter:
     def __init__(self, name, max_alpha, max_scale, lower_bound, round):
