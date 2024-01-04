@@ -30,7 +30,7 @@ def make_trunc_norm(mean, std, do_round, lower_bound):
         return lambda: lower_bound + trunc_norm_sampler_f(mean, std)()
     
 
-def make_choice_mixed(*, choice_values, **choices):
+def make_choice_mixed(*, choice_values, choices):
     weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
 
     def sample():
@@ -39,13 +39,12 @@ def make_choice_mixed(*, choice_values, **choices):
     return lambda: sample
     
 
-def make_choice(*, choice_values, **choices):
+def make_choice(*, choice_values, choices):
     choices = torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float)
     weights = torch.softmax(choices, 0)  # create a tensor of weights
     sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
     return choice_values[sample]
             
-
 
 class UniformHyperparameter:
     def __init__(self, name, min, max):
@@ -54,7 +53,6 @@ class UniformHyperparameter:
         self.name = name
     def __call__(self):
         return uniform_sampler_f(self.min, self.max)()
-
 
 class MetaBetaHyperparameter:
     def __init__(self, name, min, max, scale):
@@ -106,7 +104,7 @@ class MetaChoiceHyperparameter:
         self.choice_values = choice_values
         self.choices = {f"choice_{i}_weight": UniformHyperparameter(f"choice_{i}_weight", min=-3.0, max=5.0) for i in range(1, len(choice_values))}
     def __call__(self):
-        return make_choice(**{choice: val() for choice, val in self.choices.items()}, choice_values=self.choice_values)
+        return make_choice(choices={choice: val() for choice, val in self.choices.items()}, choice_values=self.choice_values)
 
 class MetaChoiceMixedHyperparameter:
     def __init__(self, name, choice_values):
@@ -114,7 +112,7 @@ class MetaChoiceMixedHyperparameter:
         self.choice_values = choice_values
         self.choices = {f"choice_{i}_weight": UniformHyperparameter(f"choice_{i}_weight", min=-5.0, max=6.0) for i in range(1, len(choice_values))}
     def __call__(self):
-        return make_choice_mixed(**{choice: val() for choice, val in self.choices.items()}, choice_values=self.choice_values)
+        return make_choice_mixed(choices={choice: val() for choice, val in self.choices.items()}, choice_values=self.choice_values)
 
 
 def parse_distribution(name, distribution, min=None, max=None, scale=None, lower_bound=None, round=None, min_mean=None, max_mean=None, min_std=0.01, max_std=1.0, choice_values=None,
