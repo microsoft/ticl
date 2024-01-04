@@ -157,8 +157,7 @@ class DifferentiablePrior:
         hyperparameters = {**self.h, **sampled_hyperparameters_passed}
         x, y, y_ = self.get_batch(hyperparameters=hyperparameters, **self.args)
 
-        return x, y, y_
-
+        return x, y, y_, hyperparameters
 
 class DifferentiableSamplerPrior:
     def __init__(self, base_prior, differentiable_hyperparameters):
@@ -169,6 +168,6 @@ class DifferentiableSamplerPrior:
                   hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_ = DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args)()
+            x, y, y_, sampled_hypers = DifferentiablePrior(self.base_prior.get_batch, hyperparameters, self.differentiable_hyperparameters, args)()
             x, y, y_ = x.detach(), y.detach(), y_.detach()
-        return x, y, y_, None
+        return x, y, y_, sampled_hypers

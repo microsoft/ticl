@@ -36,8 +36,9 @@ class PriorDataLoader(DataLoader):
         batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=self.n_samples, num_features=self.num_features, device=self.device,
                                      hyperparameters=self.hyperparameters, epoch=epoch,
                                      single_eval_pos=single_eval_pos)
-        x, y, target_y, style = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
-        return (style, x, y), target_y, single_eval_pos
+        # we return sampled hyperparameters from get_batch for testing but we don't want to use them as style.
+        x, y, target_y, _ = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
+        return (None, x, y), target_y, single_eval_pos
     
     def __len__(self):
         return self.num_steps

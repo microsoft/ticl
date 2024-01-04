@@ -121,7 +121,7 @@ def get_diff_config():
 
 
 def get_prior_config_causal(max_features=100):
-    config_general = get_general_config(max_features, 50)
+    config_general = get_general_config(max_features, n_samples=1024+128)
     config_flexible_categorical = get_flexible_categorical_config(max_features)
     config_diff = get_diff_config()
 
@@ -132,20 +132,17 @@ def get_prior_config_causal(max_features=100):
 
 def get_base_config_paper():
     config = get_prior_config_causal()
-    config['prior_type'] = 'prior_bag'
     config['recompute_attn'] = True
-
     config['output_multiclass_ordered_p'] = 0.
-
+    config['multiclass_max_steps'] = 10
+    config['pre_sample_causes'] = True
     config['multiclass_loss_type'] = 'nono'  # 'compatible'
     config['normalize_to_ranking'] = False  # False
-
-    config['categorical_feature_p'] = .2
+    config['categorical_feature_p'] = .2  # diff: .0
 
     config['nan_prob_no_reason'] = .0
-    config['nan_prob_unknown_reason'] = .0
-    config['set_value_to_nan'] = .1
-
+    config['nan_prob_unknown_reason'] = .0  # diff: .0
+    config['set_value_to_nan'] = .1  # diff: 1.
     config['normalize_with_sqrt'] = False
     config['prior_mlp_scale_weights_sqrt'] = True
     config['random_feature_rotation'] = True
@@ -153,6 +150,5 @@ def get_base_config_paper():
     config['y_encoder'] = "one_hot"
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
-    config['max_eval_pos'] = 1000
-    config['n_samples'] = 1024+128
+    config['hid_factor'] = 2
     return config
