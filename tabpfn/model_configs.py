@@ -3,7 +3,7 @@ import torch
 from tabpfn.priors.utils import uniform_int_sampler_f
 
 
-def get_general_config(max_features, n_samples, eval_positions=None):
+def get_general_config(max_features, n_samples):
     """"
     Returns the general PFN training hyperparameters.
     """
@@ -18,7 +18,7 @@ def get_general_config(max_features, n_samples, eval_positions=None):
         "epochs": 80,
         "num_steps": 100,
         "verbose": False,
-        "mix_activations": False,
+        "mix_activations": False,  # False means to mix activations
         "pre_sample_causes": True,
         "multiclass_type": 'rank'
     }
@@ -30,30 +30,19 @@ def get_flexible_categorical_config(max_features):
     """"
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
+    max_num_classes = 10
     config_flexible_categorical = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
-        "max_num_classes": 2,
-        "num_classes": 2,
+        "max_num_classes": max_num_classes,
+        "num_classes": uniform_int_sampler_f(2, max_num_classes),
         "noise_type": "Gaussian",  # NN
-        "balanced": True,
+        "balanced": False,
         "normalize_by_used_features": True,
         "num_features_used":
             {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
     }
     return config_flexible_categorical
-
-
-def get_diff_flex():
-    """"
-    Returns the configuration parameters for a differentiable wrapper around the tabular multiclass wrapper.
-    """
-    diff_flex = {
-        "output_multiclass_ordered_p": {'distribution': 'uniform', 'min': 0.0, 'max': 0.5},
-        "multiclass_type": {'distribution': 'meta_choice', 'choice_values': ['value', 'rank']},
-    }
-
-    return diff_flex
 
 
 def get_diff_gp():
@@ -93,7 +82,7 @@ def get_diff_causal():
         "is_causal": {'distribution': 'meta_choice', 'choice_values': [True, False]},
         "pre_sample_weights": {'distribution': 'meta_choice', 'choice_values': [True, False]},
         "y_is_effect": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-        "sampling": {'distribution': 'meta_choice', 'choice_values': ['normal', 'mixed']},
+        # "sampling": {'distribution': 'meta_choice', 'choice_values': ['normal', 'mixed']},
         "prior_mlp_activations": {'distribution': 'meta_choice_mixed', 'choice_values': [
             torch.nn.Tanh, torch.nn.Identity, torch.nn.ReLU
         ]},
@@ -125,29 +114,19 @@ def get_diff_config():
     diff_prior_bag = get_diff_prior_bag()
     diff_causal = get_diff_causal()
     diff_gp = get_diff_gp()
-    diff_flex = get_diff_flex()
 
-    config_diff = {'differentiable_hyperparameters': {**diff_prior_bag, **diff_causal, **diff_gp, **diff_flex}}
+    config_diff = {'differentiable_hyperparameters': {**diff_prior_bag, **diff_causal, **diff_gp}}
 
     return config_diff
 
 
 def get_prior_config_causal(max_features=100):
-    config_general = get_general_config(max_features, 50, eval_positions=[30])
-    config_general_real_world = {**config_general}
-
+    config_general = get_general_config(max_features, 50)
     config_flexible_categorical = get_flexible_categorical_config(max_features)
-    config_flexible_categorical_real_world = {**config_flexible_categorical}
-    config_flexible_categorical_real_world['num_categorical_features_sampler_a'] = -1.0  # Categorical features disabled by default
-
-    config_gp = {}
-    config_mlp = {}
-
     config_diff = get_diff_config()
 
-    config = {**config_general_real_world, **config_flexible_categorical_real_world, **config_diff, **config_gp,
-              **config_mlp}
-
+    # config = {'general': config_general, 'flexible_categorical': config_flexible_categorical, 'diff': config_diff}
+    config = {**config_general, **config_flexible_categorical, **config_diff}
     return config
 
 
@@ -155,43 +134,22 @@ def get_base_config_paper():
     config = get_prior_config_causal()
     config['prior_type'] = 'prior_bag'
     config['recompute_attn'] = True
-    config['max_num_classes'] = 10
-    config['num_classes'] = uniform_int_sampler_f(2, config['max_num_classes'])
-    config['balanced'] = False
 
-    # diff
     config['output_multiclass_ordered_p'] = 0.
-    del config['differentiable_hyperparameters']['output_multiclass_ordered_p']
-
-    config['multiclass_type'] = 'rank'
-    del config['differentiable_hyperparameters']['multiclass_type']
-
-    config['sampling'] = 'normal'  # vielleicht schlecht?
-    del config['differentiable_hyperparameters']['sampling']
-
-    config['pre_sample_causes'] = True
-    # end diff
 
     config['multiclass_loss_type'] = 'nono'  # 'compatible'
     config['normalize_to_ranking'] = False  # False
 
-    config['categorical_feature_p'] = .2  # diff: .0
+    config['categorical_feature_p'] = .2
 
-    # turn this back on in a random search!?
     config['nan_prob_no_reason'] = .0
-    config['nan_prob_unknown_reason'] = .0  # diff: .0
-    config['set_value_to_nan'] = .1  # diff: 1.
+    config['nan_prob_unknown_reason'] = .0
+    config['set_value_to_nan'] = .1
 
     config['normalize_with_sqrt'] = False
-
     config['prior_mlp_scale_weights_sqrt'] = True
-
     config['normalize_ignore_label_too'] = False
-
     config['random_feature_rotation'] = True
-
-    config["mix_activations"] = False  # False heisst eig True
-
     config['output_attention'] = True
     config['y_encoder'] = "one_hot"
     config['efficient_eval_masking'] = True
