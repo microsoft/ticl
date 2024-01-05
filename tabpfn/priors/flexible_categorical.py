@@ -12,11 +12,8 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
 
-class BalancedBinarize(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
+class BalancedBinarize:
+    def __call__(self, x):
         return (x > torch.median(x)).float()
 
 
@@ -28,11 +25,8 @@ def class_sampler_f(min_, max_):
     return s
 
 
-class RegressionNormalized(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
+class RegressionNormalized:
+    def __call__(self, x):
         # x has shape (T,B)
 
         # TODO: Normalize to -1, 1 or gaussian normal
@@ -43,14 +37,13 @@ class RegressionNormalized(nn.Module):
         return norm
 
 
-class MulticlassSteps(nn.Module):
+class MulticlassSteps:
     """"Sample piecewise constant functions with random number of steps and random class boundaries"""
     def __init__(self, num_classes, max_steps=10):
-        super().__init__()
         self.num_classes = class_sampler_f(2, num_classes)()
         self.num_steps = np.random.randint(1, max_steps) if max_steps > 1 else 1
 
-    def forward(self, x):
+    def __call__(self, x):
         # x has shape (T,B,H) ?!
         # x has shape (samples, batch)
         # CAUTION: This samples the same idx in sequence for each class boundary in a batch
@@ -62,13 +55,12 @@ class MulticlassSteps(nn.Module):
         return classes
 
 
-class MulticlassRank(nn.Module):
+class MulticlassRank:
     def __init__(self, num_classes, ordered_p=0.5):
-        super().__init__()
         self.num_classes = class_sampler_f(2, num_classes)()
         self.ordered_p = ordered_p
 
-    def forward(self, x):
+    def __call__(self, x):
         # x has shape (T,B,H)
 
         # CAUTION: This samples the same idx in sequence for each class boundary in a batch
@@ -84,45 +76,9 @@ class MulticlassRank(nn.Module):
         return d
 
 
-class MulticlassValue(nn.Module):
-    def __init__(self, num_classes, ordered_p=0.5):
-        super().__init__()
-        self.num_classes = class_sampler_f(2, num_classes)()
-        self.classes = nn.Parameter(torch.randn(self.num_classes-1), requires_grad=False)
-        self.ordered_p = ordered_p
 
-    def forward(self, x):
-        # x has shape (T,B,H)
-        d = (x > (self.classes.unsqueeze(-1).unsqueeze(-1))).sum(axis=0)
-
-        randomized_classes = torch.rand((d.shape[1],)) > self.ordered_p
-        d[:, randomized_classes] = randomize_classes(d[:, randomized_classes], self.num_classes)
-        reverse_classes = torch.rand((d.shape[1],)) > 0.5
-        d[:, reverse_classes] = self.num_classes - 1 - d[:, reverse_classes]
-        return d
-
-
-class MulticlassMultiNode(nn.Module):
-    def __init__(self, num_classes, ordered_p=0.5):
-        super().__init__()
-        self.num_classes = class_sampler_f(2, num_classes)()
-        self.classes = nn.Parameter(torch.randn(num_classes-1), requires_grad=False)
-        self.alt_multi_class = MulticlassValue(num_classes, ordered_p)
-
-    def forward(self, x):
-        # x has shape T, B, H
-        if len(x.shape) == 2:
-            return self.alt_multi_class(x)
-        T = 3
-        x[torch.isnan(x)] = 0.00001
-        d = torch.multinomial(torch.pow(0.00001+torch.sigmoid(x[:, :, 0:self.num_classes]).reshape(-1,
-                              self.num_classes), T), 1, replacement=True).reshape(x.shape[0], x.shape[1])  # .float()
-        return d
-
-
-class FlexibleCategorical(torch.nn.Module):
+class FlexibleCategorical:
     def __init__(self, get_batch, hyperparameters, args):
-        super(FlexibleCategorical, self).__init__()
 
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
                   hyperparameters.keys()}
@@ -138,12 +94,6 @@ class FlexibleCategorical(torch.nn.Module):
                     self.class_assigner = MulticlassRank(
                         self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
                     )
-                elif self.h['multiclass_type'] == 'value':
-                    self.class_assigner = MulticlassValue(
-                        self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
-                    )
-                elif self.h['multiclass_type'] == 'multi_node':
-                    self.class_assigner = MulticlassMultiNode(self.h['num_classes'])
                 elif self.h['multiclass_type'] == 'steps':
                     self.class_assigner =  MulticlassSteps(self.h['num_classes'], self.h['multiclass_max_steps'])
                 else:
@@ -166,7 +116,7 @@ class FlexibleCategorical(torch.nn.Module):
         x[torch.rand(x.shape, device=self.args['device']) < random.random() * self.h['nan_prob_no_reason']] = v
         return x
 
-    def forward(self, batch_size):
+    def __call__(self, batch_size):
         x, y, y_ = self.get_batch(hyperparameters=self.h, **self.args_passed)
         assert x.shape[2] == self.h['num_features_used']
 
@@ -261,7 +211,7 @@ class FlexibleCategoricalPrior:
 
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            x, y, y_ = FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args).to(device)(batch_size=batch_size)
+            x, y, y_ = FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args)(batch_size=batch_size)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_
