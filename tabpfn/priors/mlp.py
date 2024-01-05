@@ -181,9 +181,6 @@ class MLP(torch.nn.Module):
 
 class MLPPrior:
     def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
-        if 'multiclass_type' in hyperparameters and hyperparameters['multiclass_type'] == 'multi_node':
-            num_outputs = num_outputs * hyperparameters['num_classes']
-
         if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
             s = hyperparameters['prior_mlp_activations']()
             hyperparameters['prior_mlp_activations'] = lambda: s

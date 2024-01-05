@@ -43,13 +43,32 @@ def test_get_dataloader_base_config():
 @pytest.mark.parametrize("batch_size", [16, 32])
 @pytest.mark.parametrize("n_samples", [256, 512])
 @pytest.mark.parametrize("n_features", [100, 200, 311])
-def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features):
+@pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
+def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)
     config = get_base_config_paper()
     config['num_features'] = n_features
     # we shouldn't use these parameters from the config here, only what was explicitly passed
     config.pop("n_samples")
-    dataloader = get_dataloader(prior_type="prior_bag", config=config, steps_per_epoch=1, batch_size=batch_size, n_samples=n_samples, device="cpu")
+    dataloader = get_dataloader(prior_type=prior_type, config=config, steps_per_epoch=1, batch_size=batch_size, n_samples=n_samples, device="cpu")
     (_, x, y), target_y, single_eval_pos = dataloader.gbm()
+    assert x.shape == (n_samples, batch_size, n_features)
+    assert y.shape == (n_samples, batch_size)
+
+
+def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
+    L.seed_everything(42)
+    config = get_base_config_paper()
+    config['nan_prob_a_reason'] = .5
+    config['nan_prob_no_reason'] = .5
+    config['nan_prob_unknown_reason'] = .5
+    config['nan_prob_unknown_reason_reason_prior'] = .5
+    config['num_features'] = n_features
+    # we shouldn't use these parameters from the config here, only what was explicitly passed
+    config.pop("n_samples")
+    dataloader = get_dataloader(prior_type="prior_bag", config=config, steps_per_epoch=1, batch_size=batch_size, n_samples=n_samples, device="cpu")
+    for i in range(10):
+        # sample a couple times to explore different code paths
+        (_, x, y), target_y, single_eval_pos = dataloader.gbm()
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)

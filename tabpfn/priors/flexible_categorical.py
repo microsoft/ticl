@@ -78,14 +78,14 @@ class MulticlassRank:
 
 
 class FlexibleCategorical:
-    def __init__(self, get_batch, hyperparameters, args):
+    def __init__(self, base_prior, hyperparameters, args):
 
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
                   hyperparameters.keys()}
         self.args = args
         self.args_passed = {**self.args}
-        self.args_passed.update({'num_features': self.h['num_features_used']})
-        self.get_batch = get_batch
+        self.args_passed['num_features'] = self.h['num_features_used']
+        self.base_prior = base_prior
         if self.h['num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
@@ -113,11 +113,11 @@ class FlexibleCategorical:
         return x
 
     def drop_for_no_reason(self, x, v):
-        x[torch.rand(x.shape, device=self.args['device']) < random.random() * self.h['nan_prob_no_reason']] = v
+        x[torch.rand(x.shape, device=x.device) < random.random() * self.h['nan_prob_no_reason']] = v
         return x
 
     def __call__(self, batch_size):
-        x, y, y_ = self.get_batch(hyperparameters=self.h, **self.args_passed)
+        x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **self.args_passed)
         assert x.shape[2] == self.h['num_features_used']
 
         if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
@@ -211,7 +211,7 @@ class FlexibleCategoricalPrior:
 
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            x, y, y_ = FlexibleCategorical(self.base_prior.get_batch, hyperparameters, args)(batch_size=batch_size)
+            x, y, y_ = FlexibleCategorical(self.base_prior, hyperparameters, args)(batch_size=batch_size)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_
