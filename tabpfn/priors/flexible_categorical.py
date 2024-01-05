@@ -77,7 +77,7 @@ class MulticlassRank:
 
 
 
-class FlexibleCategorical:
+class ClassificationAdapter:
     # This class samples the number of features actually use (num_features_used), the number of samples
     # adds NaN and potentially categorical features
     # and discretizes the classification output variable
@@ -203,7 +203,7 @@ class FlexibleCategorical:
 
         return x, y, y  # x.shape = (T,B,H)
 
-class FlexibleCategoricalPrior:
+class ClassificationAdapterPrior:
     def __init__(self, base_prior):
         self.base_prior = base_prior
 
@@ -214,7 +214,7 @@ class FlexibleCategoricalPrior:
 
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            x, y, y_ = FlexibleCategorical(self.base_prior, hyperparameters)(batch_size=batch_size, **args)
+            x, y, y_ = ClassificationAdapter(self.base_prior, hyperparameters)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_
