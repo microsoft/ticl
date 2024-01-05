@@ -1,11 +1,12 @@
 import math
+import inspect
 
 import torch
-from torch import nn
+
 
 from tabpfn.utils import default_device
 
-from .utils import (beta_sampler_f, gamma_sampler_f,
+from .utils import (beta_sampler_f, gamma_sampler_f, uniform_int_sampler_f,
                     trunc_norm_sampler_f, uniform_sampler_f)
 
 
@@ -45,28 +46,49 @@ def make_choice(*, choice_values, choices):
     sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
     return choice_values[sample]
             
+class HyperParameter:
+    def __repr__(self):
+        init_signature = inspect.signature(self.__init__)
+        parameters = [
+            p for p in init_signature.parameters.values()
+            if p.name != "self" and p.kind != p.VAR_KEYWORD
+        ]
+        return f"{self.__class__.__name__}({', '.join([f'{p.name}={getattr(self, p.name)}' for p in parameters])})"
 
-class UniformHyperparameter:
+class UniformHyperparameter(HyperParameter):
     def __init__(self, name, min, max):
         self.min = min
         self.max = max
         self.name = name
     def __call__(self):
         return uniform_sampler_f(self.min, self.max)()
+    
+class UniformIntHyperparameter(HyperParameter):
+    def __init__(self, name, min, max):
+        self.min = min
+        self.max = max
+        self.name = name
+    def __call__(self):
+        return uniform_int_sampler_f(self.min, self.max)()
 
-class MetaBetaHyperparameter:
+
+class MetaBetaHyperparameter(HyperParameter):
     def __init__(self, name, min, max, scale):
         self.scale = scale
         self.name = name
+        self.min = min
+        self.max = max
         self.b = UniformHyperparameter('b', min=min, max=max)
         self.k = UniformHyperparameter('k', min=min, max=max)
 
     def __call__(self):
         return beta_sampler_f(a=self.b(), b=self.k(), scale=self.scale)
 
-class MetaGammaHyperparameter:
+class MetaGammaHyperparameter(HyperParameter):
     def __init__(self, name, max_alpha, max_scale, lower_bound, round):
         self.name = name
+        self.max_alpha = max_alpha
+        self.max_scale = max_scale
         self.alpha = UniformHyperparameter('alpha', min=0, max=math.log(max_alpha))  # Surprise Logarithm!
         self.scale = UniformHyperparameter('scale', min=0, max=max_scale)
         self.lower_bound = lower_bound
@@ -75,29 +97,37 @@ class MetaGammaHyperparameter:
     def __call__(self):
         return make_gamma(alpha=self.alpha(), scale=self.scale(), lower_bound=self.lower_bound, do_round=self.round)
     
-class MetaTruncNormLogScaledHyperparameter:
+class MetaTruncNormLogScaledHyperparameter(HyperParameter):
     def __init__(self, name, min_mean, max_mean, lower_bound, round, min_std, max_std):
         self.name = name
         self.lower_bound = lower_bound
         self.round = round
+        self.min_mean = min_mean
+        self.max_mean = max_mean    
+        self.min_std = min_std
+        self.max_std = max_std
         self.log_mean = UniformHyperparameter('log_mean', min=math.log(min_mean), max=math.log(max_mean))
         self.log_std = UniformHyperparameter('log_std', min=math.log(min_std), max=math.log(max_std))
 
     def __call__(self):
         return meta_trunc_norm_log_scaled(log_mean=self.log_mean(), log_std=self.log_std(), lower_bound=self.lower_bound, do_round=self.round)
     
-class MetaTruncNormHyperparameter:
+class MetaTruncNormHyperparameter(HyperParameter):
     def __init__(self, name, min_mean, max_mean, lower_bound, round, min_std, max_std):
         self.name = name
         self.lower_bound = lower_bound
         self.round = round
+        self.min_mean = min_mean
+        self.max_mean = max_mean    
+        self.min_std = min_std
+        self.max_std = max_std
         self.mean = UniformHyperparameter('mean', min=min_mean, max=max_mean)
         self.std = UniformHyperparameter('std', min=min_std, max=max_std)
 
     def __call__(self):
         return make_trunc_norm(mean=self.log_mean(), std=self.std(), lower_bound=self.lower_bound, do_round=self.round)
     
-class MetaChoiceHyperparameter:
+class MetaChoiceHyperparameter(HyperParameter):
     def __init__(self, name, choice_values):
         self.name = name
         self.choice_values = choice_values
@@ -105,7 +135,7 @@ class MetaChoiceHyperparameter:
     def __call__(self):
         return make_choice(choices={choice: val() for choice, val in self.choices.items()}, choice_values=self.choice_values)
 
-class MetaChoiceMixedHyperparameter:
+class MetaChoiceMixedHyperparameter(HyperParameter):
     def __init__(self, name, choice_values):
         self.name = name
         self.choice_values = choice_values
@@ -139,9 +169,34 @@ def parse_distribution(name, distribution, min=None, max=None, scale=None, lower
         return MetaChoiceMixedHyperparameter(name=name, choice_values=choice_values)
     elif distribution == "uniform":
         return UniformHyperparameter(name=name, min=min, max=max)
+    elif distribution == "uniform_int":
+        return UniformIntHyperparameter(name=name, min=min, max=max)
     else:
         raise ValueError(f"Distribution {distribution} not supported.")
+    
+def parse_distributions(hyperparameters):
+    # parse any distributions in the hyperparameters that are represented as dicts
+    new_hypers = {}
+    for name, dist in hyperparameters.items():
+        if isinstance(dist, dict) and "distribution" in dist:
+            new_hypers[name] = parse_distribution(name=name, **dist)
+        else:
+            new_hypers[name] = dist
+    return new_hypers
 
+
+def sample_distributions(hyperparameters):
+    # sample any distributions in the hyperparameters that are represented as functions
+    new_hypers = {}
+    for name, dist in hyperparameters.items():
+        if isinstance(dist, HyperParameter):
+            sample = dist()
+            if callable(sample):
+                sample = sample()
+            new_hypers[name] = sample
+        else:
+            new_hypers[name] = dist
+    return new_hypers
 
 class SamplerPrior:
     def __init__(self, base_prior, differentiable_hyperparameters):
