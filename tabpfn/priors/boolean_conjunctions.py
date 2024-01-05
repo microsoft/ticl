@@ -20,7 +20,7 @@ def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):
         outputs = outputs + ((signs * inputs[:, selected_bits]) == 1).all(dim=1)
     return (inputs + 1) / 2, outputs
 
-class BooleanConjunctionSampler:
+class BooleanConjunctionPrior:
     # This is a class mostly for debugging purposes
     # the object stores the sampled hyperparameters
     def __init__(self, hyperparameters=None):

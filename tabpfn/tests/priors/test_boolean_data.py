@@ -1,4 +1,4 @@
-from tabpfn.priors.boolean_conjunctions import BooleanConjunctionSampler
+from tabpfn.priors.boolean_conjunctions import BooleanConjunctionPrior
 import torch
 import pytest
 
@@ -9,7 +9,7 @@ def test_boolean_data(num_features, n_samples, device):
     if device == "cuda" and not torch.cuda.is_available():
         raise pytest.skip("CUDA not available")
     # test call (which has padding)
-    x, y, sample_params = BooleanConjunctionSampler()(n_samples=n_samples, num_features=num_features, device=device)
+    x, y, sample_params = BooleanConjunctionPrior()(n_samples=n_samples, num_features=num_features, device=device)
     assert x.shape == (n_samples, 1, num_features)
     assert y.shape == (n_samples, 1, 1)
     assert sample_params['num_features'] == num_features
