@@ -49,6 +49,7 @@ class MLP(torch.nn.Module):
         self.random_feature_rotation = hyperparameters['random_feature_rotation']
         self.sort_features = hyperparameters['sort_features']
         self.in_clique = hyperparameters['in_clique']
+        self.add_uninformative_features = hyperparameters['add_uninformative_features']
 
         with torch.no_grad():
             assert (self.num_layers >= 2)
@@ -177,6 +178,17 @@ class MLP(torch.nn.Module):
         if self.random_feature_rotation:
             x = x[..., (torch.arange(x.shape[-1], device=device)+random.randrange(x.shape[-1])) % x.shape[-1]]
 
+        if self.add_uninformative_features and random.random() < 0.5:
+            bounce = random.randint(1, num_features)
+            n_uninformative = random.randint(0, bounce)
+            print(f"Adding {n_uninformative} uninformative features.")
+            if n_uninformative > 0:
+                # we pick the last couple to be uninformative; since we shuffle anyway it doesn't matter
+                x_uninformative = x[:, :, -n_uninformative:]
+                shuffle_indices = torch.cat([torch.randperm(n_samples, device=device).unsqueeze(1).unsqueeze(2) for _ in range(n_uninformative)], 2)
+                x_uninformative = torch.gather(x_uninformative, 0, shuffle_indices)
+                x[:, :, -n_uninformative:] = x_uninformative
+                x = x[:, :, torch.randperm(num_features, device=device)]
         return x, y
 
 class MLPPrior:

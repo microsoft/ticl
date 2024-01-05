@@ -116,7 +116,7 @@ def main(argv):
 
     torch.set_num_threads(24)
     config['num_gpus'] = 1
-
+    config['add_uniformative_features'] = args.add_uninformative_features
     config['shared_embedding'] = args.shared_embedding
     config['lr'] = args.learning_rate
     config['nlayers'] = args.num_layers
