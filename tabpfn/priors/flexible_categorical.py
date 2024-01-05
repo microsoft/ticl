@@ -155,10 +155,9 @@ class FlexibleCategorical:
         # Cast to classification if enabled
         y = self.class_assigner(y).float()
 
-        if self.h['normalize_by_used_features']:
-            x = normalize_by_used_features_f(
-                x, self.h['num_features_used'], num_features,
-                normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
+        x = normalize_by_used_features_f(
+            x, self.h['num_features_used'], num_features,
+            normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
 
 
         start = time.time()
