@@ -33,19 +33,6 @@ class GPPrior:
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
                 equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
-            if isinstance(hyperparameters, (tuple, list)):
-                hyperparameters = {"noise": hyperparameters[0], "outputscale": hyperparameters[1], "lengthscale": hyperparameters[2], "is_binary_classification": hyperparameters[3],                           # , "num_features_used": hyperparameters[4]
-                                    "normalize_by_used_features": hyperparameters[5], "order_y": hyperparameters[6], "sampling": hyperparameters[7]
-                                    }
-            elif hyperparameters is None:
-                hyperparameters = {"noise": .1, "outputscale": .1, "lengthscale": .1}
-
-            if 'verbose' in hyperparameters and hyperparameters['verbose']:
-                print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
-                        "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size, 'sampling': hyperparameters['sampling']})
-
-            # hyperparameters = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
-            #      hyperparameters.keys()}
             assert not (equidistant_x and (fix_x is not None))
 
             with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))):
@@ -62,8 +49,7 @@ class GPPrior:
                         x = torch.randn(batch_size, n_samples, num_features, device=device)
                 model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
                 model.to(device)
-                # trained_model = ExactGPModel(train_x, train_y, likelihood).cuda()
-                # trained_model.eval()
+
                 is_fitted = False
                 while not is_fitted:
                     try:
@@ -87,39 +73,3 @@ class GPPrior:
             # TODO: Multi output
             res =  x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
         return res
-
-
-def get_model_on_device(x, y, hyperparameters, device):
-    model, likelihood = get_model(x, y, hyperparameters)
-    model.to(device)
-    return model, likelihood
-
-
-@torch.no_grad()
-def evaluate(x, y, y_non_noisy, use_mse=False, hyperparameters={}, get_model_on_device=get_model_on_device, device=default_device, step_size=1, start_pos=0):
-    start_time = time.time()
-    losses_after_t = [.0] if start_pos == 0 else []
-    all_losses_after_t = []
-
-    with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))), gpytorch.settings.fast_pred_var(False):
-        for t in range(max(start_pos, 1), len(x), step_size):
-            model, likelihood = get_model_on_device(x[:t].transpose(0, 1), y[:t].transpose(0, 1), hyperparameters, device)
-
-            model.eval()
-            f = model(x[t].unsqueeze(1))
-            l = likelihood(f)
-            means = l.mean.squeeze()
-            varis = l.covariance_matrix.squeeze()
-
-            assert len(means.shape) == len(varis.shape) == 1
-            assert len(means) == len(varis) == x.shape[1]
-
-            if use_mse:
-                c = nn.MSELoss(reduction='none')
-                ls = c(means, y[t])
-            else:
-                ls = -l.log_prob(y[t].unsqueeze(1))
-
-            losses_after_t.append(ls.mean())
-            all_losses_after_t.append(ls.flatten())
-        return torch.stack(all_losses_after_t).to('cpu'), torch.tensor(losses_after_t).to('cpu'), time.time() - start_time
