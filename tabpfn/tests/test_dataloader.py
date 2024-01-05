@@ -28,7 +28,6 @@ def test_get_dataloader_base_config():
     assert config_sample['num_layers']() == 3
     assert config_sample['num_layers']() == 4
     
-    
     assert config_sample['noise_std']() == 0.08150998232279336
     assert config_sample['noise_std']() == 0.10754045266680022
 

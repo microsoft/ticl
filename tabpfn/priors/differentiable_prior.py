@@ -148,23 +148,18 @@ def parse_distribution(name, distribution, min=None, max=None, scale=None, lower
                        max_alpha=None, max_scale=None):
     if distribution == "meta_beta":
         return MetaBetaHyperparameter(name=name, min=min, max=max, scale=scale)
-
     if distribution == "meta_gamma":
         return MetaGammaHyperparameter(name=name, max_alpha=max_alpha, max_scale=max_scale, lower_bound=lower_bound, round=round)
-
     elif distribution == "meta_trunc_norm_log_scaled":
         return MetaTruncNormLogScaledHyperparameter(
             name=name, min_mean=min_mean, max_mean=max_mean, lower_bound=lower_bound, round=round,
             min_std=min_std, max_std=max_std)
-        
     elif distribution == "meta_trunc_norm":
         return MetaTruncNormHyperparameter(
             name=name, min_mean=min_mean, max_mean=max_mean, lower_bound=lower_bound, round=round,
             min_std=min_std, max_std=max_std)
-
     elif distribution == "meta_choice":
         return MetaChoiceHyperparameter(name=name, choice_values=choice_values)
-    
     elif distribution == "meta_choice_mixed":
         return MetaChoiceMixedHyperparameter(name=name, choice_values=choice_values)
     elif distribution == "uniform":
