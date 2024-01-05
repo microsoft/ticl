@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 import tabpfn.priors as priors
 from tabpfn.priors.flexible_categorical import FlexibleCategoricalPrior
 from tabpfn.priors.prior_bag import BagPrior
-from tabpfn.priors.boolean_conjunctions import BooleanConjunctionSampler
+from tabpfn.priors.boolean_conjunctions import BooleanConjunctionPrior
 from tabpfn.priors.differentiable_prior import SamplerPrior
 
 class PriorDataLoader(DataLoader):
