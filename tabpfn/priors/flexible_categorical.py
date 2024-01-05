@@ -78,13 +78,15 @@ class MulticlassRank:
 
 
 class FlexibleCategorical:
-    def __init__(self, base_prior, hyperparameters, args):
+    # This class samples the number of features actually use (num_features_used), the number of samples
+    # adds NaN and potentially categorical features
+    # and discretizes the classification output variable
+    # It's instantiated anew for each batch that's created
+    def __init__(self, base_prior, hyperparameters):
 
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
                   hyperparameters.keys()}
-        self.args = args
-        self.args_passed = {**self.args}
-        self.args_passed['num_features'] = self.h['num_features_used']
+
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
@@ -116,8 +118,10 @@ class FlexibleCategorical:
         x[torch.rand(x.shape, device=x.device) < random.random() * self.h['nan_prob_no_reason']] = v
         return x
 
-    def __call__(self, batch_size):
-        x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **self.args_passed)
+    def __call__(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
+        # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
+        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+        x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **args)
         assert x.shape[2] == self.h['num_features_used']
 
         if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
@@ -153,15 +157,15 @@ class FlexibleCategorical:
 
         if self.h['normalize_by_used_features']:
             x = normalize_by_used_features_f(
-                x, self.h['num_features_used'], self.args['num_features'],
+                x, self.h['num_features_used'], num_features,
                 normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
 
 
         start = time.time()
         # Append empty features if enabled
         x = torch.cat(
-            [x, torch.zeros((x.shape[0], x.shape[1], self.args['num_features'] - self.h['num_features_used']),
-                            device=self.args['device'])], -1)
+            [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.h['num_features_used']),
+                            device=device)], -1)
 
 
         if torch.isnan(y).sum() > 0:
@@ -171,8 +175,8 @@ class FlexibleCategorical:
         for b in range(y.shape[1]):
             is_compatible, N = False, 0
             while not is_compatible and N < 10:
-                targets_in_train = torch.unique(y[:self.args['single_eval_pos'], b], sorted=True)
-                targets_in_eval = torch.unique(y[self.args['single_eval_pos']:, b], sorted=True)
+                targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
+                targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
 
                 is_compatible = len(targets_in_train) == len(targets_in_eval) and (
                     targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
@@ -195,7 +199,7 @@ class FlexibleCategorical:
                 num_classes_float = (y[valid_labels, b].max() + 1).cpu()
                 num_classes = num_classes_float.int().item()
                 assert num_classes == num_classes_float.item()
-                random_shift = torch.randint(0, num_classes, (1,), device=self.args['device'])
+                random_shift = torch.randint(0, num_classes, (1,), device=device)
                 y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
         return x, y, y  # x.shape = (T,B,H)
@@ -209,9 +213,9 @@ class FlexibleCategoricalPrior:
             # Sample one n_samples for entire batch
             n_samples = hyperparameters['n_samples_used']() if callable(hyperparameters['n_samples_used']) else n_samples
 
-            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            x, y, y_ = FlexibleCategorical(self.base_prior, hyperparameters, args)(batch_size=batch_size)
+            x, y, y_ = FlexibleCategorical(self.base_prior, hyperparameters)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_
