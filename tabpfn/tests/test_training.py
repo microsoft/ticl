@@ -185,7 +185,7 @@ def test_train_tabpfn_uninformative_features():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--add-uninformative-features', 'True'])
     assert results['loss'] == pytest.approx(2.347168445587158)
     assert count_parameters(results['model']) == 579850
-    assert isinstance(results['model'], TabPerceiver)
+    assert isinstance(results['model'], TabPFN)
 
 
 def test_train_tabpfn_refactored():
