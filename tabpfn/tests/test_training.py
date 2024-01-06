@@ -179,6 +179,15 @@ def test_train_tabpfn_boolean_mixed_prior():
     assert isinstance(results['model'], TabPFN)
 
 
+def test_train_tabpfn_uninformative_features():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--add-uninformative-features', 'True'])
+    assert results['loss'] == pytest.approx(2.347168445587158)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPerceiver)
+
+
 def test_train_tabpfn_refactored():
     pytest.skip("This is not working yet")
     L.seed_everything(42)
@@ -215,6 +224,7 @@ def test_train_perceiver_defaults():
     assert results['loss'] == pytest.approx(2.2620527744293213)
     assert count_parameters(results['model']) == 1744842
     assert isinstance(results['model'], TabPerceiver)
+    
 
 
 def test_train_perceiver_two_hidden_layers():
