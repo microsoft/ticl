@@ -181,7 +181,6 @@ class MLP(torch.nn.Module):
         if self.add_uninformative_features and random.random() < 0.5:
             bounce = random.randint(1, num_features)
             n_uninformative = random.randint(0, bounce)
-            print(f"Adding {n_uninformative} uninformative features.")
             if n_uninformative > 0:
                 # we pick the last couple to be uninformative; since we shuffle anyway it doesn't matter
                 x_uninformative = x[:, :, -n_uninformative:]
