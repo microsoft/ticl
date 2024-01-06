@@ -132,6 +132,7 @@ def get_prior_config_causal(max_features=100):
 
 def get_base_config_paper():
     config = get_prior_config_causal()
+    config['add_uninformative_features'] = False
     config['recompute_attn'] = True
     config['output_multiclass_ordered_p'] = 0.
     config['multiclass_max_steps'] = 10
