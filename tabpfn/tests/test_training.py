@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from tabpfn.fit_model import main
-from tabpfn.fit_tabpfn import main as tabpfn_main
+# from tabpfn.fit_tabpfn import main as tabpfn_main
 from tabpfn.models.mothernet_additive import MotherNetAdditive
 from tabpfn.models.perceiver import TabPerceiver
 from tabpfn.models.transformer import TabPFN

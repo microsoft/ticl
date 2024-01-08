@@ -16,12 +16,20 @@ def get_general_config(max_features, n_samples):
         "max_eval_pos": n_samples,
         "n_samples_used": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
+        #"epochs": 4000,
+        #"num_steps": None,
         "epochs": 80,
         "num_steps": 100,
         "verbose": False,
         "mix_activations": False,  # False means to mix activations
         "pre_sample_causes": True,
-        "multiclass_type": 'rank'
+        "multiclass_type": 'rank',
+        #"em_size": 512,
+        #"learing_rate": 0.00003,
+        #"num_layers": 12,
+        #"aggregate_gradients": 1,
+        #"batch_size": 8,
+
     }
 
     return config_general
