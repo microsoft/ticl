@@ -153,9 +153,7 @@ class ClassificationAdapter:
         y = self.class_assigner(y).float()
 
         x = normalize_by_used_features_f(
-            x, self.h['num_features_used'], num_features,
-            normalize_with_sqrt=self.h.get('normalize_with_sqrt', False))
-
+            x, self.h['num_features_used'], num_features)
 
         start = time.time()
         # Append empty features if enabled

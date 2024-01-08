@@ -26,8 +26,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     eval_xs_ = normalize_data(xs, eval_position)
 
     eval_xs = normalize_by_used_features_f(
-        eval_xs_, X_train.shape[-1], max_features,
-        normalize_with_sqrt=False)
+        eval_xs_, X_train.shape[-1], max_features)
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
 
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
@@ -60,8 +59,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         eval_xs_ = torch.clip(xs, min=-100, max=100)
 
     eval_xs = normalize_by_used_features_f(
-        eval_xs_, X_train.shape[-1], max_features,
-        normalize_with_sqrt=False)
+        eval_xs_, X_train.shape[-1], max_features)
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
@@ -145,8 +143,7 @@ def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
 
     eval_xs_ = normalize_data(xs, eval_position)
 
-    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features,
-                                           normalize_with_sqrt=False)
+    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features)
     x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((eval_xs.shape[0], 100 - eval_xs.shape[1]))]))
 
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])

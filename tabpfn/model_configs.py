@@ -143,7 +143,6 @@ def get_base_config_paper():
     config['nan_prob_no_reason'] = .0
     config['nan_prob_unknown_reason'] = .0  # diff: .0
     config['set_value_to_nan'] = .1  # diff: 1.
-    config['normalize_with_sqrt'] = False
     config['prior_mlp_scale_weights_sqrt'] = True
     config['random_feature_rotation'] = True
     config['output_attention'] = True

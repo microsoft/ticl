@@ -264,7 +264,7 @@ def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits, mo
 
 
 def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, normalize_with_test, eval_position,
-                     categorical_feats, device, normalize_with_sqrt, scale):
+                     categorical_feats, device, scale):
     import warnings
 
     if eval_xs.shape[1] > 1:
@@ -310,8 +310,7 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
     # TODO: Caution there is information leakage when to_ranking is used, we should not use it
     eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     # Rescale X
-    eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features,
-                                            normalize_with_sqrt=normalize_with_sqrt)
+    eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
 
     return eval_xs.to(device)
 
@@ -321,7 +320,7 @@ def transformer_predict(
         num_classes=2, extend_features=True, normalize_with_test=False, softmax_temperature=0.0,
         multiclass_decoder='permutation', preprocess_transform='mix', categorical_feats=[], feature_shift_decoder=False,
         N_ensemble_configurations=10, batch_size_inference=16, average_logits=True,
-        fp16_inference=False, normalize_with_sqrt=False, seed=0, no_grad=True, return_logits=False, scale=True, **kwargs):
+        fp16_inference=False, seed=0, no_grad=True, return_logits=False, scale=True, **kwargs):
     
     num_classes = len(torch.unique(eval_ys))
 
@@ -373,8 +372,7 @@ def transformer_predict(
         else:
             eval_xs_ = preprocess_input(eval_xs_, eval_ys, preprocess_transform=preprocess_transform_configuration, max_features=max_features,
                                         normalize_with_test=normalize_with_test, eval_position=eval_position, categorical_feats=categorical_feats,
-                                        device=device, normalize_with_sqrt=normalize_with_sqrt,
-                                        scale=scale)
+                                        device=device, scale=scale)
             if no_grad:
                 eval_xs_ = eval_xs_.detach()
             eval_xs_transformed[preprocess_transform_configuration] = eval_xs_
@@ -432,5 +430,4 @@ def transformer_predict(
 
 
 def get_params_from_config(c):
-    return {'max_features': c['num_features'], 'normalize_with_sqrt': c.get("normalize_with_sqrt", False)
-            }
+    return {'max_features': c['num_features']}
