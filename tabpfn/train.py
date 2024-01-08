@@ -97,7 +97,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
-    if rank == 0:
+    if rank == 0 and verbose:
         print(f'Using {device} device')
 
     model.to(device)

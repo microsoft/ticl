@@ -158,8 +158,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             model, c, results_file = load_model_workflow(self.epoch, add_name=self.model_string, base_path=self.base_path, device=self.device,
                                                          eval_addition='')
             self.models_in_memory[model_key] = (model, c, results_file)
-            if len(self.models_in_memory) == 2:
-                print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
+            #if len(self.models_in_memory) == 2:
+            #    print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
         self.c = c
         self.max_num_features = self.c['num_features']
         self.max_num_classes = self.c['max_num_classes']
