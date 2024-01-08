@@ -138,7 +138,6 @@ def get_base_config_paper():
     config['multiclass_max_steps'] = 10
     config['pre_sample_causes'] = True
     config['multiclass_loss_type'] = 'nono'  # 'compatible'
-    config['normalize_to_ranking'] = False  # False
     config['categorical_feature_p'] = .2  # diff: .0
 
     config['nan_prob_no_reason'] = .0

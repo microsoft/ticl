@@ -146,10 +146,7 @@ class ClassificationAdapter:
                 if random.random() < p:
                     x[:, :, col] = m(x[:, :, col])
 
-        if self.h['normalize_to_ranking']:
-            x = to_ranking_low_mem(x)
-        else:
-            x = remove_outliers(x)
+        x = remove_outliers(x)
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled
