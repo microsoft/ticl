@@ -160,6 +160,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             self.models_in_memory[model_key] = (model, c, results_file)
             #if len(self.models_in_memory) == 2:
             #    print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
+        if c.get("model_maker", "tabpfn") != "tabpfn":
+            raise ValueError(f"Cannot load {c['model_maker']} weights into TabPFNClassifier.")
         self.c = c
         self.max_num_features = self.c['num_features']
         self.max_num_classes = self.c['max_num_classes']
