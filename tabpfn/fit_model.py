@@ -38,45 +38,22 @@ def main(argv):
     base_path = args.base_path
 
     torch.set_num_threads(24)
-
     config.update(vars(args))
     config['num_gpus'] = 1
-    config['add_uninformative_features'] = args.add_uninformative_features
-    config['shared_embedding'] = args.shared_embedding
+    config['device'] = device
+
     config['lr'] = args.learning_rate
-    config['nlayers'] = args.nlayers
     config['emsize'] = args.em_size
     config['aggregate_k_gradients'] = args.agg_gradients
-    config['batch_size'] = args.batch_size
-    config['model_maker'] = args.model_maker
-    config['adaptive_batch_size'] = args.adaptive_batch_size
-    config['weight_decay'] = args.weight_decay
-    config['special_token'] = args.special_token
-    config['device'] = device
     config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
-    config['learning_rate_schedule'] = args.learning_rate_schedule
-    config['warmup_epochs'] = args.warmup_epochs
-    config['train_mixed_precision'] = args.train_mixed_precision
-    config['pre_norm'] = args.pre_norm
-    config['lr_decay'] = args.lr_decay
-    config['min_lr'] = args.min_lr
-    config['perceiver_large_dataset'] = args.perceiver_large_dataset
-    config['num_latents'] = args.num_latents
-    config['reduce_lr_on_spike'] = args.reduce_lr_on_spike
-    config['adam_beta1'] = args.adam_beta1
-    config['spike_tolerance'] = args.spike_tolerance
-    config['extra_fast_test'] = args.extra_fast_test
-    config['multiclass_type'] = args.multiclass_type
-    config['prior_type'] = args.prior_type
+
 
     warm_start_weights = args.load_file
     config['no_double_embedding'] = not args.double_embedding
     config['nhead'] = config['emsize'] // 128
 
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
-    config['epochs'] = args.epochs
     config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
-    config['low_rank_weights'] = args.low_rank_weights
 
     if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
@@ -91,12 +68,8 @@ def main(argv):
         config['nhead'] = 1
 
     config['decoder_embed_dim'] = args.decoder_em_size
-    config['decoder_hidden_size'] = args.decoder_hidden_size
-    config['decoder_two_hidden_layers'] = args.decoder_two_hidden_layers
-    config['predicted_hidden_layer_size'] = args.predicted_hidden_layer_size
     config['warm_start_from'] = warm_start_weights
     config['continue_old_config'] = args.continue_run
-    config['stop_after_epochs'] = args.stop_after_epochs
     save_every = args.save_every
 
     model_state, optimizer_state, scheduler = None, None, None
