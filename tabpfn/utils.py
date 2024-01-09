@@ -717,10 +717,14 @@ def init_mlflow(experiment_name, model_string, continue_run):
 def synetune_handle_checkpoint(args):
     # handle syne-tune restarts
     checkpoint_dir = args.st_checkpoint_dir
+    base_path = args.base_path
+    load_file = args.load_file
+    continue_run = args.continue_run
     if checkpoint_dir is not None:
-        args.base_path = checkpoint_dir
+        base_path = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
         if checkpoint_path.exists():
-            args.continue_run = True
-            args.load_file = checkpoint_path
+            continue_run = True
+            load_file = checkpoint_path
+    return base_path, continue_run, load_file

@@ -14,7 +14,7 @@ from syne_tune import Reporter
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 from tabpfn.model_builder import get_model, save_model
 from tabpfn.model_configs import get_base_config_paper
-from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string
+from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string, synetune_handle_checkpoint
 
 def main(argv):
     config = get_base_config_paper()
@@ -24,14 +24,7 @@ def main(argv):
     device, rank, num_gpus = init_device(args.gpu_id, args.use_cpu)
 
     # handle syne-tune restarts
-    checkpoint_dir = args.st_checkpoint_dir
-    if checkpoint_dir is not None:
-        args.base_path = checkpoint_dir
-        os.makedirs(checkpoint_dir, exist_ok=True)
-        checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
-        if checkpoint_path.exists():
-            args.continue_run = True
-            args.load_file = checkpoint_path
+    args.base_path, args.continue_run, args.load_file = synetune_handle_checkpoint(args)
 
     if args.create_new_run and not args.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
@@ -115,7 +108,7 @@ def main(argv):
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
-                if checkpoint_dir is not None:
+                if args.st_checkpoint_dir is not None:
                     if epoch == "on_exit":
                         return
                     file_name = f'{base_path}/checkpoint.mothernet'
