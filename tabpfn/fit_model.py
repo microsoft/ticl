@@ -57,9 +57,6 @@ def main(argv):
     if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
         config['n_samples'] = 8 * 1024+128
-    else:
-        config['max_eval_pos'] = 1000
-        config['n_samples'] = 1024+128
 
     if config['extra_fast_test']:
         config['max_eval_pos'] = 16

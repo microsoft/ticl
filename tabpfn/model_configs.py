@@ -158,4 +158,5 @@ def get_base_config_paper():
     config['efficient_eval_masking'] = True
     config['min_eval_pos'] = 2
     config['hid_factor'] = 2
+    config['max_eval_pos'] = 1000
     return config
