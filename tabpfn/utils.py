@@ -565,9 +565,9 @@ def init_device(gpu_id, use_cpu):
 def get_model_string(config, args, parser):
     if args.continue_run:
         if args.st_checkpoint_dir is None:
-            model_string = warm_start_weights.split("/")[-1].split("_epoch_")[0]
+            model_string = args.load_file.split("/")[-1].split("_epoch_")[0]
             if args.create_new_run:
-                model_string = model_string + '_continue_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+                model_string = model_string + '_continue_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
             with open(f"{args.st_checkpoint_dir }/model_string.txt", 'r') as f:
                 model_string = f.read()
@@ -592,11 +592,11 @@ def get_model_string(config, args, parser):
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
         model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
-        model_string = model_string + '_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+        model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         if args.st_checkpoint_dir is not None:
             with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:
                 f.write(model_string)
-
+    return model_string
 
 def make_training_callback(save_every, model_string, base_path, report):
     def save_callback(model, optimizer, scheduler, epoch):
