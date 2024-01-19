@@ -80,7 +80,6 @@ def main(argv):
 
     model_string = get_model_string(config, args, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)
-    import pdb; pdb.set_trace()
 
     if not args.no_mlflow:
         mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")
