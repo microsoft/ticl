@@ -15,7 +15,7 @@ from sklearn.base import BaseEstimator
 from tabpfn.evaluation import tabular_metrics
 from tabpfn.evaluation.baselines.tabular_baselines import get_scoring_string, transformer_metric
 from tabpfn.utils import torch_nanmean
-from tabpfn.prediction import transformer_predict
+from tabpfn.prediction.tabpfn import transformer_predict
 from tabpfn.evaluation.baselines.baseline_prediction_interface import baseline_predict
 
 
