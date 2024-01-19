@@ -1,20 +1,15 @@
-import argparse
-import os
-import shutil
 import socket
 import sys
 import time
-from datetime import datetime
-from pathlib import Path
 
 import mlflow
 import torch
 from syne_tune import Reporter
 
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
-from tabpfn.model_builder import get_model, save_model
+from tabpfn.model_builder import get_model
 from tabpfn.model_configs import get_base_config_paper
-from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string, synetune_handle_checkpoint
+from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 
 def main(argv):
     config = get_base_config_paper()
@@ -82,72 +77,8 @@ def main(argv):
     report = Reporter()
 
     model_string = get_model_string(config, args, parser)
+    save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)
 
-    def save_callback(model, optimizer, scheduler, epoch):
-        if not hasattr(model, 'last_saved_epoch'):
-            model.last_saved_epoch = 0
-        log_file = f'{base_path}/log/{model_string}.log'
-        if epoch == "start":
-            print(f"Starting training of model {model_string}")
-            return
-        try:
-            os.makedirs(f"{base_path}/log", exist_ok=True)
-            with open(log_file, 'a') as f:
-                f.write(f'Epoch {epoch} loss {model.losses[-1]} learning_rate {model.learning_rates[-1]}\n')
-        except Exception as e:
-            print(f'Failed to write to log file {log_file}: {e}')
-
-        if epoch != "on_exit":
-            wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-            if not args.no_mlflow:
-                mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-                mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-                mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
-                mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
-            report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
-
-        try:
-            if (epoch == "on_exit") or epoch % save_every == 0:
-                if args.st_checkpoint_dir is not None:
-                    if epoch == "on_exit":
-                        return
-                    file_name = f'{base_path}/checkpoint.mothernet'
-                else:
-                    file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
-                os.makedirs(f"{base_path}/models_diff", exist_ok=True)
-                disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
-                if disk_usage.free < 1024 * 1024 * 1024 * 2:
-                    print("Not saving model, not enough disk space")
-                    print("DISK FULLLLLLL")
-                    return
-                with open(log_file, 'a') as f:
-                    f.write(f'Saving model to {file_name}\n')
-                print(f'Saving model to {file_name}')
-                config['epoch_in_training'] = epoch
-                config['learning_rates'] = model.learning_rates
-                config['losses'] = model.losses
-                config['wallclock_times'] = model.wallclock_times
-
-                save_model(model, optimizer, scheduler, base_path, file_name, config)
-                # remove checkpoints that are worse than current
-                if epoch != "on_exit" and epoch - save_every > 0:
-                    this_loss = model.losses[-1]
-                    for i in range(epoch // save_every):
-                        loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
-                        old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
-                        if os.path.exists(old_file_name):
-                            if loss > this_loss:
-                                try:
-                                    print(f"Removing old model file {old_file_name}")
-                                    os.remove(old_file_name)
-                                except Exception as e:
-                                    print(f"Failed to remove old model file {old_file_name}: {e}")
-                            else:
-                                print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
-
-        except Exception as e:
-            print("WRITING TO MODEL FILE FAILED")
-            print(e)
 
     if not args.no_mlflow:
         mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")

@@ -19,7 +19,6 @@ except ImportError:
 
 
 def save_model(model, optimizer, scheduler, path, filename, config_sample):
-    config_sample = {**config_sample}
     optimizer_dict = optimizer.state_dict() if optimizer is not None else None
 
     import cloudpickle

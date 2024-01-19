@@ -23,6 +23,8 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 
 
+
+
 def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
     """
     Just sample any evaluation position with the same weight
@@ -598,7 +600,10 @@ def get_model_string(config, args, parser):
                 f.write(model_string)
     return model_string
 
-def make_training_callback(save_every, model_string, base_path, report):
+
+def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir):
+    from tabpfn.model_builder import save_model
+    config = config.copy()
     def save_callback(model, optimizer, scheduler, epoch):
         if not hasattr(model, 'last_saved_epoch'):
             model.last_saved_epoch = 0
@@ -614,11 +619,12 @@ def make_training_callback(save_every, model_string, base_path, report):
             print(f'Failed to write to log file {log_file}: {e}')
 
         if epoch != "on_exit":
-            mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
-            mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
-            mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
             wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-            mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+            if not no_mlflow:
+                mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
+                mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
+                mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
+                mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
             report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
         try:
@@ -638,12 +644,12 @@ def make_training_callback(save_every, model_string, base_path, report):
                 with open(log_file, 'a') as f:
                     f.write(f'Saving model to {file_name}\n')
                 print(f'Saving model to {file_name}')
-                config_sample['epoch_in_training'] = epoch
-                config_sample['learning_rates'] = model.learning_rates
-                config_sample['losses'] = model.losses
-                config_sample['wallclock_times'] = model.wallclock_times
+                config['epoch_in_training'] = epoch
+                config['learning_rates'] = model.learning_rates
+                config['losses'] = model.losses
+                config['wallclock_times'] = model.wallclock_times
 
-                save_model(model, optimizer, scheduler, base_path, file_name, config_sample)
+                save_model(model, optimizer, scheduler, base_path, file_name, config)
                 # remove checkpoints that are worse than current
                 if epoch != "on_exit" and epoch - save_every > 0:
                     this_loss = model.losses[-1]
