@@ -5,6 +5,8 @@ import time
 import mlflow
 import torch
 from syne_tune import Reporter
+import os
+from git import Repo
 
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 from tabpfn.model_builder import get_model
@@ -78,7 +80,7 @@ def main(argv):
 
     model_string = get_model_string(config, args, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)
-
+    import pdb; pdb.set_trace()
 
     if not args.no_mlflow:
         mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")
@@ -103,6 +105,9 @@ def main(argv):
 
         else:
             run_args = {'run_name': model_string}
+
+        path = os.path.dirname(os.path.abspath(__file__))
+        run_args['tags'] = {'mlflow.source.git.commit': Repo(path, search_parent_directories=True).head.object.hexsha}
 
         with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
