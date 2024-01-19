@@ -35,7 +35,7 @@ class BooleanConjunctionPrior:
         # num_features_important is the number of features that actually determine the output
         num_features_active = safe_randint(1, num_features)
         if np.random.random() < 0.5:
-            num_features_important = safe_randint(num_features_active // 2, num_features_active)
+            num_features_important = safe_randint(max(1, num_features_active // 2), num_features_active)
         else:
             num_features_important = num_features_active
         rank = safe_randint(1, min(self.max_rank, num_features_important))
