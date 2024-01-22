@@ -119,10 +119,11 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto'):
     if callable(model):
-        device = "cpu"
         model_callable = model
+        if device == 'auto':
+            device = 'cpu'
     elif isinstance(model, BaseEstimator):
         model_callable = partial(transformer_metric, classifier=model)
         device_param = [v for k, v in model.get_params().items() if "device" in k]
