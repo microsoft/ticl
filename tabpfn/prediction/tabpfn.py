@@ -291,7 +291,9 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
 
     # Removing empty features
     eval_xs = eval_xs[:, 0, :]
-    sel = [len(torch.unique(eval_xs[0:eval_ys.shape[0], col])) > 1 for col in range(eval_xs.shape[1])]
+    def check_col_values(col_tensor):
+        return len(torch.unique(col_tensor[~col_tensor.isnan()])) > 1
+    sel = [check_col_values(eval_xs[0:eval_ys.shape[0], col]) for col in range(eval_xs.shape[1])]
     # sel = eval_xs[0:eval_ys.shape[0]].var(dim=0) > 0
     eval_xs = eval_xs[:, sel]
 
