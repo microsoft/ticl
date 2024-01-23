@@ -220,7 +220,7 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
                 data.iloc[:, c] = data.iloc[:, c].astype('int')
             return data
         x, test_x = make_pd_from_np(x),  make_pd_from_np(test_x)
-        transformer = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', sparse=False), cat_features)], remainder="passthrough")
+        transformer = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), cat_features)], remainder="passthrough")
         transformer.fit(x)
         x, test_x = transformer.transform(x), transformer.transform(test_x)
 
@@ -240,7 +240,7 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     if onehot:
         ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                sparse=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
