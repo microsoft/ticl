@@ -168,6 +168,24 @@ def test_train_tabpfn_boolean_prior():
     assert isinstance(results['model'], TabPFN)
 
 
+def test_train_tabpfn_boolean_prior_p_uninformative():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
+    assert results['loss'] == pytest.approx(2.3381218910217285)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+
+def test_train_tabpfn_boolean_prior_max_uninformative():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '1'])
+    assert results['loss'] == pytest.approx(2.34548282623291)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+
 def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
