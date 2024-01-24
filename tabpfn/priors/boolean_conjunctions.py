@@ -28,14 +28,16 @@ class BooleanConjunctionPrior:
             hyperparameters = {}
         self.max_rank = hyperparameters.get("max_rank", 10)
         self.verbose = hyperparameters.get("verbose", False)
+        self.max_fraction_uninformative = hyperparameters.get("max_fraction_uninformative", 0.5)
+        self.p_uninformative = hyperparameters.get("p_uninformative", 0.5)
 
     def sample(self, n_samples, num_features, device):
         # num_features is always 100, i.e. the number of inputs of the transformer model
         # num_features_active is the number of synthetic datasets features
         # num_features_important is the number of features that actually determine the output
         num_features_active = safe_randint(1, num_features)
-        if np.random.random() < 0.5:
-            num_features_important = safe_randint(max(1, num_features_active // 2), num_features_active)
+        if np.random.random() < self.p_uninformative:
+            num_features_important = safe_randint(max(1, num_features_active  * (1 - self.max_fraction_uninformative)), num_features_active)
         else:
             num_features_important = num_features_active
         rank = safe_randint(1, min(self.max_rank, num_features_important))

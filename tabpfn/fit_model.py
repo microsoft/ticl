@@ -56,6 +56,7 @@ def main(argv):
     config['decoder_embed_dim'] = args.decoder_em_size
     config['warm_start_from'] = warm_start_weights
     config['continue_old_config'] = args.continue_run
+    config['boolean_prior'] = {'max_fraction_uninformative': args.max_fraction_uninformative, 'p_uninformative': args.p_uninformative}
     save_every = args.save_every
 
     model_state, optimizer_state, scheduler = None, None, None

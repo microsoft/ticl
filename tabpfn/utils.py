@@ -517,6 +517,8 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
     parser.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
     parser.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
+    parser.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
+    parser.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float)
     
     # serialization, loading, logging
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
