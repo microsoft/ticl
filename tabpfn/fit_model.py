@@ -21,7 +21,7 @@ def main(argv):
     device, rank, num_gpus = init_device(args.gpu_id, args.use_cpu)
 
     # handle syne-tune restarts
-    args.base_path, args.continue_run, args.load_file = synetune_handle_checkpoint(args)
+    args.base_path, args.continue_run, args.warm_start_from = synetune_handle_checkpoint(args)
 
     if args.create_new_run and not args.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
@@ -32,13 +32,7 @@ def main(argv):
     config['num_gpus'] = 1
     config['device'] = device
 
-    config['lr'] = args.learning_rate
-    config['emsize'] = args.em_size
-    config['aggregate_k_gradients'] = args.agg_gradients
-    config['predicted_hidden_layers'] = args.num_predicted_hidden_layers
-
-    warm_start_weights = args.load_file
-    config['no_double_embedding'] = not args.double_embedding
+    warm_start_weights = args.warm_start_from
     config['nhead'] = config['emsize'] // 128
 
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
@@ -53,9 +47,6 @@ def main(argv):
         config['n_samples'] = 2 * 16
         config['nhead'] = 1
 
-    config['decoder_embed_dim'] = args.decoder_em_size
-    config['warm_start_from'] = warm_start_weights
-    config['continue_old_config'] = args.continue_run
     config['boolean_prior'] = {'max_fraction_uninformative': args.boolean_max_fraction_uninformative, 'p_uninformative': args.boolean_p_uninformative}
     save_every = args.save_every
 
@@ -67,6 +58,7 @@ def main(argv):
         model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
         if args.continue_run:
             config = old_config
+            # we want to overwrite specific parts of the old config with current values
             config['device'] = device
             config['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state

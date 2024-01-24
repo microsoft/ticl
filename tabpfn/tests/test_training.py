@@ -64,7 +64,7 @@ def test_train_reload():
         assert results_new['model_string'].startswith(results['model_string'])
         for k, v in results['config'].items():
             # fixme num_classes really shouldn't be a callable in config
-            if k not in ['warm_start_from', 'continue_old_config', 'num_classes', 'num_features_used']:
+            if k not in ['warm_start_from', 'continue_run', 'num_classes', 'num_features_used']:
                 assert results_new['config'][k] == v
         # strict loading should fail if we change model arch
         with pytest.raises(RuntimeError):

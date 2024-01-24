@@ -468,16 +468,15 @@ class ReduceLROnSpike:
 def argparser_from_config(config, description="Train Mothernet"):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
-    parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512)
+    parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512, dest='emsize')
     parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
     parser.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
-    parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
+    parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
     parser.add_argument('-N', '--nlayers', type=int, help='number of transformer layers', default=12)
-    parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1)
+    parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
     parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
     parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
     parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
-    parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
     parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
     parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
@@ -493,15 +492,15 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
 
     # Mothernet specific
-    parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024)
+    parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
     parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
     
-    parser.add_argument('-D', '--double-embedding', help='whether to reuse transformer embedding for mlp', action='store_true')
+    parser.add_argument('-D', '--no-double-embedding', help='whether to reuse transformer embedding for mlp', action='store_false')
     parser.add_argument('-S', '--special-token',
                         help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=True, type=str2bool)
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
-
-    parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1)
+    parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
+    parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1, dest='predicted_hidden_layers')
     parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
 
@@ -528,7 +527,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('--save-every', default=10, type=int)
     parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
-    parser.add_argument('-f', '--load-file', help='Warm start from this file')
+    parser.add_argument('-f', '--load-file', help='Warm start from this file', dest='warm_start_from')
     parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
     parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
@@ -569,7 +568,7 @@ def init_device(gpu_id, use_cpu):
 def get_model_string(config, args, parser):
     if args.continue_run:
         if args.st_checkpoint_dir is None:
-            model_string = args.load_file.split("/")[-1].split("_epoch_")[0]
+            model_string = args.warm_start_from.split("/")[-1].split("_epoch_")[0]
             if args.create_new_run:
                 model_string = model_string + '_continue_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
@@ -585,7 +584,7 @@ def get_model_string(config, args, parser):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'load_file', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
+                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
@@ -595,7 +594,7 @@ def get_model_string(config, args, parser):
                     else:
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
-        model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.load_file else ''}"
+        model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.warm_start_from else ''}"
         model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         if args.st_checkpoint_dir is not None:
             with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:
@@ -726,7 +725,7 @@ def synetune_handle_checkpoint(args):
     # handle syne-tune restarts
     checkpoint_dir = args.st_checkpoint_dir
     base_path = args.base_path
-    load_file = args.load_file
+    warm_start_from = args.warm_start_from
     continue_run = args.continue_run
     if checkpoint_dir is not None:
         base_path = checkpoint_dir
@@ -734,5 +733,5 @@ def synetune_handle_checkpoint(args):
         checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
         if checkpoint_path.exists():
             continue_run = True
-            load_file = checkpoint_path
-    return base_path, continue_run, load_file
+            warm_start_from = checkpoint_path
+    return base_path, continue_run, warm_start_from
