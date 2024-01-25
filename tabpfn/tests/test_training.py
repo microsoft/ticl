@@ -206,6 +206,15 @@ def test_train_tabpfn_uninformative_features():
     assert isinstance(results['model'], TabPFN)
 
 
+def test_train_tabpfn_heterogeneous_batches():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--heterogeneous-batches', 'True'])
+    assert results['loss'] == pytest.approx(2.352351188659668)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+
 def test_train_tabpfn_refactored():
     pytest.skip("This is not working yet")
     L.seed_everything(42)

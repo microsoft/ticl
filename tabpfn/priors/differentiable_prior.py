@@ -194,16 +194,29 @@ def sample_distributions(hyperparameters):
     return new_hypers
 
 class SamplerPrior:
-    def __init__(self, base_prior, differentiable_hyperparameters):
+    def __init__(self, base_prior, differentiable_hyperparameters, heterogeneous_batches=False):
         self.base_prior = base_prior
+        self.heterogeneous_batches = heterogeneous_batches
         self.hyper_dists = {hp: parse_distribution(name=hp, **dist) for hp, dist in differentiable_hyperparameters.items()}
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device,
                   hyperparameters=None, epoch=None, single_eval_pos=None):
+        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         with torch.no_grad():
-            args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
-            combined_hypers = {**hyperparameters, **sampled_hypers}
-            x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
-            x, y, y_ = x.detach(), y.detach(), y_.detach()
+            if self.heterogeneous_batches:
+                args['batch_size'] = 1
+                xs, ys, ys_ = [], [], []
+                for i in range(0, batch_size):
+                    sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
+                    combined_hypers = {**hyperparameters, **sampled_hypers}
+                    x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
+                    xs.append(x)
+                    ys.append(y)
+                    ys_.append(y_)
+                    x, y, y_ = torch.cat(xs, 1), torch.cat(ys, 1), torch.cat(ys_, 1)
+            else:
+                sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
+                combined_hypers = {**hyperparameters, **sampled_hypers}
+                x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
+        x, y, y_ = x.detach(), y.detach(), y_.detach()
         return x, y, y_, sampled_hypers
