@@ -141,6 +141,7 @@ def get_prior_config_causal(max_features=100):
 def get_base_config_paper():
     config = get_prior_config_causal()
     config['boolean_prior'] = {'max_fraction_uninformative': 0.5, 'p_uninformative': 0.5}
+    config['heterogeneous_batches'] = False
     config['add_uninformative_features'] = False
     config['recompute_attn'] = True
     config['output_multiclass_ordered_p'] = 0.
