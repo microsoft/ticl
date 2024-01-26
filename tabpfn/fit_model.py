@@ -4,7 +4,6 @@ import time
 
 import mlflow
 import torch
-from syne_tune import Reporter
 import os
 from git import Repo
 
@@ -21,7 +20,7 @@ def main(argv):
     device, rank, num_gpus = init_device(args.gpu_id, args.use_cpu)
 
     # handle syne-tune restarts
-    args.base_path, args.continue_run, args.warm_start_from = synetune_handle_checkpoint(args)
+    args.base_path, args.continue_run, args.warm_start_from, report = synetune_handle_checkpoint(args)
 
     if args.create_new_run and not args.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
@@ -68,8 +67,6 @@ def main(argv):
         else:
             print("WARNING warm starting with new settings")
             compare_dicts(config, old_config, all=True)
-
-    report = Reporter()
 
     model_string = get_model_string(config, args, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)

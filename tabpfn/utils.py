@@ -628,7 +628,9 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
-            report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
+            if report is not None:
+                # synetune callback
+                report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
         try:
             if (epoch == "on_exit") or epoch % save_every == 0:
@@ -729,11 +731,14 @@ def synetune_handle_checkpoint(args):
     base_path = args.base_path
     warm_start_from = args.warm_start_from
     continue_run = args.continue_run
+    report = None
     if checkpoint_dir is not None:
+        from syne_tune import Reporter
+        report = Reporter()
         base_path = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = Path(checkpoint_dir) / "checkpoint.mothernet"
         if checkpoint_path.exists():
             continue_run = True
             warm_start_from = checkpoint_path
-    return base_path, continue_run, warm_start_from
+    return base_path, continue_run, warm_start_from, report
