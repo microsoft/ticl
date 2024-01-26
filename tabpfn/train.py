@@ -68,7 +68,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
             loss.backward()
 
             if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1., foreach=True)
                 optimizer.step()
 
                 optimizer.zero_grad()
