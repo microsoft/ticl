@@ -28,6 +28,11 @@ def main(argv):
 
     torch.set_num_threads(24)
     config.update(vars(args))
+
+    if config['seed_everything']:
+        import lightning as L
+        L.seed_everything(42)
+        
     config['num_gpus'] = 1
     config['device'] = device
 

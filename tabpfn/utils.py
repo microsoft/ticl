@@ -523,6 +523,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     
     # serialization, loading, logging
     parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
+    parser.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", default=None)
     parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     parser.add_argument('-B', '--base-path', default='.')

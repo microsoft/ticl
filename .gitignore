@@ -166,6 +166,7 @@ tabpfn/results
 *.pdf
 *.png
 *.pickle
+*.prof
 tabpfn/joblib_cache
 tabpfn/catboost_info
 tabpfn/mlruns
