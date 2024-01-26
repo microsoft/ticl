@@ -7,7 +7,7 @@ import torch
 from tabpfn.utils import default_device
 
 from .utils import (beta_sampler_f, gamma_sampler_f, uniform_int_sampler_f,
-                    trunc_norm_sampler_f, uniform_sampler_f)
+                    trunc_norm_sampler_f, uniform_sampler_f, log_uniform_sampler_f)
 
 
 def make_gamma(alpha, scale, do_round, lower_bound):
@@ -64,6 +64,15 @@ class UniformHyperparameter(HyperParameter):
         self.name = name
     def __call__(self):
         return uniform_sampler_f(self.min, self.max)()
+    
+
+class LogUniformHyperparameter(HyperParameter):
+    def __init__(self, name, min, max):
+        self.min = min
+        self.max = max
+        self.name = name
+    def __call__(self):
+        return log_uniform_sampler_f(self.min, self.max)()
     
 class UniformIntHyperparameter(HyperParameter):
     def __init__(self, name, min, max):
@@ -166,6 +175,8 @@ def parse_distribution(name, distribution, min=None, max=None, scale=None, lower
         return MetaChoiceMixedHyperparameter(name=name, choice_values=choice_values)
     elif distribution == "uniform":
         return UniformHyperparameter(name=name, min=min, max=max)
+    elif distribution == "log_uniform":
+        return LogUniformHyperparameter(name=name, min=min, max=max)
     elif distribution == "uniform_int":
         return UniformIntHyperparameter(name=name, min=min, max=max)
     else:
