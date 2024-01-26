@@ -78,12 +78,9 @@ def get_diff_causal():
         "prior_mlp_hidden_dim": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 100, 'round': True, 'lower_bound': 4},
         "prior_mlp_dropout_prob": {'distribution': 'meta_beta', 'scale': 0.6, 'min': 0.1, 'max': 5.0},
         # This mustn't be too high since activations get too large otherwise
-        "noise_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': .3, 'min_mean': 0.0001, 'round': False,
-                      'lower_bound': 0.0},
-        "init_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 10.0, 'min_mean': 0.01, 'round': False,
-                     'lower_bound': 0.0},
-        # "num_causes": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 12, 'min_mean': 1, 'round': True,
-        #               'lower_bound': 1},
+        "init_std": {'distribution': 'log_uniform', 'min': 1e-2, 'max': 12},
+        "noise_std": {'distribution': 'log_uniform', 'min': 1e-4, 'max': .5},
+
         "num_causes": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 7, 'round': True,
                        'lower_bound': 2},
 
@@ -97,6 +94,7 @@ def get_diff_causal():
         "block_wise_dropout": {'distribution': 'meta_choice', 'choice_values': [True, False]},
         "sort_features": {'distribution': 'meta_choice', 'choice_values': [True, False]},
         "in_clique": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+
         # 'pre_sample_causes': {'distribution': 'meta_choice', 'choice_values': [True, False]},
     }
 
