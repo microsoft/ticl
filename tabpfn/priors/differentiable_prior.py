@@ -18,17 +18,19 @@ def make_gamma(alpha, scale, do_round, lower_bound):
 
 
 def meta_trunc_norm_log_scaled(log_mean, log_std, do_round, lower_bound):
+    dist = trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))
     if do_round:
-        return lambda: lower_bound + round(trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))())
+        return lambda: lower_bound + round(dist())
     else:    
-        return lambda: lower_bound + trunc_norm_sampler_f(math.exp(log_mean), math.exp(log_mean)*math.exp(log_std))()
+        return lambda: lower_bound + dist()
 
 
 def make_trunc_norm(mean, std, do_round, lower_bound):
+    dist = trunc_norm_sampler_f(mean, std)
     if do_round:
-        return lambda: lower_bound + round(trunc_norm_sampler_f(mean, std)())
+        return lambda: lower_bound + round(dist())
     else:
-        return lambda: lower_bound + trunc_norm_sampler_f(mean, std)()
+        return lambda: lower_bound + dist()
     
 
 def make_choice_mixed(*, choice_values, choices):
