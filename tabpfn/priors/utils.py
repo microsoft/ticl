@@ -13,8 +13,15 @@ def eval_simple_dist(dist_dict):
         return np.random.uniform(dist_dict['min'], dist_dict['max'])
     raise ValueError("Distribution not supported")
 
-def trunc_norm_sampler_f(mu, sigma): return lambda: stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma).rvs(1)[0]
-def beta_sampler_f(a, b, scale=1): return lambda: np.random.beta(a, b) * scale
+def trunc_norm_sampler_f(mu, sigma):
+    dist = stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma)
+    def sampler():
+        return dist.rvs(1)[0]
+    return sampler
+ 
+def beta_sampler_f(a, b, scale=1):
+    return lambda: np.random.beta(a, b) * scale
+
 def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
 def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
 def uniform_int_sampler_f(a, b): return lambda: round(np.random.uniform(a, b))
