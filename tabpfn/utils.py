@@ -497,7 +497,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     
     parser.add_argument('-D', '--no-double-embedding', help='whether to reuse transformer embedding for mlp', action='store_false')
     parser.add_argument('-S', '--special-token',
-                        help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=True, type=str2bool)
+                        help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=str2bool)
     parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1, dest='predicted_hidden_layers')
