@@ -48,12 +48,12 @@ class BooleanConjunctionPrior:
         inputs_important = inputs[:, important_indices]
         selected_bits = torch.multinomial(torch.ones(num_features_important, device=device) / num_features_important, rank * num_terms_max, replacement=True).reshape(rank, num_terms_max)
         signs = torch.randint(2, (rank, num_terms_max), device=device) * 2 - 1
-        outputs = ((signs * inputs_important[:, selected_bits]) == 1).all(dim=1).all(dim=1)
+        outputs = ((signs * inputs_important[:, selected_bits]) == 1).all(dim=1).any(dim=1)
         sample_params = {'num_terms': num_terms_max, 'rank': rank, 'important_indices': important_indices,
                          'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': num_features}
         if self.debug:
             sample_params['features_in_terms'] = selected_bits.unique()
-        print(outputs.mean())
+        print(outputs.float().mean())
         return inputs, outputs, sample_params
     
     def normalize_and_pad(self, x, y, num_features, device):
