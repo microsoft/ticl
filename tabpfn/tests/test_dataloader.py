@@ -21,23 +21,21 @@ def test_get_dataloader_base_config():
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
     assert config_sample['prior_bag_exp_weights_1'] == 4.9963209507789
-    assert config_sample['is_causal'] == True
-    assert config_sample['sort_features'] == True
-    assert (x[:, :, 60] == 0).all()
-    assert (x[:, :, 59] != 0).all()
+    assert config_sample['is_causal'] == False
+    assert config_sample['sort_features'] == False
+    assert (x[:, :, 46] == 0).all()
+    assert (x[:, :, 45] != 0).all()
+    assert config_sample['num_layers']() == 5
     assert config_sample['num_layers']() == 3
-    assert config_sample['num_layers']() == 4
     
-    assert config_sample['noise_std']() == 0.08150998232279336
-    assert config_sample['noise_std']() == 0.10754045266680022
+    assert config_sample['noise_std'] == 0.016730402817820244
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 59] == 0).all()
-    assert (x[:, :, 58] != 0).all()
-    assert config_sample['noise_std']() == 0.0019014857504532474
-    assert config_sample['noise_std']() == 0.0017815365399049398
-    assert config_sample['sort_features'] == False
-    assert config_sample['is_causal'] == False
+    assert (x[:, :, 52] == 0).all()
+    assert (x[:, :, 51] != 0).all()
+    assert config_sample['noise_std'] == 0.0036156294364456955
+    assert config_sample['sort_features'] == True
+    assert config_sample['is_causal'] == True
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
