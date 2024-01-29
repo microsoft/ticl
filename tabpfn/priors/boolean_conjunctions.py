@@ -53,7 +53,6 @@ class BooleanConjunctionPrior:
                          'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': num_features}
         if self.debug:
             sample_params['features_in_terms'] = selected_bits.unique()
-        print(outputs.float().mean())
         return inputs, outputs, sample_params
     
     def normalize_and_pad(self, x, y, num_features, device):
