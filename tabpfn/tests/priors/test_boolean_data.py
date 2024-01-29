@@ -12,13 +12,13 @@ def test_boolean_data(num_features, n_samples, device, max_fraction_uninformativ
         raise pytest.skip("CUDA not available")
     # test call (which has padding)
     hyperparameters = {'max_fraction_uninformative': max_fraction_uninformative, 'p_uninformative': p_uninformative}
-    x, y, sample_params = BooleanConjunctionPrior(hyperparameters=hyperparameters)(n_samples=n_samples, num_features=num_features, device=device)
+    x, y, sample_params = BooleanConjunctionPrior(hyperparameters=hyperparameters, debug=True)(n_samples=n_samples, num_features=num_features, device=device)
     assert x.shape == (n_samples, 1, num_features)
     assert y.shape == (n_samples, 1, 1)
     assert sample_params['num_features'] == num_features
     assert sample_params['num_features_active'] <= sample_params['num_features']
     assert sample_params['num_features_important'] <= sample_params['num_features_active']
-    assert sample_params['features_in_terms'].sum() <=sample_params['num_features_important']
+    assert len(sample_params['features_in_terms']) <= sample_params['num_features_important']
     assert sample_params['num_features_important'] >= int((1 - max_fraction_uninformative) * sample_params['num_features_active'])
     if p_uninformative == 0:
         assert sample_params['num_features_important'] == sample_params['num_features_active']

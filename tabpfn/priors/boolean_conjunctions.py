@@ -23,14 +23,16 @@ def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):
 class BooleanConjunctionPrior:
     # This is a class mostly for debugging purposes
     # the object stores the sampled hyperparameters
-    def __init__(self, hyperparameters=None):
+    def __init__(self, hyperparameters=None, debug=False):
         if hyperparameters is None:
             hyperparameters = {}
+        self.debug = debug
         self.max_rank = hyperparameters.get("max_rank", 10)
         self.verbose = hyperparameters.get("verbose", False)
         self.max_fraction_uninformative = hyperparameters.get("max_fraction_uninformative", 0.5)
         self.p_uninformative = hyperparameters.get("p_uninformative", 0.5)
 
+    @profile
     def sample(self, n_samples, num_features, device):
         # num_features is always 100, i.e. the number of inputs of the transformer model
         # num_features_active is the number of synthetic datasets features
@@ -42,21 +44,17 @@ class BooleanConjunctionPrior:
             num_features_important = num_features_active
         rank = safe_randint(1, min(self.max_rank, num_features_important))
         num_terms_max = int(np.exp((rank - 1)/ 1.5))
-        num_terms = 0
-        features_in_terms = torch.zeros(num_features_important, dtype=bool, device=device)
         inputs = 2 * torch.randint(0, 2, (n_samples, num_features_active), device=device) - 1
         important_indices = torch.randperm(num_features_active)[:num_features_important]
         inputs_important = inputs[:, important_indices]
-        outputs = torch.zeros(n_samples, dtype=bool, device=device)
         selected_bits = torch.multinomial(torch.ones(num_features_important, device=device) / num_features_important, rank * num_terms_max, replacement=True).reshape(rank, num_terms_max)
-        while 3 * torch.sum(outputs) < len(inputs) and num_terms < num_terms_max:
-            these_selected_bits = selected_bits[:, num_terms]
-            features_in_terms[these_selected_bits] = True
-            signs = torch.randint(2, (rank,), device=device) * 2 - 1
-            outputs = outputs + ((signs * inputs_important[:, these_selected_bits]) == 1).all(dim=1)
-            num_terms += 1
-        sample_params = {'num_terms': num_terms, 'features_in_terms': features_in_terms, 'rank': rank, 'important_indices': important_indices,
+        signs = torch.randint(2, (rank, num_terms_max), device=device) * 2 - 1
+        # import pdb; pdb.set_trace()
+        outputs = ((signs * inputs_important[:, selected_bits]) == 1).all(dim=1).all(dim=1)
+        sample_params = {'num_terms': num_terms_max, 'rank': rank, 'important_indices': important_indices,
                          'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': num_features}
+        if self.debug:
+            sample_params['features_in_terms'] = selected_bits.unique()
         return inputs, outputs, sample_params
     
     def normalize_and_pad(self, x, y, num_features, device):
