@@ -41,17 +41,19 @@ class BooleanConjunctionPrior:
         else:
             num_features_important = num_features_active
         rank = safe_randint(1, min(self.max_rank, num_features_important))
+        num_terms_max = int(np.exp((rank - 1)/ 1.5))
         num_terms = 0
         features_in_terms = torch.zeros(num_features_important, dtype=bool, device=device)
         inputs = 2 * torch.randint(0, 2, (n_samples, num_features_active), device=device) - 1
         important_indices = torch.randperm(num_features_active)[:num_features_important]
         inputs_important = inputs[:, important_indices]
         outputs = torch.zeros(n_samples, dtype=bool, device=device)
-        while 3 * torch.sum(outputs) < len(inputs):
-            selected_bits = torch.multinomial(torch.ones(num_features_important, device=device), rank, replacement=False)
-            features_in_terms[selected_bits] = True
+        selected_bits = torch.multinomial(torch.ones(num_features_important, device=device) / num_features_important, rank * num_terms_max, replacement=True).reshape(rank, num_terms_max)
+        while 3 * torch.sum(outputs) < len(inputs) and num_terms < num_terms_max:
+            these_selected_bits = selected_bits[:, num_terms]
+            features_in_terms[these_selected_bits] = True
             signs = torch.randint(2, (rank,), device=device) * 2 - 1
-            outputs = outputs + ((signs * inputs_important[:, selected_bits]) == 1).all(dim=1)
+            outputs = outputs + ((signs * inputs_important[:, these_selected_bits]) == 1).all(dim=1)
             num_terms += 1
         sample_params = {'num_terms': num_terms, 'features_in_terms': features_in_terms, 'rank': rank, 'important_indices': important_indices,
                          'num_features_active': num_features_active, 'num_features_important': num_features_important, 'num_features': num_features}
