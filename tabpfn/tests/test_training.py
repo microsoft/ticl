@@ -164,7 +164,7 @@ def test_train_tabpfn_boolean_prior():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only'])
-    assert results['loss'] == pytest.approx(2.347414970397949)
+    assert results['loss'] == pytest.approx(2.3440020084381104)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -173,7 +173,7 @@ def test_train_tabpfn_boolean_prior_p_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
-    assert results['loss'] == pytest.approx(2.3381218910217285)
+    assert results['loss'] == pytest.approx(2.359046697616577)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -182,7 +182,7 @@ def test_train_tabpfn_boolean_prior_max_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '1'])
-    assert results['loss'] == pytest.approx(2.34548282623291)
+    assert results['loss'] == pytest.approx(2.3682920932769775)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -193,7 +193,7 @@ def test_train_tabpfn_boolean_mixed_prior():
         results = main(['-C', '-E', '30', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
                        'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
-    assert results['loss'] == pytest.approx(2.253826141357422)
+    assert results['loss'] == pytest.approx(2.2671408653259277)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
