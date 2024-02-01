@@ -463,77 +463,100 @@ class ReduceLROnSpike:
         """ Return last computed learning rate by current scheduler.
         """
         return self._last_lr
+    
+class GroupedArgParser(argparse.ArgumentParser):
+    # This extends the argparse.ArgumentParser to allow for nested namespaces via groups
+    # we return everything by dicts
+    def parse_args(self, argv):
+        results = super().parse_args(argv)
+        nested_by_groups = argparse.Namespace()
+        for group in self._action_groups:
+            new_subnamespace = argparse.Namespace()
+            for action in group._group_actions:
+                if action.dest is not argparse.SUPPRESS and hasattr(results, action.dest):
+                    setattr(new_subnamespace, action.dest, getattr(results, action.dest))
+            if len(new_subnamespace):
+                setattr(nested_by_groups, group.title, new_subnamespace)
+                
+        return nested_by_groups
 
 
 def argparser_from_config(config, description="Train Mothernet"):
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-g', '--gpu-id', type=int, help='GPU id')
-    parser.add_argument('-e', '--em-size', type=int, help='embedding size', default=512, dest='emsize')
-    parser.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
-    parser.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
-    parser.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
-    parser.add_argument('-N', '--nlayers', type=int, help='number of transformer layers', default=12)
-    parser.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
-    parser.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
-    parser.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
-    parser.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
-    parser.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
-    parser.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
-    parser.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
-    parser.add_argument('--adam-beta1', default=0.9, type=float)
-    parser.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
-    parser.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
-    parser.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
-    parser.add_argument('--pre-norm', action='store_true')
-    parser.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
-    parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
+    parser = GroupedArgParser(description=description)
 
-    # selecting model
-    parser.add_argument('-m', '--model-type', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
+    general = parser.add_argument_group('general')
+    general.add_argument('-m', '--model-type', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
+    general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
+    general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 
-    # Mothernet specific
-    parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
-    parser.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
+    training = parser.add_argument_group('training')
+    training.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
+    training.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
+    training.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
+    training.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
+    training.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
+    training.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
+    training.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
+    training.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
+    training.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
+    training.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
+    training.add_argument('--adam-beta1', default=0.9, type=float)
+    training.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
+    training.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
+    training.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
+    training.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
+
+    transformer = parser.add_argument_group('transformer')
+    transformer.add_argument('-e', '--em-size', type=int, help='embedding size', default=512, dest='emsize')
+    transformer.add_argument('-N', '--nlayers', type=int, help='number of transformer layers', default=12)
+    transformer.add_argument('--pre-norm', action='store_true')
+
+    mothernet = parser.add_argument_group('mothernet')
+    mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
+    mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
     
-    parser.add_argument('-D', '--no-double-embedding', help='whether to reuse transformer embedding for mlp', action='store_false')
-    parser.add_argument('-S', '--special-token',
-                        help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=str2bool)
-    parser.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
-    parser.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
-    parser.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1, dest='predicted_hidden_layers')
-    parser.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
-    parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
+    mothernet.add_argument('-D', '--no-double-embedding', help='whether to reuse transformer embedding for mlp', action='store_false')
+    mothernet.add_argument('-S', '--special-token',
+                           help='whether add a special output token in the first layer as opposed to having one in the last attention layer. If True, decoder-em-size is ignored.', default=False, type=str2bool)
+    mothernet.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
+    mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
+    mothernet.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1, dest='predicted_hidden_layers')
+    mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
+    mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
 
     # Additive model (WIP)
-    parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    additive = parser.add_argument_group('additive')
+    additive.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
 
     # Perceiver
-    parser.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
-    parser.add_argument('--perceiver-large-dataset', action='store_true')
+    perceiver = parser.add_argument_group('perceiver')
+    perceiver.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
+    perceiver.add_argument('--perceiver-large-dataset', action='store_true')
 
     # Prior and data generation
-    parser.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
-    parser.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
-    parser.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
-    parser.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
-    parser.add_argument('--heterogeneous-batches', help="Whether to resample MLP hypers for each sample instead of each batch.", default='False', type=str2bool)
-
-    parser.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
-    parser.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float)
+    prior = parser.add_argument_group('prior')
+    prior.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
+    prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
+    prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
+    prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
+    prior.add_argument('--heterogeneous-batches', help="Whether to resample MLP hypers for each sample instead of each batch.", default='False', type=str2bool)
+    prior.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
+    prior.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float)
     
     # serialization, loading, logging
-    parser.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
-    parser.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", action='store_true')
-    parser.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
-    parser.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
-    parser.add_argument('-B', '--base-path', default='.')
-    parser.add_argument('--save-every', default=10, type=int)
-    parser.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
-    parser.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
-    parser.add_argument('-f', '--load-file', help='Warm start from this file', dest='warm_start_from')
-    parser.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
-    parser.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
-    parser.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
+    orchestration = parser.add_argument_group('orchestration')
+    orchestration.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
+    orchestration.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", action='store_true')
+    orchestration.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
+    orchestration.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
+    orchestration.add_argument('-B', '--base-path', default='.')
+    orchestration.add_argument('--save-every', default=10, type=int)
+    orchestration.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
+    orchestration.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    orchestration.add_argument('-f', '--load-file', help='Warm start from this file', dest='warm_start_from')
+    orchestration.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
+    orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
+    orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     return parser
 
 
