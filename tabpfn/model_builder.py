@@ -92,7 +92,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         config['y_encoder'] = 'linear'
     config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
 
-    model = config.get('model', False)
+    model_maker = config.get('model_maker', False)
     epochs = 0 if not should_train else config['epochs']
 
     dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
@@ -102,7 +102,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model=model, max_num_classes=config['max_num_classes'],
+                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,
                            decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False),
