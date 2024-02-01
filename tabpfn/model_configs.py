@@ -159,21 +159,32 @@ def get_base_config():
     config['prior_mlp_scale_weights_sqrt'] = True
     config['random_feature_rotation'] = True
 
+
+    config['model-type'] = 'mothernet'
+
     # mothernet
     config['weight_embedding_rank'] = None
     config['predicted_hidden_layer_size'] = 128
     config['output_attention'] = True
     config['decoder_embed_dim'] = 2048
     config['predicted_hidden_layers'] = 1
+    config['decoder_two_hidden_layers'] = False
+    config['decoder_hidden_size'] = None
+    config['no_double_embedding'] = True
+    config['special_token'] = False
 
     # perceiver
     config['num_latents'] = 512
+
+    # additive
+    config['shared_embedding'] = False
     
     # architecture
     config['pre_norm'] = False
     config['y_encoder'] = "one_hot"
     config['efficient_eval_masking'] = True
     config['hid_factor'] = 2
+    config['input_normalization'] = False
 
     # training
     config['stop_after_epochs'] = None
@@ -186,4 +197,6 @@ def get_base_config():
     config['adam_beta1'] = 0.9
     config['spike_tolerance'] = 4
     config['weight_decay'] = 0.0
+    config['lr_decay'] = 0.99
+    config['adaptive_batch_size'] = True
     return config

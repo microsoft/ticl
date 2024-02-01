@@ -90,9 +90,11 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         config['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config:
         config['y_encoder'] = 'linear'
+    if 'model_type' not in passed_config:
+        config['model_type'] = 'tabpfn'
+
     config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
 
-    model_type = config.get('model_type', False)
     epochs = 0 if not should_train else config['epochs']
 
     dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
@@ -102,15 +104,15 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model_type=model_type, max_num_classes=config['max_num_classes'],
+                           input_normalization=config['input_normalization'],  model_type=config['model_type'], max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,
-                           decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False),
-                           decoder_hidden_size=config.get('decoder_hidden_size', None), no_double_embedding=config.get('no_double_embedding', False),
-                           verbose=verbose_train, pre_norm=config['pre_norm'], efficient_eval_masking=config.get('efficient_eval_masking', False),
-                           output_attention=config.get('output_attention', False), predicted_hidden_layers=config['predicted_hidden_layers'],
-                           special_token=config.get('special_token', False), weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
-                           num_latents=config['num_latents'], shared_embedding=config.get('shared_embedding', False))
+                           decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config['decoder_two_hidden_layers'],
+                           decoder_hidden_size=config['decoder_hidden_size'], no_double_embedding=config['no_double_embedding'],
+                           verbose=verbose_train, pre_norm=config['pre_norm'], efficient_eval_masking=config['efficient_eval_masking'],
+                           output_attention=config['output_attention'], predicted_hidden_layers=config['predicted_hidden_layers'],
+                           special_token=config['special_token'], weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
+                           num_latents=config['num_latents'], shared_embedding=config['shared_embedding'])
 
     if 'losses' in config:
         # for continuing training
@@ -120,12 +122,12 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model = train(dl,
                   model, criterion=criterion,
-                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'], warmup_epochs=config[
-                      'warmup_epochs'], gpu_device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback, lr=config['lr'], min_lr=config['min_lr'],
-                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config.get('lr_decay', .99), verbose=verbose_train, train_mixed_precision=config.get('train_mixed_precision', False),
-                  weight_decay=config['weight_decay'], adaptive_batch_size=config.get('adaptive_batch_size', False),
-                  reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'],
-                  spike_tolerance=config['spike_tolerance']
+                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'],
+                  warmup_epochs=config['warmup_epochs'], gpu_device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
+                  lr=config['lr'], min_lr=config['min_lr'],
+                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config['lr_decay'], verbose=verbose_train, train_mixed_precision=config['train_mixed_precision'],
+                  weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
+                  reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
                   )
 
     return model

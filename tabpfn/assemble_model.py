@@ -42,12 +42,14 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
             n_features=num_features, n_out=n_out, ninp=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, shared_embedding=shared_embedding)
-    else:
+    elif model_type == "tabpfn":
         model = TabPFN(
             encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
             y_encoder=y_encoder, input_normalization=input_normalization,
             efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
         )
+    else:
+        raise ValueError(f"Unknown model type {model_type}.")
     if model_state is not None:
         if not load_model_strict:
             for k, v in model.state_dict().items():
