@@ -163,6 +163,8 @@ def get_base_config():
     config['weight_embedding_rank'] = None
     config['predicted_hidden_layer_size'] = 128
     config['output_attention'] = True
+    config['decoder_embed_dim'] = 2048
+    config['predicted_hidden_layers'] = 1
     
     # architecture
     config['pre_norm'] = False
@@ -179,4 +181,5 @@ def get_base_config():
     config['min_lr'] = None
     config['adam_beta1'] = 0.9
     config['spike_tolerance'] = 4
+    config['weight_decay'] = 0.0
     return config

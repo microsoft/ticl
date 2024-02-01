@@ -85,12 +85,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     criterion = get_criterion(config['max_num_classes'])
 
-    # 'real' current defaults should be defined in model_configs.py
-    config['multiclass_type'] = config.get('multiclass_type', 'rank')
-    config['weight_decay'] = config.get('weight_decay', 0.0)
-    config['decoder_embed_dim'] = config.get('decoder_embed_dim', 2048)
-    config['predicted_hidden_layers'] = config.get('predicted_hidden_layers', 1)
-
     config['num_latents'] = config.get('num_latents', 512)
     config['boolean_prior'] = config.get('boolean_prior', {})
 
