@@ -84,21 +84,15 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['verbose'] = verbose_prior
 
     criterion = get_criterion(config['max_num_classes'])
-
-    config['num_latents'] = config.get('num_latents', 512)
-    config['boolean_prior'] = config.get('boolean_prior', {})
-
-    config['min_eval_pos'] = config.get('min_eval_pos', 2)
-    config['stop_after_epochs'] = config.get('stop_after_epochs', None)
-    config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
+    
     # backwards compatibility for cases where absence of parameter doesn't correspond to current default
     if 'n_samples' not in passed_config:
         config['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config:
         config['y_encoder'] = 'linear'
+    config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
 
-    config['eval_positions'] = [config['n_samples'] * 0.95]
-    model_maker = config.get('model_maker', False)
+    model = config.get('model', False)
     epochs = 0 if not should_train else config['epochs']
 
     dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
@@ -108,7 +102,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     encoder = get_encoder(config)
     model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config.get('input_normalization', False),  model_maker=model_maker, max_num_classes=config['max_num_classes'],
+                           input_normalization=config.get('input_normalization', False),  model=model, max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,
                            decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config.get('decoder_two_hidden_layers', False),

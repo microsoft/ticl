@@ -12,7 +12,7 @@ def get_general_config(max_features, n_samples):
         "num_features": max_features,
         "nhid_factor": 2,
         "n_samples": n_samples,
-        "eval_positions": None,
+        "eval_positions": [n_samples * 0.95],
         "max_eval_pos": n_samples,
         "n_samples_used": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
@@ -165,6 +165,9 @@ def get_base_config():
     config['output_attention'] = True
     config['decoder_embed_dim'] = 2048
     config['predicted_hidden_layers'] = 1
+
+    # perceiver
+    config['num_latents'] = 512
     
     # architecture
     config['pre_norm'] = False
@@ -173,6 +176,7 @@ def get_base_config():
     config['hid_factor'] = 2
 
     # training
+    config['stop_after_epochs'] = None
     config['reduce_lr_on_spike'] = False
     config['warmup_epochs'] = 20
     config['learning_rate_schedule'] = 'cosine'
