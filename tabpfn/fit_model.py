@@ -9,11 +9,11 @@ from git import Repo
 
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 from tabpfn.model_builder import get_model
-from tabpfn.model_configs import get_base_config_paper
+from tabpfn.model_configs import get_base_config
 from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 
 def main(argv):
-    config = get_base_config_paper()
+    config = get_base_config()
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
 

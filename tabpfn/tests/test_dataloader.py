@@ -1,5 +1,5 @@
 from tabpfn.dataloader import get_dataloader
-from tabpfn.model_configs import get_base_config_paper
+from tabpfn.model_configs import get_base_config
 
 import lightning as L
 
@@ -7,7 +7,7 @@ import pytest
 
 def test_get_dataloader_base_config():
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     # config['num_causes'] = 3
     # config['num_features'] = 10
     # num_features really doesn't work lol
@@ -44,7 +44,7 @@ def test_get_dataloader_base_config():
 @pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
 def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['num_features'] = n_features
     # we shouldn't use these parameters from the config here, only what was explicitly passed
     config.pop("n_samples")
@@ -56,7 +56,7 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
 
 def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['nan_prob_a_reason'] = .5
     config['nan_prob_no_reason'] = .5
     config['nan_prob_unknown_reason'] = .5
@@ -74,7 +74,7 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
 
 def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['add_uninformative_features'] = True
     config['num_features'] = n_features
     # we shouldn't use these parameters from the config here, only what was explicitly passed

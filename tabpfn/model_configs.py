@@ -141,8 +141,9 @@ def get_prior_config_causal(max_features=100):
     return config
 
 
-def get_base_config_paper():
+def get_base_config():
     config = get_prior_config_causal()
+    # prior
     config['boolean_prior'] = {'max_fraction_uninformative': 0.5, 'p_uninformative': 0.5}
     config['heterogeneous_batches'] = False
     config['add_uninformative_features'] = False
@@ -152,16 +153,30 @@ def get_base_config_paper():
     config['pre_sample_causes'] = True
     config['multiclass_loss_type'] = 'nono'  # 'compatible'
     config['categorical_feature_p'] = .2  # diff: .0
-
     config['nan_prob_no_reason'] = .0
     config['nan_prob_unknown_reason'] = .0  # diff: .0
     config['set_value_to_nan'] = .1  # diff: 1.
     config['prior_mlp_scale_weights_sqrt'] = True
     config['random_feature_rotation'] = True
+
+    # mothernet
+    config['weight_embedding_rank'] = None
+    config['predicted_hidden_layer_size'] = 128
     config['output_attention'] = True
+    
+    # architecture
+    config['pre_norm'] = False
     config['y_encoder'] = "one_hot"
     config['efficient_eval_masking'] = True
-    config['min_eval_pos'] = 2
     config['hid_factor'] = 2
+
+    # training
+    config['reduce_lr_on_spike'] = False
+    config['warmup_epochs'] = 20
+    config['learning_rate_schedule'] = 'cosine'
+    config['min_eval_pos'] = 2
     config['max_eval_pos'] = 1000
+    config['min_lr'] = None
+    config['adam_beta1'] = 0.9
+    config['spike_tolerance'] = 4
     return config

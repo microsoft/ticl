@@ -9,7 +9,7 @@ import tabpfn.models.encoders as encoders
 from tabpfn.assemble_model import assemble_model
 from tabpfn.dataloader import get_dataloader
 from tabpfn.train import get_criterion, train
-from tabpfn.utils import get_uniform_single_eval_pos_sampler
+from tabpfn.model_configs import get_base_config
 
 try:
     from functools import cache
@@ -66,9 +66,6 @@ def get_encoder(config):
 
 
 def get_y_encoder(config):
-    if 'y_encoder' not in config:
-        # backward compatibility
-        config['y_encoder'] = 'linear'
     if config['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
     elif config['y_encoder'] == 'linear':
@@ -80,42 +77,31 @@ def get_y_encoder(config):
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
-    config = config.copy()
+    passed_config = config.copy()
+    config = get_base_config()
+    config.update(passed_config)
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
-    if 'aggregate_k_gradients' not in config or config['aggregate_k_gradients'] is None:
-        config['aggregate_k_gradients'] = math.ceil(config['batch_size'] * ((config['nlayers'] * config['emsize']
-                                                    * config['n_samples'] * config['n_samples']) / 10824640000))
-
     criterion = get_criterion(config['max_num_classes'])
 
-    # DEFAULTS for backward compatibility.
-    # 'real' current defaults should be defined in fit_model.py command line parsing
+    # 'real' current defaults should be defined in model_configs.py
     config['multiclass_type'] = config.get('multiclass_type', 'rank')
-    config['mix_activations'] = config.get('mix_activations', False)
-    config['recompute_attn'] = config.get('recompute_attn', False)
     config['weight_decay'] = config.get('weight_decay', 0.0)
-    config['pre_norm'] = config.get('pre_norm', False)
     config['decoder_embed_dim'] = config.get('decoder_embed_dim', 2048)
-    config['predicted_hidden_layer_size'] = config.get('predicted_hidden_layer_size', None)
     config['predicted_hidden_layers'] = config.get('predicted_hidden_layers', 1)
-    config['weight_embedding_rank'] = config.get('weight_embedding_rank', None)
-    config['learning_rate_schedule'] = config.get('learning_rate_schedule', 'cosine')
-    config['warmup_epochs'] = config.get('warmup_epochs', 20)
+
     config['num_latents'] = config.get('num_latents', 512)
-    config['reduce_lr_on_spike'] = config.get('reduce_lr_on_spike', False)
-    config['adam_beta1'] = config.get('adam_beta1', 0.9)
-    config['spike_tolerance'] = config.get('spike_tolerance', 4)
-    config['min_lr'] = config.get('min_lr', None)
     config['boolean_prior'] = config.get('boolean_prior', {})
-    config['heterogeneous_batches'] = config.get('heterogeneous_batches', False)
 
     config['min_eval_pos'] = config.get('min_eval_pos', 2)
     config['stop_after_epochs'] = config.get('stop_after_epochs', None)
     config['low_rank_weights'] = config.get('low_rank_weights', config['weight_embedding_rank'] is not None)
-    if 'n_samples' not in config:
+    # backwards compatibility for cases where absence of parameter doesn't correspond to current default
+    if 'n_samples' not in passed_config:
         config['n_samples'] = config['bptt']
+    if 'y_encoder' not in passed_config:
+        config['y_encoder'] = 'linear'
 
     config['eval_positions'] = [config['n_samples'] * 0.95]
     model_maker = config.get('model_maker', False)
