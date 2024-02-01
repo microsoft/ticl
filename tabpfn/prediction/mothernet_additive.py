@@ -89,10 +89,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         le = LabelEncoder()
         y = le.fit_transform(y)
         model, config = load_model(self.path, device=self.device)
-        if "model_maker" not in config:
+        if "model_type" not in config:
             raise ValueError("Cannot load tabpfn weights into MotherNetClassifier")
-        if config['model_maker'] != "additive":
-            raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
+        if config['model_type'] != "additive":
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device)
         self.w_ = w

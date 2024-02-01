@@ -489,7 +489,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
 
     # selecting model
-    parser.add_argument('-m', '--model-maker', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
+    parser.add_argument('-m', '--model-type', type=str, help='model maker kind. mlp for mothernet, perceiver, additive, or False for TabPFN', default='mlp')
 
     # Mothernet specific
     parser.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
@@ -578,8 +578,8 @@ def get_model_string(config, args, parser):
             with open(f"{args.st_checkpoint_dir }/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
-        mm = config['model_maker']
-        model_maker_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
+        mm = config['model_type']
+        model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
 
         default_args_dict = vars(parser.parse_args([]))
         args_dict = vars(args)
@@ -587,7 +587,7 @@ def get_model_string(config, args, parser):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_maker'] or k not in args_dict:
+                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
@@ -597,7 +597,7 @@ def get_model_string(config, args, parser):
                     else:
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
-        model_string = f"{model_maker_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.warm_start_from else ''}"
+        model_string = f"{model_type_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.warm_start_from else ''}"
         model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         if args.st_checkpoint_dir is not None:
             with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:

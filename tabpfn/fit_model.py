@@ -42,7 +42,7 @@ def main(argv):
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
     config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
 
-    if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
+    if config['model_type'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
         config['n_samples'] = 8 * 1024+128
 
