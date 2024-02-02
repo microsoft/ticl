@@ -92,7 +92,7 @@ def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_featur
     dataloader_config['steps_per_epoch'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
-
+    prior_config['num_features'] = n_features
     prior_config['mlp']['add_uninformative_features'] = True
 
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
