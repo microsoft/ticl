@@ -1,5 +1,8 @@
 from tabpfn.dataloader import get_dataloader
 from tabpfn.model_configs import get_base_config
+from tabpfn.priors.differentiable_prior import SamplerPrior
+from tabpfn.priors.prior_bag import BagPrior
+from tabpfn.priors.flexible_categorical import ClassificationAdapterPrior
 
 import lightning as L
 
@@ -22,7 +25,14 @@ def test_get_dataloader_base_config():
     prior_config['num_features']  = n_features
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
+    assert isinstance(dataloader.prior, SamplerPrior)
+    assert isinstance(dataloader.prior.base_prior, BagPrior)
+    assert isinstance(dataloader.prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
+    assert isinstance(dataloader.prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
+
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
+    assert set(config_sample.keys()) == set(['block_wise_dropout', 'num_causes', 'sort_features', 'is_causal', 'prior_mlp_activations', 'prior_bag_exp_weights_1', 'in_clique',
+                                             'prior_mlp_hidden_dim', 'noise_std', 'y_is_effect', 'lengthscale', 'prior_mlp_dropout_prob', 'pre_sample_weights', 'init_std', 'num_layers', 'noise', 'outputscale'])
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
     assert config_sample['prior_bag_exp_weights_1'] == 4.9963209507789
