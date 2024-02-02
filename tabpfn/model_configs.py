@@ -14,6 +14,7 @@ def get_general_config(max_features, n_samples):
         "max_eval_pos": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
+        'prior_type': 'prior_bag',
         'mlp': {"pre_sample_causes": True,
                 'prior_mlp_scale_weights_sqrt': True,
                 'random_feature_rotation': True},
@@ -62,6 +63,8 @@ def get_flexible_categorical_config(max_features, n_samples):
         'nan_prob_no_reason': 0.0,
         'nan_prob_unknown_reason': 0.0,
         'nan_prob_a_reason': 0.0,
+        'set_value_to_nan': .1,
+
     }
     return {'prior' : {'classification': config_flexible_categorical}}
 
@@ -155,8 +158,6 @@ def get_base_config():
         'boolean': {
             'max_fraction_uninformative': 0.5,
             'p_uninformative': 0.5},
-
-        'set_value_to_nan': .1,
     })
 
     config['model-type'] = 'mothernet'
