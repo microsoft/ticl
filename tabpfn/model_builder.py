@@ -56,9 +56,9 @@ def get_encoder(config):
     if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
         ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
             ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
-        encoder = encoders.NanHandlingEncoder(num_features, config_transformer['emsize'])
+        encoder = encoders.NanHandlingEncoder(config['prior']['num_features'], config['transformer']['emsize'])
     else:
-        encoder = encoders.Linear(num_features, config_transformer['emsize'], replace_nan_by_zero=True)
+        encoder = encoders.Linear(config['prior']['num_features'], config['transformer']['emsize'], replace_nan_by_zero=True)
 
     if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
         encoder = encoders.FeaturewiseMLP
@@ -93,11 +93,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     if 'model_type' not in passed_config['general']:
         config['general']['model_type'] = 'tabpfn'
 
-    config['mothernet']['low_rank_weights'] = passed_config['mothernet'].get('low_rank_weights', passed_config['mothernet'].get('weight_embedding_rank', None) is not None)
-
-    epochs = 0 if not should_train else config['optimizer']['epochs']
-
-    dl = get_dataloader(prior_config=config['prior'], optimizer_config=config['optimizer'], diff_config=config['differentiable_hyperparameters'], device=device)
+    dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], diff_config=config['differentiable_hyperparameters'], device=device)
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
@@ -121,8 +117,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         model.learning_rates = config['learning_rates']
         model.wallclock_times = config.get('wallclock_times', [])
 
-    model = train(dl,
-                  model, criterion=criterion,
-                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, epoch_callback=epoch_callback, verbose=verbose_train, **config['optimizer'])
+    if should_train:    
+        model = train(dl, model, criterion=criterion, optimizer_state=optimizer_state, scheduler=scheduler,
+                      epoch_callback=epoch_callback, verbose=verbose_train, **config['optimizer'])
 
     return model

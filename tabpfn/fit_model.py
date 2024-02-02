@@ -52,8 +52,7 @@ def main(argv):
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
-    config['optimizer']['num_steps'] = config['optimizer']['num_steps'] or 1024 * 64 // config['optimizer']['batch_size'] // config['optimizer']['aggregate_k_gradients']
-    config['mothernet']['weight_embedding_rank'] = config['mothernet']['weight_embedding_rank'] if config['mothernet']['low_rank_weights'] else None
+    config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * 64 // config['dataloader']['batch_size'] // config['dataloader']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
          config['prior']['max_eval_pos'] = 16

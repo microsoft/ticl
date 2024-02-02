@@ -34,11 +34,9 @@ def argparser_from_config(description="Train Mothernet"):
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 
     optimizer = parser.add_argument_group('optimizer')
-    optimizer.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
     optimizer.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
-    optimizer.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
+    optimizer.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
     optimizer.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
-    optimizer.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
     optimizer.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
     optimizer.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
     optimizer.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
@@ -49,6 +47,11 @@ def argparser_from_config(description="Train Mothernet"):
     optimizer.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
     optimizer.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
     optimizer.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
+
+    dataloader = parser.add_argument_group('dataloader')
+    dataloader.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
+    dataloader.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
+
 
     transformer = parser.add_argument_group('transformer')
     transformer.add_argument('-e', '--em-size', type=int, help='embedding size', default=512, dest='emsize')

@@ -41,7 +41,7 @@ class PriorDataLoader(DataLoader):
         return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 
-def get_dataloader(prior_config, optimizer_config, diff_config, device):
+def get_dataloader(prior_config, dataloader_config, diff_config, device):
 
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.fast_gp.GPPrior())
@@ -67,6 +67,6 @@ def get_dataloader(prior_config, optimizer_config, diff_config, device):
         raise ValueError(f"Prior type {prior_type} not supported.")
     
     # fixme get rid of passing whole config as hyperparameters here
-    return PriorDataLoader(prior=prior, num_steps=optimizer_config['num_steps'], batch_size=optimizer_config['batch_size'], n_samples=prior_config['n_samples'], min_eval_pos=optimizer_config['min_eval_pos'],
-                           max_eval_pos=optimizer_config['max_eval_pos'], device=device,
+    return PriorDataLoader(prior=prior, num_steps=dataloader_config['num_steps'], batch_size=dataloader_config['batch_size'], n_samples=prior_config['n_samples'], min_eval_pos=dataloader_config['min_eval_pos'],
+                           max_eval_pos=dataloader_config['max_eval_pos'], device=device,
                            num_features=prior_config['num_features'], hyperparameters={})

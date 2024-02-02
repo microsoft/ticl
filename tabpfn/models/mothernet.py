@@ -52,26 +52,28 @@ class MLPModelPredictor(nn.Module):
 
 
 class MotherNet(MLPModelPredictor):
-    def __init__(self, encoder_layer, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
+        self.y_encoder = y_encoder # unused for now, y_encoder_layer was passed
         super().__init__()
-        self.model_type = 'Transformer'
-        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+        nhid = emsize *  nhid_factor
+
+        def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
-        self.ninp = ninp
+        self.emsize = emsize
         self.encoder = encoder_layer
         self.y_encoder = y_encoder_layer
-        self.decoder = LinearModelDecoder(emsize=ninp, hidden_size=nhid, n_out=n_out)
-        self.input_ln = SeqBN(ninp) if input_normalization else None
+        self.decoder = LinearModelDecoder(emsize=emsize, hidden_size=nhid, n_out=n_out)
+        self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         if num_global_att_tokens is not None:
             assert not full_attention
-        self.global_att_embeddings = nn.Embedding(num_global_att_tokens, ninp) if num_global_att_tokens else None
+        self.global_att_embeddings = nn.Embedding(num_global_att_tokens, emsize) if num_global_att_tokens else None
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
         self.n_out = n_out
@@ -80,12 +82,12 @@ class MotherNet(MLPModelPredictor):
         self.output_attention = output_attention
         self.special_token = special_token
         decoder_hidden_size = decoder_hidden_size or nhid
-        self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
+        self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
-                                       weight_embedding_rank=weight_embedding_rank)
+                                       weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
         if special_token:
-            self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
+            self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
 
         self.init_weights()
 

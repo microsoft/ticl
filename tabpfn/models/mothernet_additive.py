@@ -9,24 +9,26 @@ from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
 class MotherNetAdditive(nn.Module):
-    def __init__(self, n_features, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+    def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16):
+                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None,
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16, y_encoder=None):
         super().__init__()
-        self.model_type = 'Transformer'
-        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+        nhid = emsize *  nhid_factor
+        self.y_encoder = y_encoder # unused for now, y_encoder_layer was passed
+        self.low_rank_weights = low_rank_weights # ignored for now
+        def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
-        self.ninp = ninp
+        self.emsize = emsize
         if shared_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=shared_embedding_rank)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=shared_embedding_rank)
         else:
-            self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
+            self.encoder = Linear(num_features=n_features*n_bins, emsize=emsize, replace_nan_by_zero=True)
         self.y_encoder = y_encoder_layer
-        self.input_ln = SeqBN(ninp) if input_normalization else None
+        self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
@@ -35,7 +37,7 @@ class MotherNetAdditive(nn.Module):
         self.nhid = nhid
         self.shared_embedding = shared_embedding
 
-        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
+        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                             embed_dim=decoder_embed_dim,
                                             decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, shared_embedding=shared_embedding)
 

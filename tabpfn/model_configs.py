@@ -18,23 +18,27 @@ def get_general_config(max_features, n_samples):
         "pre_sample_causes": True,
         "multiclass_type": 'rank'}
     
-    optimizer = {
-        "aggregate_gradients": 1,
+    dataloader = {
         "batch_size": 8,
-        "learing_rate": 0.00003,
-        "epochs": 4000,
         "num_steps": None,
-        "epochs": 80,
+        'min_eval_pos': 2,
+        'max_eval_pos': 1000,}
+    
+    optimizer = {
+        "aggregate_k_gradients": 1,
+        "learning_rate": 0.00003,
+        "epochs": 4000,
+
     }
 
     transformer = {
-        "em_size": 512,
+        "emsize": 512,
         "nlayers": 12,
         "dropout": 0.0,
         "nhid_factor": 2,
     }
 
-    return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer}
+    return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer, 'dataloader': dataloader}
 
 
 def get_flexible_categorical_config(max_features):
@@ -185,7 +189,6 @@ def get_base_config():
         'pre_norm': False,
         'y_encoder': "one_hot",
         'efficient_eval_masking': True,
-        'hid_factor': 2,
         'input_normalization': False
     })
 
@@ -194,8 +197,6 @@ def get_base_config():
         'reduce_lr_on_spike': False,
         'warmup_epochs': 20,
         'learning_rate_schedule': 'cosine',
-        'min_eval_pos': 2,
-        'max_eval_pos': 1000,
         'min_lr': None,
         'adam_beta1': 0.9,
         'spike_tolerance': 4,

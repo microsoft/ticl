@@ -7,21 +7,21 @@ from tabpfn.utils import normalize_data
 
 
 class StyleEncoder(nn.Module):
-    def __init__(self, num_hyperparameters, em_size):
+    def __init__(self, num_hyperparameters, emsize):
         super().__init__()
-        self.em_size = em_size
-        self.embedding = nn.Linear(num_hyperparameters, self.em_size)
+        self.emsize = emsize
+        self.embedding = nn.Linear(num_hyperparameters, self.emsize)
 
     def forward(self, hyperparameters):  # B x num_hps
         return self.embedding(hyperparameters)
 
 
 class StyleEmbEncoder(nn.Module):
-    def __init__(self, num_hyperparameters, em_size, num_embeddings=100):
+    def __init__(self, num_hyperparameters, emsize, num_embeddings=100):
         super().__init__()
         assert num_hyperparameters == 1
-        self.em_size = em_size
-        self.embedding = nn.Embedding(num_embeddings, self.em_size)
+        self.emsize = emsize
+        self.embedding = nn.Embedding(num_embeddings, self.emsize)
 
     def forward(self, hyperparameters):  # B x num_hps
         return self.embedding(hyperparameters.squeeze(1))
@@ -52,10 +52,10 @@ def Positional(_, emsize): return _PositionalEncoding(d_model=emsize)
 
 
 class EmbeddingEncoder(nn.Module):
-    def __init__(self, num_features, em_size, num_embs=100):
+    def __init__(self, num_features, emsize, num_embs=100):
         super().__init__()
         self.num_embs = num_embs
-        self.embeddings = nn.Embedding(num_embs * num_features, em_size, max_norm=True)
+        self.embeddings = nn.Embedding(num_embs * num_features, emsize, max_norm=True)
         self.init_weights(.1)
         self.min_max = (-2, +2)
 

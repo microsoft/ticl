@@ -89,11 +89,11 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
-          epochs=10, stop_after_epochs=None, lr=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
+          epochs=10, stop_after_epochs=None, learning_rate=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
           validation_period=10, gpu_device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
-          spike_tolerance=4,
+          spike_tolerance=4
           ):
     device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
@@ -126,7 +126,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             epoch_callback(model, None, None, "start")
 
     dl.model = model
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, betas=(adam_beta1, 0.999))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay, betas=(adam_beta1, 0.999))
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
     spike_scheduler = None

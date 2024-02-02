@@ -62,7 +62,7 @@ class AdditiveModelDecoder(nn.Module):
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
+                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
@@ -75,7 +75,7 @@ class MLPModelDecoder(nn.Module):
         self.in_size = 100 if no_double_embedding else emsize
         out_size = emsize
         self.nhead = nhead
-        self.weight_embedding_rank = weight_embedding_rank
+        self.weight_embedding_rank = weight_embedding_rank if low_rank_weights else None
 
         self.predicted_hidden_layers = predicted_hidden_layers
 
