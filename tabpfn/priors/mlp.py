@@ -24,7 +24,7 @@ def causes_sampler_f(num_causes):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling):
+    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling, *, pre_sample_causes=False, add_uninformative_features=False, prior_mlp_scale_weights_sqrt=True, random_feature_rotation=True):
         super(MLP, self).__init__()
         self.device = device
         self.num_features = num_features
@@ -32,6 +32,11 @@ class MLP(torch.nn.Module):
         self.n_samples = n_samples
         self.sampling = sampling
         self.hyperparameters = hyperparameters
+        self.prior_mlp_scale_weights_sqrt = prior_mlp_scale_weights_sqrt
+        self.random_feature_rotation = random_feature_rotation
+        self.pre_sample_causes = pre_sample_causes
+        self.add_uninformative_features = add_uninformative_features
+
         self.is_causal = hyperparameters['is_causal']
         self.num_causes = hyperparameters['num_causes']
         self.prior_mlp_hidden_dim = hyperparameters['prior_mlp_hidden_dim']
@@ -41,15 +46,10 @@ class MLP(torch.nn.Module):
         self.y_is_effect = hyperparameters['y_is_effect']
         self.pre_sample_weights = hyperparameters['pre_sample_weights']
         self.prior_mlp_dropout_prob = hyperparameters['prior_mlp_dropout_prob']
-        self.pre_sample_causes = hyperparameters['pre_sample_causes']
-        self.verbose = hyperparameters['verbose']
         self.block_wise_dropout = hyperparameters['block_wise_dropout']
         self.init_std = hyperparameters['init_std']
-        self.prior_mlp_scale_weights_sqrt = hyperparameters['prior_mlp_scale_weights_sqrt']
-        self.random_feature_rotation = hyperparameters['random_feature_rotation']
         self.sort_features = hyperparameters['sort_features']
         self.in_clique = hyperparameters['in_clique']
-        self.add_uninformative_features = hyperparameters['add_uninformative_features']
 
         with torch.no_grad():
             assert (self.num_layers >= 2)
@@ -191,12 +191,14 @@ class MLP(torch.nn.Module):
         return x, y
 
 class MLPPrior:
+    def __init__(self, config=None):
+        self.config = config or {}
     def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
         if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
             s = hyperparameters['prior_mlp_activations']()
             hyperparameters['prior_mlp_activations'] = lambda: s
 
-        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, sampling).to(device)() for _ in range(0, batch_size)]
+        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, sampling, **self.config).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

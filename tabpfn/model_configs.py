@@ -14,8 +14,10 @@ def get_general_config(max_features, n_samples):
         "max_eval_pos": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
-        "pre_sample_causes": True,
-        "multiclass_type": 'rank'}
+        'mlp': {"pre_sample_causes": True,
+                'prior_mlp_scale_weights_sqrt': True,
+                'random_feature_rotation': True},
+}
     
     dataloader = {
         "batch_size": 8,
@@ -46,15 +48,20 @@ def get_flexible_categorical_config(max_features, n_samples):
     """
     max_num_classes = 10
     config_flexible_categorical = {
-        "n_samples_used": n_samples,
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
         "num_classes": uniform_int_sampler_f(2, max_num_classes),
         "noise_type": "Gaussian",  # NN
         "balanced": False,
-        "num_features_used":
-            {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
+        'output_multiclass_ordered_p': 0.,
+        'multiclass_max_steps': 10,
+        "multiclass_type": 'rank',
+        "num_features_used": uniform_int_sampler_f(1, max_features),
+        'categorical_feature_p': .2,  # diff: .0
+        'nan_prob_no_reason': 0.0,
+        'nan_prob_unknown_reason': 0.0,
+        'nan_prob_a_reason': 0.0,
     }
     return {'prior' : {'classification': config_flexible_categorical}}
 
@@ -64,11 +71,7 @@ def get_diff_gp():
     Returns the configuration parameters for a differentiable wrapper around GP.
     """
     diff_gp = {
-        #'outputscale': {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 10., 'min_mean': 0.00001, 'round': False,
-        #                'lower_bound': 0},
         'outputscale': {'distribution': 'log_uniform', 'min': 1e-5, 'max': 8},
-        #'lengthscale': {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 10., 'min_mean': 0.00001, 'round': False,
-        #                'lower_bound': 0},
         'lengthscale': {'distribution': 'log_uniform', 'min': 1e-5, 'max': 8},
         'noise': {'distribution': 'meta_choice', 'choice_values': [0.00001, 0.0001, 0.01]}
     }
@@ -88,10 +91,6 @@ def get_diff_causal():
         # This mustn't be too high since activations get too large otherwise
         "init_std": {'distribution': 'log_uniform', 'min': 1e-2, 'max': 12},
         "noise_std": {'distribution': 'log_uniform', 'min': 1e-4, 'max': .5},
-        #"noise_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': .3, 'min_mean': 0.0001, 'round': False,
-        #              'lower_bound': 0.0},
-        #"init_std": {'distribution': 'meta_trunc_norm_log_scaled', 'max_mean': 10.0, 'min_mean': 0.01, 'round': False,
-        #             'lower_bound': 0.0},
         "num_causes": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 7, 'round': True,
                        'lower_bound': 2},
 
@@ -152,20 +151,10 @@ def get_base_config():
     config['prior'].update({
         'heterogeneous_batches': False,
         'add_uninformative_features': False,
-        'recompute_attn': True,
-        'output_multiclass_ordered_p': 0.,
-        'multiclass_max_steps': 10,
-        'pre_sample_causes': True,
         'multiclass_loss_type': 'nono',  # 'compatible'
-        'categorical_feature_p': .2,  # diff: .0
-        'nan_prob_no_reason': 0.0,
-        'nan_prob_unknown_reason': 0.0,
-        'nan_prob_a_reason': 0.0,
         'boolean_max_fraction_uninformative': 0.5,
         'boolean_p_uninformative': 0.5,
         'set_value_to_nan': .1,
-        'prior_mlp_scale_weights_sqrt': True,
-        'random_feature_rotation': True
     })
 
     config['model-type'] = 'mothernet'
@@ -186,6 +175,7 @@ def get_base_config():
     config['additive'] = {'shared_embedding' : False}
     
     config['transformer'].update({
+        'recompute_attn': True,
         'pre_norm': False,
         'y_encoder': "one_hot",
         'efficient_eval_masking': True,

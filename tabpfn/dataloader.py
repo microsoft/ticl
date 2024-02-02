@@ -45,7 +45,7 @@ def get_dataloader(prior_config, dataloader_config, diff_config, device):
 
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.fast_gp.GPPrior(), **prior_config['classification'])
-    mlp_flexible = ClassificationAdapterPrior(priors.mlp.MLPPrior(), **prior_config['classification'])
+    mlp_flexible = ClassificationAdapterPrior(priors.mlp.MLPPrior(prior_config['mlp']), **prior_config['classification'])
 
     # hyperparameters = config.copy()
     #if 'num_features_used' in hyperparameters:
