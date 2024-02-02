@@ -7,7 +7,7 @@ from torch import nn
 
 from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
-                          remove_outliers, to_ranking_low_mem)
+                          remove_outliers)
 
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
@@ -115,11 +115,11 @@ class ClassificationAdapter:
             num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
-        x[d < torch.rand((1,), device=x.device) * 20 * self.h['nan_prob_no_reason'] * random.random()] = v
+        x[d < torch.rand((1,), device=x.device) * 20 * self.c['nan_prob_no_reason'] * random.random()] = v
         return x
 
     def drop_for_no_reason(self, x, v):
-        x[torch.rand(x.shape, device=x.device) < random.random() * self.h['nan_prob_no_reason']] = v
+        x[torch.rand(x.shape, device=x.device) < random.random() * self.c['nan_prob_no_reason']] = v
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
@@ -142,7 +142,7 @@ class ClassificationAdapter:
                     x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.c['set_value_to_nan']))
 
         # Categorical features
-        if 'categorical_feature_p' in self.h and random.random() < self.h['categorical_feature_p']:
+        if random.random() < self.c['categorical_feature_p']:
             p = random.random()
             for col in range(x.shape[2]):
                 num_unique_features = max(round(random.gammavariate(1, 10)), 2)
@@ -165,11 +165,9 @@ class ClassificationAdapter:
             [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.c['num_features_used']),
                             device=device)], -1)
 
-
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
 
-        # if self.h['check_is_compatible']: always true
         for b in range(y.shape[1]):
             is_compatible, N = False, 0
             while not is_compatible and N < 10:
@@ -188,7 +186,6 @@ class ClassificationAdapter:
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
-        #if self.h['normalize_labels']: this was always true
         for b in range(y.shape[1]):
             valid_labels = y[:, b] != -100
             y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()

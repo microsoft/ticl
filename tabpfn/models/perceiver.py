@@ -134,7 +134,6 @@ class Perceiver(nn.Module):
         num_classes=1000,
         attn_dropout=0.,
         ff_dropout=0.,
-        weight_tie_layers=False,
         fourier_encode_data=True,
         self_per_cross_attn=1,
         final_classifier_head=True
@@ -251,7 +250,7 @@ class TabPerceiver(MLPModelPredictor):
         self,
         *,
         depth,
-        input_dim=512,
+        emsize=512,
         input_axis=1,
         num_latents=512,
         latent_dim=512,
@@ -301,7 +300,7 @@ class TabPerceiver(MLPModelPredictor):
         self.encoder = encoder_layer
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
-        self.input_dim = input_dim
+        self.input_dim = emsize
         self.n_out = n_out
         assert not special_token
         self.special_token = special_token
@@ -320,8 +319,8 @@ class TabPerceiver(MLPModelPredictor):
                 self_attns.append(latent_block)
 
             cross_attn_layer = nn.Module()
-            cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, input_dim, heads=cross_heads,
-                                        dim_head=cross_dim_head, dropout=attn_dropout), context_dim=input_dim))
+            cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, emsize, heads=cross_heads,
+                                        dim_head=cross_dim_head, dropout=attn_dropout), context_dim=emsize))
             cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)

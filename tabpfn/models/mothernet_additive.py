@@ -12,12 +12,14 @@ class MotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16, y_encoder=None):
+                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16, y_encoder=None,
+                 predicted_hidden_layer_size=None, output_attention=None, special_token=None, no_double_embedding=None, predicted_hidden_layers=None):
         super().__init__()
         nhid = emsize *  nhid_factor
         self.y_encoder = y_encoder # unused for now, y_encoder_layer was passed
         self.low_rank_weights = low_rank_weights # ignored for now
+        self.weight_embedding_rank = weight_embedding_rank # ignored for now
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
