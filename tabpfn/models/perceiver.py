@@ -249,7 +249,7 @@ class TabPerceiver(MLPModelPredictor):
     def __init__(
         self,
         *,
-        depth,
+        nlayers,
         emsize=512,
         input_axis=1,
         num_latents=512,
@@ -260,7 +260,7 @@ class TabPerceiver(MLPModelPredictor):
         latent_dim_head=64,
         n_out=10,
         attn_dropout=0.,
-        ff_dropout=0.,
+        dropout=0., # feed forward dropout
         self_per_cross_attn=1,
         decoder_hidden_size=512,
         predicted_hidden_layer_size=128,
@@ -271,13 +271,22 @@ class TabPerceiver(MLPModelPredictor):
         y_encoder_layer=None,
         encoder_layer=None,
         predicted_hidden_layers=1,
-        weight_embedding_rank=None
+        recompute_attn=None, # ignored
+        nhid_factor=None, # ignored
+        pre_norm=None, # ignored
+        efficient_eval_masking=None, # ignored
+        input_normalization=None, # ignored
+        nhead=None, # ignored
+        low_rank_weights=None,
+        y_encoder=None, # ignored, y_encoder_layer is passed
+        weight_embedding_rank=None,
+        
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)
 
         Args:
-          depth: Depth of net.
+          nlayers: Depth of net.
           input_channels: Number of channels for each token of the input.
           input_axis: Number of axes for input data (2 for images, 3 for video)
           num_latents: Number of latents, or induced set points, or centroids.
@@ -308,26 +317,26 @@ class TabPerceiver(MLPModelPredictor):
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
         self.layers = nn.ModuleList([])
-        for i in range(depth):
+        for i in range(nlayers):
             self_attns = nn.ModuleList([])
 
             for block_ind in range(self_per_cross_attn):
                 latent_block = nn.Module()
                 latent_block.add_module('latent_attn', PreNorm(latent_dim, Attention(
                     latent_dim, heads=latent_heads, dim_head=latent_dim_head, dropout=attn_dropout)))
-                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=ff_dropout, mult=1)))
+                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=dropout, mult=1)))
                 self_attns.append(latent_block)
 
             cross_attn_layer = nn.Module()
             cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, emsize, heads=cross_heads,
                                         dim_head=cross_dim_head, dropout=attn_dropout), context_dim=emsize))
-            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=ff_dropout, mult=1)))
+            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
-                                       weight_embedding_rank=weight_embedding_rank)
+                                       weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
 
     def inner_forward(self, data):
         # b, *axis, _, device, dtype = *data.shape, data.device, data.dtype

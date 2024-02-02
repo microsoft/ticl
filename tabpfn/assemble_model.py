@@ -18,7 +18,7 @@ def assemble_model(encoder_layer, y_encoder_layer, model_type, config_transforme
         )
     elif model_type == 'perceiver':
         model = TabPerceiver(
-            encoder_layer, n_out=n_out,
+            encoder_layer=encoder_layer, n_out=n_out,
             y_encoder_layer=y_encoder_layer, **config_transformer, **config_mothernet, **config_perceiver
         )
     elif model_type == "additive":

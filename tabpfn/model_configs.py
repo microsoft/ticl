@@ -152,8 +152,10 @@ def get_base_config():
         'heterogeneous_batches': False,
         'add_uninformative_features': False,
         'multiclass_loss_type': 'nono',  # 'compatible'
-        'boolean_max_fraction_uninformative': 0.5,
-        'boolean_p_uninformative': 0.5,
+        'boolean': {
+            'max_fraction_uninformative': 0.5,
+            'p_uninformative': 0.5},
+
         'set_value_to_nan': .1,
     })
 

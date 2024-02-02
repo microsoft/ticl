@@ -57,7 +57,6 @@ class MotherNet(MLPModelPredictor):
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
-        self.y_encoder = y_encoder # unused for now, y_encoder_layer was passed
         super().__init__()
         nhid = emsize *  nhid_factor
 
