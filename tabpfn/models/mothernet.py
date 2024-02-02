@@ -52,8 +52,8 @@ class MLPModelPredictor(nn.Module):
 
 
 class MotherNet(MLPModelPredictor):
-    def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
-                 pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
+    def __init__(self, encoder_layer, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+                 input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None):
@@ -64,12 +64,10 @@ class MotherNet(MLPModelPredictor):
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
-        self.encoder = encoder
-        self.y_encoder = y_encoder
-        self.pos_encoder = pos_encoder
+        self.encoder = encoder_layer
+        self.y_encoder = y_encoder_layer
         self.decoder = LinearModelDecoder(emsize=ninp, hidden_size=nhid, n_out=n_out)
         self.input_ln = SeqBN(ninp) if input_normalization else None
-        self.style_encoder = style_encoder
         self.init_method = init_method
         if num_global_att_tokens is not None:
             assert not full_attention

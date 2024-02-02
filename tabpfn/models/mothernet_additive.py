@@ -9,8 +9,8 @@ from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
 class MotherNetAdditive(nn.Module):
-    def __init__(self, n_features, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder=None,
-                 pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
+    def __init__(self, n_features, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+                 input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16):
@@ -25,8 +25,7 @@ class MotherNetAdditive(nn.Module):
             self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=shared_embedding_rank)
         else:
             self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
-        self.y_encoder = y_encoder
-        self.pos_encoder = pos_encoder
+        self.y_encoder = y_encoder_layer
         self.input_ln = SeqBN(ninp) if input_normalization else None
         self.init_method = init_method
         self.full_attention = full_attention

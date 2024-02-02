@@ -51,6 +51,30 @@ def load_model(path, device, verbose=False):
 
     return model, config_sample
 
+
+def get_encoder(config):
+    if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
+        ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
+            ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
+        encoder = encoders.NanHandlingEncoder(num_features, config_transformer['emsize'])
+    else:
+        encoder = encoders.Linear(num_features, config_transformer['emsize'], replace_nan_by_zero=True)
+
+    if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
+        encoder = encoders.FeaturewiseMLP
+    return encoder
+
+
+def get_y_encoder(config):
+    if config['transformer']['y_encoder'] == 'one_hot':
+        y_encoder = encoders.OneHotAndLinear(config['prior']['classification']['max_num_classes'], emsize=config['transformer']['emsize'])
+    elif config['transformer']['y_encoder'] == 'linear':
+        y_encoder = encoders.Linear(1, emsize=config['transformer']['emsize'])
+    else:
+        raise ValueError(f"Unknown y_encoder: {config['transformer']['y_encoder']}")
+    return y_encoder
+
+
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
@@ -77,7 +101,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
-    model = assemble_model(encoder=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'], config_transformer=config['transformer'],
+    model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'], config_transformer=config['transformer'],
                            config_mothernet=config['mothernet'], config_additive=config['additive'], config_perceiver=config['perceiver'],
                            num_features=config['prior']['num_features'], max_num_classes=config['prior']['classification']['max_num_classes'])
     
