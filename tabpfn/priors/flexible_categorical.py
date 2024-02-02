@@ -82,8 +82,10 @@ class ClassificationAdapter:
     # adds NaN and potentially categorical features
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
-    def __init__(self, base_prior, hyperparameters):
-
+    def __init__(self, base_prior, hyperparameters, config):
+        # hyperparameters are those passed via SamplingPrior.get_batch
+        # config are passed directly vrom the constructor.
+        self.config = config
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
                   hyperparameters.keys()}
 
@@ -199,8 +201,9 @@ class ClassificationAdapter:
         return x, y, y  # x.shape = (T,B,H)
 
 class ClassificationAdapterPrior:
-    def __init__(self, base_prior):
+    def __init__(self, base_prior, **config):
         self.base_prior = base_prior
+        self.config = config
 
     def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
@@ -209,7 +212,7 @@ class ClassificationAdapterPrior:
 
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
 
-            x, y, y_ = ClassificationAdapter(self.base_prior, hyperparameters)(batch_size=batch_size, **args)
+            x, y, y_ = ClassificationAdapter(self.base_prior, hyperparameters, self.config)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_

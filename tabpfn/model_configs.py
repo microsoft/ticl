@@ -12,7 +12,6 @@ def get_general_config(max_features, n_samples):
         "n_samples": n_samples,
         "eval_positions": [n_samples * 0.95],
         "max_eval_pos": n_samples,
-        "n_samples_used": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
         "pre_sample_causes": True,
@@ -41,12 +40,13 @@ def get_general_config(max_features, n_samples):
     return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer, 'dataloader': dataloader}
 
 
-def get_flexible_categorical_config(max_features):
+def get_flexible_categorical_config(max_features, n_samples):
     """"
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
     max_num_classes = 10
     config_flexible_categorical = {
+        "n_samples_used": n_samples,
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
@@ -139,7 +139,7 @@ def get_diff_config():
 
 def get_prior_config_causal(max_features=100):
     config_general = get_general_config(max_features, n_samples=1024+128)
-    config_flexible_categorical = get_flexible_categorical_config(max_features)
+    config_flexible_categorical = get_flexible_categorical_config(max_features, n_samples=1024+128)
     config_diff = get_diff_config()
 
     # config = {'general': config_general, 'flexible_categorical': config_flexible_categorical, 'diff': config_diff}
