@@ -262,6 +262,19 @@ def compare_dicts(left, right, prefix=None, all=False):
             if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
                 print(f"{prefix}{k}: left: {left[k]}, right: {right[k]}")
 
+def merge_dicts(*dicts):
+    keys = set([k for d in dicts for k in d])
+    merged = {}
+    for k in keys:
+        values = [d[k] for d in dicts if k in d]
+        if len(values) == 1:
+            merged[k] = values[0]
+        elif all([isinstance(v, dict) for v in values]):
+            merged[k] = merge_dicts(*values)
+        else:
+            raise ValueError(f"Can't merge {values} for key {k}")
+    return merged
+
 
 def get_latest_losses(fileglob="models_diff/*.cpkt"):
 

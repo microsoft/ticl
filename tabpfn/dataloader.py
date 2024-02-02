@@ -41,32 +41,32 @@ class PriorDataLoader(DataLoader):
         return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 
-def get_dataloader(prior_config, device):
+def get_dataloader(prior_config, optimizer_config, diff_config, device):
 
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.fast_gp.GPPrior())
     mlp_flexible = ClassificationAdapterPrior(priors.mlp.MLPPrior())
 
-    hyperparameters = config.copy()
-    if 'num_features_used' in hyperparameters:
-        hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
+    # hyperparameters = config.copy()
+    #if 'num_features_used' in hyperparameters:
+    #    hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
     
     if prior_type == 'prior_bag':
         # Prior bag combines priors
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
                              prior_weights={'mlp': 0.961, 'gp': 0.039})
-        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'], heterogeneous_batches=prior_config['heterogeneous_batches'])
+        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=diff_config, heterogeneous_batches=prior_config['heterogeneous_batches'])
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionPrior(hyperparameters=prior_config['boolean_prior'])
     elif prior_type == "bag_boolean":
         boolean = BooleanConjunctionPrior(hyperparameters=prior_config['boolean_prior'])
         bag_prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible, 'boolean': boolean},
                              prior_weights={'mlp': 0.9, 'gp': 0.02, 'boolean': 0.08})
-        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=config['differentiable_hyperparameters'], heterogeneous_batches=prior_config['heterogeneous_batches'])
+        prior = SamplerPrior(base_prior=bag_prior, differentiable_hyperparameters=diff_config, heterogeneous_batches=prior_config['heterogeneous_batches'])
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
     
     # fixme get rid of passing whole config as hyperparameters here
-    return PriorDataLoader(prior=prior, num_steps=steps_per_epoch, batch_size=batch_size, n_samples=n_samples, min_eval_pos=config['min_eval_pos'],
-                           max_eval_pos=config['max_eval_pos'], device=device,
-                           num_features=config['num_features'], hyperparameters=hyperparameters)
+    return PriorDataLoader(prior=prior, num_steps=optimizer_config['num_steps'], batch_size=optimizer_config['batch_size'], n_samples=prior_config['n_samples'], min_eval_pos=optimizer_config['min_eval_pos'],
+                           max_eval_pos=optimizer_config['max_eval_pos'], device=device,
+                           num_features=prior_config['num_features'], hyperparameters={})

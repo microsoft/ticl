@@ -12,12 +12,12 @@ from tabpfn.model_builder import get_model
 from tabpfn.model_configs import get_base_config
 from tabpfn.utils import compare_dicts, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 from tabpfn.cli_parsing import argparser_from_config
+from argparse import Namespace
 
 def main(argv):
     config = get_base_config()
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
-    import pdb; pdb.set_trace()
     device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
 
     # handle syne-tune restarts
@@ -30,7 +30,17 @@ def main(argv):
 
     torch.set_num_threads(24)
     for group_name in vars(args):
-        config[group_name].update(vars(getattr(args, group_name)))
+        if group_name not in config:
+            config[group_name] = {}
+        for k, v in vars(getattr(args, group_name)).items():
+            if isinstance(v, Namespace):
+                if k not in config[group_name]:
+                    config[group_name][k] = {}
+                # FIXME we only allow one level of nesting, we should do recursion here really.
+                config[group_name][k].update(vars(v))
+            else:
+                config[group_name][k] = v
+        config[group_name].update()
 
     if args.orchestration.seed_everything:
         import lightning as L
@@ -42,13 +52,12 @@ def main(argv):
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
-    config['training']['num_steps'] = config['training']['num_steps'] or 1024 * 64 // config['training']['batch_size'] // config['training']['aggregate_k_gradients']
+    config['optimizer']['num_steps'] = config['optimizer']['num_steps'] or 1024 * 64 // config['optimizer']['batch_size'] // config['optimizer']['aggregate_k_gradients']
     config['mothernet']['weight_embedding_rank'] = config['mothernet']['weight_embedding_rank'] if config['mothernet']['low_rank_weights'] else None
 
     if args.orchestration.extra_fast_test:
-         config['max_eval_pos'] = 16
-         config['n_samples'] = 2 * 16
-         config['nhead'] = 1
+         config['prior']['max_eval_pos'] = 16
+         config['prior']['n_samples'] = 2 * 16
 
     save_every = orchestration.save_every
 

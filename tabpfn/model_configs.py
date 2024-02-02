@@ -1,7 +1,7 @@
 import torch
 
 from tabpfn.priors.utils import uniform_int_sampler_f
-from collections import defaultdict
+from tabpfn.utils import merge_dicts
 
 def get_general_config(max_features, n_samples):
     """"
@@ -52,7 +52,7 @@ def get_flexible_categorical_config(max_features):
         "num_features_used":
             {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
     }
-    return {'prior': config_flexible_categorical}
+    return {'prior' : {'classification': config_flexible_categorical}}
 
 
 def get_diff_gp():
@@ -128,7 +128,7 @@ def get_diff_config():
     diff_causal = get_diff_causal()
     diff_gp = get_diff_gp()
 
-    config_diff = {'differentiable_hyperparameters': {**diff_prior_bag, **diff_causal, **diff_gp}}
+    config_diff = {'differentiable_hyperparameters': merge_dicts(diff_prior_bag, diff_causal, diff_gp)}
 
     return config_diff
 
@@ -139,14 +139,12 @@ def get_prior_config_causal(max_features=100):
     config_diff = get_diff_config()
 
     # config = {'general': config_general, 'flexible_categorical': config_flexible_categorical, 'diff': config_diff}
-    config = {**config_general, **config_flexible_categorical, **config_diff}
+    config = merge_dicts(config_general, config_flexible_categorical, config_diff)
     return config
 
 
 def get_base_config():
     config = get_prior_config_causal()
-    config = defaultdict(dict, config)
-    # prior
     config['prior'].update({
         'heterogeneous_batches': False,
         'add_uninformative_features': False,
@@ -168,7 +166,7 @@ def get_base_config():
 
     config['model-type'] = 'mothernet'
 
-    config['mothernet'].update({
+    config['mothernet'] = {
         'weight_embedding_rank': None,
         'predicted_hidden_layer_size': 128,
         'output_attention': True,
@@ -177,11 +175,11 @@ def get_base_config():
         'decoder_two_hidden_layers': False,
         'decoder_hidden_size': None,
         'no_double_embedding': True,
-        'special_token': False})
+        'special_token': False}
 
-    config['perceiver']['num_latents'] = 512
+    config['perceiver'] = {'num_latents': 512}
 
-    config['additive']['shared_embedding'] = False
+    config['additive'] = {'shared_embedding' : False}
     
     config['transformer'].update({
         'pre_norm': False,
@@ -191,8 +189,7 @@ def get_base_config():
         'input_normalization': False
     })
 
-    # training
-    config['training'].update({
+    config['optimizer'].update({
         'stop_after_epochs': None,
         'reduce_lr_on_spike': False,
         'warmup_epochs': 20,

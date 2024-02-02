@@ -51,30 +51,6 @@ def load_model(path, device, verbose=False):
 
     return model, config_sample
 
-
-def get_encoder(config):
-    if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
-        ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
-            ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
-        encoder = encoders.NanHandlingEncoder
-    else:
-        encoder = partial(encoders.Linear, replace_nan_by_zero=True)
-
-    if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
-        encoder = encoders.FeaturewiseMLP
-    return encoder
-
-
-def get_y_encoder(config):
-    if config['y_encoder'] == 'one_hot':
-        y_encoder = encoders.OneHotAndLinear(config['max_num_classes'], emsize=config['emsize'])
-    elif config['y_encoder'] == 'linear':
-        y_encoder = encoders.Linear(1, emsize=config['emsize'])
-    else:
-        raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
-    return y_encoder
-
-
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
@@ -83,35 +59,37 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
 
-    criterion = get_criterion(config['max_num_classes'])
+    criterion = get_criterion(config['prior']['classification']['max_num_classes'])
     
     # backwards compatibility for cases where absence of parameter doesn't correspond to current default
-    if 'n_samples' not in passed_config:
-        config['n_samples'] = config['bptt']
-    if 'y_encoder' not in passed_config:
-        config['y_encoder'] = 'linear'
-    if 'model_type' not in passed_config:
-        config['model_type'] = 'tabpfn'
+    if 'n_samples' not in passed_config['prior']:
+        config['prior']['n_samples'] = config['bptt']
+    if 'y_encoder' not in passed_config['transformer']:
+        config['transformer']['y_encoder'] = 'linear'
+    if 'model_type' not in passed_config['general']:
+        config['general']['model_type'] = 'tabpfn'
 
-    config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
+    config['mothernet']['low_rank_weights'] = passed_config['mothernet'].get('low_rank_weights', passed_config['mothernet'].get('weight_embedding_rank', None) is not None)
 
-    epochs = 0 if not should_train else config['epochs']
+    epochs = 0 if not should_train else config['optimizer']['epochs']
 
-    dl = get_dataloader(config=config['prior'], device=device)
+    dl = get_dataloader(prior_config=config['prior'], optimizer_config=config['optimizer'], diff_config=config['differentiable_hyperparameters'], device=device)
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
-    model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
-                           nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
-                           input_normalization=config['input_normalization'],  model_type=config['model_type'], max_num_classes=config['max_num_classes'],
-                           predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
-                           model_state=model_state, load_model_strict=load_model_strict,
-                           decoder_embed_dim=config['decoder_embed_dim'], decoder_two_hidden_layers=config['decoder_two_hidden_layers'],
-                           decoder_hidden_size=config['decoder_hidden_size'], no_double_embedding=config['no_double_embedding'],
-                           verbose=verbose_train, pre_norm=config['pre_norm'], efficient_eval_masking=config['efficient_eval_masking'],
-                           output_attention=config['output_attention'], predicted_hidden_layers=config['predicted_hidden_layers'],
-                           special_token=config['special_token'], weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
-                           num_latents=config['num_latents'], shared_embedding=config['shared_embedding'])
+    model = assemble_model(encoder=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'], config_transformer=config['transformer'],
+                           config_mothernet=config['mothernet'], config_additive=config['additive'], config_perceiver=config['perceiver'],
+                           num_features=config['prior']['num_features'], max_num_classes=config['prior']['classification']['max_num_classes'])
+    
+    if model_state is not None:
+        if not load_model_strict:
+            for k, v in model.state_dict().items():
+                if k in model_state and model_state[k].shape != v.shape:
+                    model_state.pop(k)
+        model.load_state_dict(model_state, strict=load_model_strict)
+
+    if verbose:
+        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
 
     if 'losses' in config:
         # for continuing training
@@ -121,12 +99,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model = train(dl,
                   model, criterion=criterion,
-                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'],
-                  warmup_epochs=config['warmup_epochs'], gpu_device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
-                  lr=config['lr'], min_lr=config['min_lr'],
-                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config['lr_decay'], verbose=verbose_train, train_mixed_precision=config['train_mixed_precision'],
-                  weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
-                  reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
-                  )
+                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, epoch_callback=epoch_callback, verbose=verbose_train, **config['optimizer'])
 
     return model

@@ -76,12 +76,12 @@ class MotherNet(MLPModelPredictor):
         self.global_att_embeddings = nn.Embedding(num_global_att_tokens, ninp) if num_global_att_tokens else None
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
-
         self.n_out = n_out
         self.nhid = nhid
         self.no_double_embedding = no_double_embedding
         self.output_attention = output_attention
         self.special_token = special_token
+        decoder_hidden_size = decoder_hidden_size or nhid
         self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,

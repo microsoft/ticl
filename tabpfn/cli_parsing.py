@@ -79,9 +79,12 @@ def argparser_from_config(description="Train Mothernet"):
 
     # Prior and data generation
     prior = parser.add_argument_group('prior')
-    prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
     prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
-    prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
+    classification_prior = parser.add_argument_group('prior.classification')
+    classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
+
+    mlp_prior = parser.add_argument_group('prior.mlp')
+    mlp_prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
     prior.add_argument('--heterogeneous-batches', help="Whether to resample MLP hypers for each sample instead of each batch.", default='False', type=str2bool)
     boolean = parser.add_argument_group('prior.boolean')
     boolean.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
