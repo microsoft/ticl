@@ -475,7 +475,7 @@ class GroupedArgParser(argparse.ArgumentParser):
             for action in group._group_actions:
                 if action.dest is not argparse.SUPPRESS and hasattr(results, action.dest):
                     setattr(new_subnamespace, action.dest, getattr(results, action.dest))
-            if len(new_subnamespace):
+            if new_subnamespace != argparse.Namespace():
                 setattr(nested_by_groups, group.title, new_subnamespace)
                 
         return nested_by_groups

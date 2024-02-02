@@ -17,41 +17,44 @@ def main(argv):
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
 
-    device, rank, num_gpus = init_device(args.gpu_id, args.use_cpu)
+    device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
 
     # handle syne-tune restarts
-    args.base_path, args.continue_run, args.warm_start_from, report = synetune_handle_checkpoint(args)
+    orchestration = args.orchestration
+    orchestration.base_path, orchestration.continue_run, orchestration.warm_start_from, report = synetune_handle_checkpoint(orchestration)
 
-    if args.create_new_run and not args.continue_run:
+    if orchestration.create_new_run and not orchestration.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
-    base_path = args.base_path
+    base_path = orchestration.base_path
 
     torch.set_num_threads(24)
-    config.update(vars(args))
+    for group in vars(args):
+        config[group.name] = vars(getattr(args, group))
+    # config.update(vars(args))
 
-    if config['seed_everything']:
+    if args.orchestration.seed_everything:
         import lightning as L
         L.seed_everything(42)
         
-    config['num_gpus'] = 1
-    config['device'] = device
+    # config['num_gpus'] = 1
+    # config['device'] = device
 
-    warm_start_weights = args.warm_start_from
-    config['nhead'] = config['emsize'] // 128
+    warm_start_weights = orchestration.warm_start_from
+    # config['nhead'] = config['emsize'] // 128
 
-    config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
-    config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
+    # config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
+    # config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
 
-    if config['model_type'] == 'perceiver' and config['perceiver_large_dataset']:
-        config['max_eval_pos'] = 8 * 1000
-        config['n_samples'] = 8 * 1024+128
+    # if config['model_type'] == 'perceiver' and config['perceiver_large_dataset']:
+    #     config['max_eval_pos'] = 8 * 1000
+    #     config['n_samples'] = 8 * 1024+128
 
-    if config['extra_fast_test']:
-        config['max_eval_pos'] = 16
-        config['n_samples'] = 2 * 16
-        config['nhead'] = 1
+    # if config['extra_fast_test']:
+    #     config['max_eval_pos'] = 16
+    #     config['n_samples'] = 2 * 16
+    #     config['nhead'] = 1
 
-    config['boolean_prior'] = {'max_fraction_uninformative': args.boolean_max_fraction_uninformative, 'p_uninformative': args.boolean_p_uninformative}
+    # config['boolean_prior'] = {'max_fraction_uninformative': args.boolean_max_fraction_uninformative, 'p_uninformative': args.boolean_p_uninformative}
     save_every = args.save_every
 
     model_state, optimizer_state, scheduler = None, None, None
