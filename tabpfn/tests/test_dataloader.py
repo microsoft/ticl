@@ -35,6 +35,7 @@ def test_get_dataloader_base_config():
     assert isinstance(prior.hyper_dists['noise_std'], LogUniformHyperparameter)
     assert prior.hyper_dists['noise_std'].min == 1e-4
     assert prior.hyper_dists['noise_std'].max == 0.5
+    assert prior.hyper_dists['noise_std']() == 0.002428916946974888
     assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
@@ -42,6 +43,7 @@ def test_get_dataloader_base_config():
                                              'prior_mlp_hidden_dim', 'noise_std', 'y_is_effect', 'lengthscale', 'prior_mlp_dropout_prob', 'pre_sample_weights', 'init_std', 'num_layers', 'noise', 'outputscale'])
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
+    assert config_sample['noise_std'] == 0.016730402817820244
     assert config_sample['prior_bag_exp_weights_1'] == 4.9963209507789
     assert config_sample['is_causal'] == False
     assert config_sample['sort_features'] == False
@@ -49,7 +51,6 @@ def test_get_dataloader_base_config():
     assert (x[:, :, 45] != 0).all()
     assert config_sample['num_layers']() == 5
     assert config_sample['num_layers']() == 3
-    assert config_sample['noise_std'] == 0.016730402817820244
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
     assert (x[:, :, 52] == 0).all()
