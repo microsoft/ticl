@@ -41,23 +41,25 @@ def test_get_dataloader_base_config():
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
     assert set(config_sample.keys()) == set(['block_wise_dropout', 'num_causes', 'sort_features', 'is_causal', 'prior_mlp_activations', 'prior_bag_exp_weights_1', 'in_clique',
                                              'prior_mlp_hidden_dim', 'noise_std', 'y_is_effect', 'lengthscale', 'prior_mlp_dropout_prob', 'pre_sample_weights', 'init_std', 'num_layers', 'noise', 'outputscale'])
+    assert prior.hyper_dists['noise_std']() == 0.09381271387714264
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
-    assert config_sample['noise_std'] == 0.016730402817820244
-    assert config_sample['prior_bag_exp_weights_1'] == 4.9963209507789
+    assert config_sample['prior_bag_exp_weights_1'] == 9.60571445127933
     assert config_sample['is_causal'] == False
     assert config_sample['sort_features'] == False
-    assert (x[:, :, 46] == 0).all()
-    assert (x[:, :, 45] != 0).all()
-    assert config_sample['num_layers']() == 5
+    assert (x[:, :, 79:] == 0).all()
+    assert (x[:, :, 78] != 0).all()
     assert config_sample['num_layers']() == 3
+    assert config_sample['num_layers']() == 4
+
+    assert config_sample['noise_std'] == 0.04160439645256607
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 52] == 0).all()
-    assert (x[:, :, 51] != 0).all()
-    assert config_sample['noise_std'] == 0.0036156294364456955
+    assert (x[:, :, 49] == 0).all()
+    assert (x[:, :, 48] != 0).all()
+    assert config_sample['noise_std'] == 0.0040123682639395565
     assert config_sample['sort_features'] == True
-    assert config_sample['is_causal'] == True
+    assert config_sample['is_causal'] == False
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
