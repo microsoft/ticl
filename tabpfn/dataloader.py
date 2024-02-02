@@ -2,10 +2,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 import tabpfn.priors as priors
-from tabpfn.priors.flexible_categorical import ClassificationAdapterPrior
-from tabpfn.priors.prior_bag import BagPrior
-from tabpfn.priors.boolean_conjunctions import BooleanConjunctionPrior
-from tabpfn.priors.differentiable_prior import SamplerPrior
+from tabpfn.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, SamplerPrior
 
 class PriorDataLoader(DataLoader):
     def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features, hyperparameters):
@@ -42,8 +39,8 @@ class PriorDataLoader(DataLoader):
 
 
 def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, device):
-    gp_flexible = ClassificationAdapterPrior(priors.fast_gp.GPPrior())
-    mlp_flexible = ClassificationAdapterPrior(priors.mlp.MLPPrior())
+    gp_flexible = ClassificationAdapterPrior(priors.GPPrior())
+    mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior())
 
     hyperparameters = config.copy()
     if 'num_features_used' in hyperparameters:

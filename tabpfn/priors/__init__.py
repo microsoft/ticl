@@ -1,3 +1,8 @@
-from . import differentiable_prior, fast_gp, flexible_categorical, mlp, prior_bag, boolean_conjunctions
+from tabpfn.priors.boolean_conjunctions import BooleanConjunctionPrior
+from tabpfn.priors.differentiable_prior import SamplerPrior
+from tabpfn.priors.flexible_categorical import ClassificationAdapterPrior
+from tabpfn.priors.mlp import MLPPrior
+from tabpfn.priors.prior_bag import BagPrior
+from tabpfn.priors.fast_gp import GPPrior
 
-__all__ = ["differentiable_prior", "fast_gp", "flexible_categorical", "mlp", "prior_bag", "boolean_conjunctions"]
+__all__ = ["SamplerPrior", "ClassificationAdapterPrior", "MLPPrior", "BagPrior", "BooleanConjunctionPrior", "GPPrior"]
