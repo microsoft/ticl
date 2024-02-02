@@ -1,8 +1,7 @@
 from tabpfn.dataloader import get_dataloader
 from tabpfn.model_configs import get_base_config
-from tabpfn.priors.differentiable_prior import SamplerPrior
-from tabpfn.priors.prior_bag import BagPrior
-from tabpfn.priors.flexible_categorical import ClassificationAdapterPrior
+from tabpfn.priors import SamplerPrior, BagPrior, ClassificationAdapterPrior
+from tabpfn.priors.differentiable_prior import LogUniformHyperparameter
 
 import lightning as L
 
@@ -25,10 +24,18 @@ def test_get_dataloader_base_config():
     prior_config['num_features']  = n_features
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
-    assert isinstance(dataloader.prior, SamplerPrior)
-    assert isinstance(dataloader.prior.base_prior, BagPrior)
-    assert isinstance(dataloader.prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
-    assert isinstance(dataloader.prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
+    prior = dataloader.prior
+    assert isinstance(prior, SamplerPrior)
+    assert isinstance(prior.base_prior, BagPrior)
+    assert isinstance(prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
+    assert isinstance(prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
+    assert set(prior.hyper_dists.keys()) == set(['prior_bag_exp_weights_1', 'num_layers', 'prior_mlp_hidden_dim', 'prior_mlp_dropout_prob', 'init_std', 'noise_std', 'num_causes', 'is_causal', 'pre_sample_weights', 'y_is_effect', 'prior_mlp_activations',
+                                                 'block_wise_dropout', 'sort_features', 'in_clique', 'outputscale', 'lengthscale', 'noise'])
+    assert prior.hyper_dists['prior_bag_exp_weights_1'].max == 10
+    assert isinstance(prior.hyper_dists['noise_std'], LogUniformHyperparameter)
+    assert prior.hyper_dists['noise_std'].min == 1e-4
+    assert prior.hyper_dists['noise_std'].max == 0.5
+    assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
     assert set(config_sample.keys()) == set(['block_wise_dropout', 'num_causes', 'sort_features', 'is_causal', 'prior_mlp_activations', 'prior_bag_exp_weights_1', 'in_clique',
