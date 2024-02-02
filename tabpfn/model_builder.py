@@ -97,8 +97,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     epochs = 0 if not should_train else config['epochs']
 
-    dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
-                        prior_type=config['prior_type'])
+    dl = get_dataloader(config=config['prior'], device=device)
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)

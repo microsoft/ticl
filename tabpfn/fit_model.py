@@ -16,7 +16,7 @@ def main(argv):
     config = get_base_config()
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
-
+    import pdb; pdb.set_trace()
     device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
 
     # handle syne-tune restarts
@@ -28,34 +28,28 @@ def main(argv):
     base_path = orchestration.base_path
 
     torch.set_num_threads(24)
-    for group in vars(args):
-        config[group.name] = vars(getattr(args, group))
-    # config.update(vars(args))
+    for group_name in vars(args):
+        config[group_name].update(vars(getattr(args, group_name)))
 
     if args.orchestration.seed_everything:
         import lightning as L
         L.seed_everything(42)
         
-    # config['num_gpus'] = 1
-    # config['device'] = device
+    config['general']['num_gpus'] = 1
+    config['general']['device'] = device
 
     warm_start_weights = orchestration.warm_start_from
-    # config['nhead'] = config['emsize'] // 128
+    config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
-    # config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
-    # config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
+    config['training']['num_steps'] = config['training']['num_steps'] or 1024 * 64 // config['training']['batch_size'] // config['training']['aggregate_k_gradients']
+    config['mothernet']['weight_embedding_rank'] = config['mothernet']['weight_embedding_rank'] if config['mothernet']['low_rank_weights'] else None
 
-    # if config['model_type'] == 'perceiver' and config['perceiver_large_dataset']:
-    #     config['max_eval_pos'] = 8 * 1000
-    #     config['n_samples'] = 8 * 1024+128
+    if args.orchestration.extra_fast_test:
+         config['max_eval_pos'] = 16
+         config['n_samples'] = 2 * 16
+         config['nhead'] = 1
 
-    # if config['extra_fast_test']:
-    #     config['max_eval_pos'] = 16
-    #     config['n_samples'] = 2 * 16
-    #     config['nhead'] = 1
-
-    # config['boolean_prior'] = {'max_fraction_uninformative': args.boolean_max_fraction_uninformative, 'p_uninformative': args.boolean_p_uninformative}
-    save_every = args.save_every
+    save_every = orchestration.save_every
 
     model_state, optimizer_state, scheduler = None, None, None
     if warm_start_weights is not None:
@@ -76,23 +70,23 @@ def main(argv):
             print("WARNING warm starting with new settings")
             compare_dicts(config, old_config, all=True)
 
-    model_string = get_model_string(config, args, parser)
-    save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)
+    model_string = get_model_string(args, parser, num_gpus, device)
+    save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow, orchestration.st_checkpoint_dir)
 
-    if not args.no_mlflow:
+    if not orchestration.no_mlflow:
         mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")
 
         tries = 0
         while tries < 5:
             try:
-                mlflow.set_experiment(args.experiment)
+                mlflow.set_experiment(orchestration.experiment)
                 break
             except:
                 tries += 1
                 print(f"Failed to set experiment, retrying {tries}/5")
                 time.sleep(5)
 
-        if args.continue_run and not args.create_new_run:
+        if orchestration.continue_run and not orchestration.create_new_run:
             # find run id via mlflow
             run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
             if len(run_ids) > 1:
@@ -111,12 +105,12 @@ def main(argv):
             mlflow.log_params({k: v for k, v in config.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
             total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
-                                                     load_model_strict=args.continue_run or args.load_strict)
+                                                     load_model_strict=orchestration.continue_run or orchestration.load_strict)
 
     else:
         total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                  optimizer_state=optimizer_state, scheduler=scheduler,
-                                                 load_model_strict=args.continue_run or args.load_strict)
+                                                 load_model_strict=orchestration.continue_run or orchestration.load_strict)
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")

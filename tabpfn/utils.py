@@ -466,22 +466,30 @@ class ReduceLROnSpike:
     
 class GroupedArgParser(argparse.ArgumentParser):
     # This extends the argparse.ArgumentParser to allow for nested namespaces via groups
-    # we return everything by dicts
+    # nesting of groups is done by giving them names with dots in them
+
     def parse_args(self, argv):
         results = super().parse_args(argv)
         nested_by_groups = argparse.Namespace()
         for group in self._action_groups:
-            new_subnamespace = argparse.Namespace()
+            # group could have been created if we saw a nested group first
+            new_subnamespace = getattr(nested_by_groups, group.title, argparse.Namespace())
             for action in group._group_actions:
                 if action.dest is not argparse.SUPPRESS and hasattr(results, action.dest):
                     setattr(new_subnamespace, action.dest, getattr(results, action.dest))
             if new_subnamespace != argparse.Namespace():
-                setattr(nested_by_groups, group.title, new_subnamespace)
+                parts = group.title.split(".")
+                parent_namespace = nested_by_groups
+                for part in parts[:-1]:
+                    if not hasattr(parent_namespace, part):
+                        setattr(parent_namespace, part, argparse.Namespace())
+                    parent_namespace = getattr(parent_namespace, part)
+                setattr(parent_namespace, parts[-1], new_subnamespace)
                 
         return nested_by_groups
 
 
-def argparser_from_config(config, description="Train Mothernet"):
+def argparser_from_config(description="Train Mothernet"):
     parser = GroupedArgParser(description=description)
 
     general = parser.add_argument_group('general')
@@ -489,22 +497,22 @@ def argparser_from_config(config, description="Train Mothernet"):
     general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 
-    training = parser.add_argument_group('training')
-    training.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
-    training.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
-    training.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
-    training.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
-    training.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
-    training.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
-    training.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
-    training.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
-    training.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
-    training.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
-    training.add_argument('--adam-beta1', default=0.9, type=float)
-    training.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
-    training.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
-    training.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
-    training.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
+    optimizer = parser.add_argument_group('optimizer')
+    optimizer.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
+    optimizer.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
+    optimizer.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003, dest='lr')
+    optimizer.add_argument('-k', '--agg-gradients', type=int, help='number steps to aggregate gradient over', default=1, dest='aggregate_k_gradients')
+    optimizer.add_argument('-b', '--batch-size', type=int, help='physical batch size', default=8)
+    optimizer.add_argument('-A', '--adaptive-batch-size', help='Wether to progressively increase effective batch size.', default=True, type=str2bool)
+    optimizer.add_argument('-w', '--weight-decay', type=float, help='Weight decay for AdamW.', default=0)
+    optimizer.add_argument('-Q', '--learning-rate-schedule', help="Learning rate schedule. Cosine, constant or exponential", default='cosine')
+    optimizer.add_argument('-U', '--warmup-epochs', type=int, help="Number of epochs to warm up learning rate (linear climb)", default=20)
+    optimizer.add_argument('-t', '--train-mixed-precision', help='whether to train with mixed precision', default=True, type=str2bool)
+    optimizer.add_argument('--adam-beta1', default=0.9, type=float)
+    optimizer.add_argument('--lr-decay', help="learning rate decay when using exponential schedule", default=0.99, type=float)
+    optimizer.add_argument('--min-lr', help="minimum learning rate for any schedule", default=1e-8, type=float)
+    optimizer.add_argument('--reduce-lr-on-spike', help="Whether to half learning rate when observing a loss spike", default=False, type=str2bool)
+    optimizer.add_argument('--spike-tolerance', help="how many times the std makes it a spike", default=4, type=int)
 
     transformer = parser.add_argument_group('transformer')
     transformer.add_argument('-e', '--em-size', type=int, help='embedding size', default=512, dest='emsize')
@@ -531,20 +539,21 @@ def argparser_from_config(config, description="Train Mothernet"):
     # Perceiver
     perceiver = parser.add_argument_group('perceiver')
     perceiver.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
-    perceiver.add_argument('--perceiver-large-dataset', action='store_true')
+    # perceiver.add_argument('--perceiver-large-dataset', action='store_true')
 
     # Prior and data generation
     prior = parser.add_argument_group('prior')
-    prior.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
     prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
     prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
     prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
     prior.add_argument('--heterogeneous-batches', help="Whether to resample MLP hypers for each sample instead of each batch.", default='False', type=str2bool)
-    prior.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
-    prior.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float)
+    boolean = parser.add_argument_group('prior.boolean')
+    boolean.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float)
+    boolean.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float)
     
     # serialization, loading, logging
     orchestration = parser.add_argument_group('orchestration')
+    orchestration.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
     orchestration.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
     orchestration.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", action='store_true')
     orchestration.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
@@ -591,17 +600,17 @@ def init_device(gpu_id, use_cpu):
     return device, rank, num_gpus
 
 
-def get_model_string(config, args, parser):
-    if args.continue_run:
-        if args.st_checkpoint_dir is None:
-            model_string = args.warm_start_from.split("/")[-1].split("_epoch_")[0]
-            if args.create_new_run:
+def get_model_string(args, parser, num_gpus, device):
+    if args.orchestration.continue_run:
+        if args.orchestration.st_checkpoint_dir is None:
+            model_string = args.orchestration.warm_start_from.split("/")[-1].split("_epoch_")[0]
+            if args.orchestration.create_new_run:
                 model_string = model_string + '_continue_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         else:
-            with open(f"{args.st_checkpoint_dir }/model_string.txt", 'r') as f:
+            with open(f"{args.orchestration.st_checkpoint_dir }/model_string.txt", 'r') as f:
                 model_string = f.read()
     else:
-        mm = config['model_type']
+        mm = args.general.model_type
         model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
 
         default_args_dict = vars(parser.parse_args([]))
@@ -619,11 +628,11 @@ def get_model_string(config, args, parser):
                         config_string += f"_{short_name}{v:.4g}"
                     else:
                         config_string += f"_{short_name}{v}"
-        gpu_string = f"_{config['num_gpus']}_gpu{'s' if config['num_gpus'] > 1 else ''}" if config['device'] != 'cpu' else '_cpu'
-        model_string = f"{model_type_string}{config_string}{gpu_string}{'_continue' if args.continue_run else '_warm' if args.warm_start_from else ''}"
+        gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
+        model_string = f"{model_type_string}{config_string}{gpu_string}{'_continue' if args.orchestration.continue_run else '_warm' if args.orchestration.warm_start_from else ''}"
         model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-        if args.st_checkpoint_dir is not None:
-            with open(f"{args.st_checkpoint_dir}/model_string.txt", 'w') as f:
+        if args.orchestration.st_checkpoint_dir is not None:
+            with open(f"{args.orchestration.st_checkpoint_dir}/model_string.txt", 'w') as f:
                 f.write(model_string)
     return model_string
 
