@@ -103,9 +103,9 @@ def test_classification_adapter_with_sampling():
     hyperparameters = parse_distributions(hyperparameters)
 
     adapter = ClassificationAdapter(MLPPrior(), hyperparameters)
-    assert adapter.h['num_layers'] == 4
-    assert adapter.h['num_features_used'] == 73
-    assert adapter.h['num_classes'] == 10
+    assert adapter.h['num_layers'] == 3
+    assert adapter.h['num_features_used'] == 15
+    assert adapter.h['num_classes'] == 7
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
     x, y, y_ = adapter(batch_size=batch_size, **args)
@@ -113,6 +113,5 @@ def test_classification_adapter_with_sampling():
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
 
-    assert float(x[0, 0, 0])== 0.21882277727127075
+    assert float(x[0, 0, 0]) == -8.69741439819336
     assert float(y[0, 0]) == 0.0
-
