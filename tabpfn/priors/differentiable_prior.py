@@ -202,6 +202,8 @@ def sample_distributions(hyperparameters):
             if callable(sample):
                 sample = sample()
             new_hypers[name] = sample
+        elif callable(dist):
+            new_hypers[name] = dist()
         else:
             new_hypers[name] = dist
     return new_hypers

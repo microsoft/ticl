@@ -9,6 +9,7 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers)
 
+from tabpfn.priors.differentiable_prior import sample_distributions
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
 
@@ -85,10 +86,7 @@ class ClassificationAdapter:
         # hyperparameters are those passed via SamplingPrior.get_batch
         # config are passed directly from the constructor.
         united_again = {**hyperparameters, **config}
-        
-        self.h = {k: united_again[k]() if callable(united_again[k]) else united_again[k] for k in
-                  united_again.keys()}
-
+        self.h = sample_distributions(united_again)
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:
