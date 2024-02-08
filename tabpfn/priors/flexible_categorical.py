@@ -83,8 +83,7 @@ class ClassificationAdapter:
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, hyperparameters, config):
         # hyperparameters are those passed via SamplingPrior.get_batch
-        # config are passed directly vrom the constructor.
-        self.config = config
+        # config are passed directly from the constructor.
         self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
                   hyperparameters.keys()}
         self.c = {k: config[k]() if callable(config[k]) else config[k] for k in
@@ -158,7 +157,6 @@ class ClassificationAdapter:
         x = normalize_by_used_features_f(
             x, self.c['num_features_used'], num_features)
 
-        start = time.time()
         # Append empty features if enabled
         x = torch.cat(
             [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.c['num_features_used']),
