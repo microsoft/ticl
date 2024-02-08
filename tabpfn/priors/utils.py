@@ -24,7 +24,16 @@ def beta_sampler_f(a, b, scale=1):
 
 def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
 def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
-def uniform_int_sampler_f(a, b): return lambda: round(np.random.uniform(a, b))
+
+class uniform_int_sampler_f:
+    def __init__(self,a, b):
+        self.a = a
+        self.b = b
+    def __repr__(self):
+        return f'uniform_int_sampler_f({self.a},{self.b})'
+    def __call__(self):
+        return round(np.random.uniform(self.a, self.b))
+
 def log_uniform_sampler_f(a, b): return lambda: np.exp(np.random.uniform(np.log(a), np.log(b)))
 
 def zipf_sampler_f(a, b, c):
