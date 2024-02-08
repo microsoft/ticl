@@ -84,27 +84,28 @@ class ClassificationAdapter:
     def __init__(self, base_prior, hyperparameters, config):
         # hyperparameters are those passed via SamplingPrior.get_batch
         # config are passed directly from the constructor.
-        self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
-                  hyperparameters.keys()}
-        self.c = {k: config[k]() if callable(config[k]) else config[k] for k in
-                    config.keys()}
+        united_again = {**hyperparameters, **config}
+        
+        self.h = {k: united_again[k]() if callable(united_again[k]) else united_again[k] for k in
+                  united_again.keys()}
+
 
         self.base_prior = base_prior
-        if self.c['num_classes'] == 0:
+        if self.h['num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
-            if self.c['num_classes'] > 1 and not self.c['balanced']:
-                if self.c['multiclass_type'] == 'rank':
+            if self.h['num_classes'] > 1 and not self.h['balanced']:
+                if self.h['multiclass_type'] == 'rank':
                     self.class_assigner = MulticlassRank(
-                        self.c['num_classes'], ordered_p=self.c['output_multiclass_ordered_p']
+                        self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
                     )
-                elif self.c['multiclass_type'] == 'steps':
-                    self.class_assigner =  MulticlassSteps(self.c['num_classes'], self.c['multiclass_max_steps'])
+                elif self.h['multiclass_type'] == 'steps':
+                    self.class_assigner =  MulticlassSteps(self.h['num_classes'], self.h['multiclass_max_steps'])
                 else:
                     raise ValueError("Unknow Multiclass type")
-            elif self.c['num_classes'] == 2 and self.c['balanced']:
+            elif self.h['num_classes'] == 2 and self.h['balanced']:
                 self.class_assigner = BalancedBinarize()
-            elif self.c['num_classes'] > 2 and self.c['balanced']:
+            elif self.h['num_classes'] > 2 and self.h['balanced']:
                 raise NotImplementedError("Balanced multiclass training is not possible")
 
     def drop_for_reason(self, x, v):
@@ -113,34 +114,34 @@ class ClassificationAdapter:
             num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
-        x[d < torch.rand((1,), device=x.device) * 20 * self.c['nan_prob_no_reason'] * random.random()] = v
+        x[d < torch.rand((1,), device=x.device) * 20 * self.h['nan_prob_no_reason'] * random.random()] = v
         return x
 
     def drop_for_no_reason(self, x, v):
-        x[torch.rand(x.shape, device=x.device) < random.random() * self.c['nan_prob_no_reason']] = v
+        x[torch.rand(x.shape, device=x.device) < random.random() * self.h['nan_prob_no_reason']] = v
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
-        args = {'device': device, 'n_samples': n_samples, 'num_features': self.c['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **args)
-        assert x.shape[2] == self.c['num_features_used']
+        assert x.shape[2] == self.h['num_features_used']
 
-        if self.c['nan_prob_no_reason']+self.c['nan_prob_a_reason']+self.c['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
-            if random.random() < self.c['nan_prob_no_reason']:  # Missing for no reason
-                x = self.drop_for_no_reason(x, nan_handling_missing_for_no_reason_value(self.c['set_value_to_nan']))
+        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
+            if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
+                x = self.drop_for_no_reason(x, nan_handling_missing_for_no_reason_value(self.h['set_value_to_nan']))
 
-            if self.c['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Missing for a reason
-                x = self.drop_for_reason(x, nan_handling_missing_for_a_reason_value(self.c['set_value_to_nan']))
+            if self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Missing for a reason
+                x = self.drop_for_reason(x, nan_handling_missing_for_a_reason_value(self.h['set_value_to_nan']))
 
-            if self.c['nan_prob_unknown_reason'] > 0:  # Missing for unknown reason  and random.random() > 0.5
-                if random.random() < self.c['nan_prob_unknown_reason_reason_prior']:
-                    x = self.drop_for_no_reason(x, nan_handling_missing_for_unknown_reason_value(self.c['set_value_to_nan']))
+            if self.h['nan_prob_unknown_reason'] > 0:  # Missing for unknown reason  and random.random() > 0.5
+                if random.random() < self.h['nan_prob_unknown_reason_reason_prior']:
+                    x = self.drop_for_no_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
                 else:
-                    x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.c['set_value_to_nan']))
+                    x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
 
         # Categorical features
-        if random.random() < self.c['categorical_feature_p']:
+        if random.random() < self.h['categorical_feature_p']:
             p = random.random()
             for col in range(x.shape[2]):
                 num_unique_features = max(round(random.gammavariate(1, 10)), 2)
@@ -155,11 +156,11 @@ class ClassificationAdapter:
         y = self.class_assigner(y).float()
 
         x = normalize_by_used_features_f(
-            x, self.c['num_features_used'], num_features)
+            x, self.h['num_features_used'], num_features)
 
         # Append empty features if enabled
         x = torch.cat(
-            [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.c['num_features_used']),
+            [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.h['num_features_used']),
                             device=device)], -1)
 
         if torch.isnan(y).sum() > 0:

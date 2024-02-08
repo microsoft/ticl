@@ -71,8 +71,8 @@ def test_classification_adapter_with_sampling():
 
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), hyperparameters=hyperparameters, config=config['prior']['classification'])
     assert adapter.h['num_layers'] == 4
-    assert adapter.c['num_features_used'] == 8
-    assert adapter.c['num_classes'] == 10
+    assert adapter.h['num_features_used'] == 8
+    assert adapter.h['num_classes'] == 10
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
     x, y, y_ = adapter(batch_size=batch_size, **args)
