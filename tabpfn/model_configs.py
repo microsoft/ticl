@@ -48,12 +48,12 @@ def get_flexible_categorical_config(max_features, n_samples):
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
     max_num_classes = 10
-    config_flexible_categorical = {
+    config_flexible_categorical = { 
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
         "num_classes": uniform_int_sampler_f(2, max_num_classes),
-        "noise_type": "Gaussian",  # NN
+        # "noise_type": "Gaussian",  # NN unused?!
         "balanced": False,
         'output_multiclass_ordered_p': 0.,
         'multiclass_max_steps': 10,
