@@ -42,6 +42,7 @@ def test_mlp_prior(batch_size, num_features, n_samples, n_classes):
         'nan_prob_no_reason': 0,
         'nan_prob_a_reason': 0,
         'nan_prob_unknown_reason': 0,
+        'categorical_feature_p': 0.2,
 
     }
     x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
