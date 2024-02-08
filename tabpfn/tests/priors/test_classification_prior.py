@@ -92,11 +92,11 @@ def test_classification_adapter_with_sampling():
         'nan_prob_unknown_reason': 0,
         'categorical_feature_p': 0.2,
         "num_classes": uniform_int_sampler_f(2, 10),
-        "num_features_used": uniform_int_sampler_f(1, 10)
+        "num_features_used": uniform_int_sampler_f(1, 100)
     }
     adapter = ClassificationAdapter(MLPPrior(), hyperparameters)
     assert adapter.h['num_layers'] == 4
-    assert adapter.h['num_features_used'] == 8
+    assert adapter.h['num_features_used'] == 73
     assert adapter.h['num_classes'] == 10
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
