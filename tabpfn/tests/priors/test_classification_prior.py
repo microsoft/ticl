@@ -4,6 +4,7 @@ import torch
 import pytest
 
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
+from tabpfn.priors.flexible_categorical import ClassificationAdapter
 from tabpfn.priors.utils import uniform_int_sampler_f
 
 @pytest.mark.parametrize("num_features", [11, 51])
@@ -44,7 +45,7 @@ def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n
         assert float(y[0, 0]) == 1.0
 
 
-def test_classification_prior_with_sampling():
+def test_classification_adapter_with_sampling():
     batch_size = 16
     num_features = 100
     n_samples = 900
@@ -52,7 +53,6 @@ def test_classification_prior_with_sampling():
     # test the mlp prior
     L.seed_everything(42)
     config = get_base_config()
-    prior = ClassificationAdapterPrior(MLPPrior(config['prior']['mlp']), **config['prior']['classification'])
     hyperparameters = {
         'prior_mlp_activations': lambda: torch.nn.ReLU, # relu is callable so we'd try to call it thinking it's a sampling function....
         'is_causal' : False,
@@ -68,11 +68,17 @@ def test_classification_prior_with_sampling():
         'sort_features': False,
         'in_clique': False,
     }
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
+
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), hyperparameters=hyperparameters, config=config['prior']['classification'])
+    assert adapter.h['num_layers'] == 4
+    assert adapter.c['num_features_used'] == 8
+    assert adapter.c['num_classes'] == 10
+
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
 
     assert float(x[0, 0, 0])== 0.21882277727127075
     assert float(y[0, 0]) == 0.0
-
