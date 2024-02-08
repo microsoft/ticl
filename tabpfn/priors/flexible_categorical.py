@@ -76,7 +76,6 @@ class MulticlassRank:
         return d
 
 
-
 class ClassificationAdapter:
     # This class samples the number of features actually use (num_features_used), the number of samples
     # adds NaN and potentially categorical features
@@ -122,7 +121,7 @@ class ClassificationAdapter:
         x[torch.rand(x.shape, device=x.device) < random.random() * self.c['nan_prob_no_reason']] = v
         return x
 
-    def __call__(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
+    def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
         args = {'device': device, 'n_samples': n_samples, 'num_features': self.c['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **args)
