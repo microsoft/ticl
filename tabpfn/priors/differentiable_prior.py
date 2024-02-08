@@ -198,14 +198,10 @@ def sample_distributions(hyperparameters):
     new_hypers = {}
     for name, dist in hyperparameters.items():
         if isinstance(dist, HyperParameter):
-            sample = dist()
-            if callable(sample):
-                sample = sample()
-            new_hypers[name] = sample
-        elif callable(dist):
-            new_hypers[name] = dist()
-        else:
-            new_hypers[name] = dist
+            dist = dist()
+        if callable(dist):
+            dist = dist()
+        new_hypers[name] = dist
     return new_hypers
 
 class SamplerPrior:
