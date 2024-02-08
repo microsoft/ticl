@@ -5,6 +5,7 @@ import pytest
 
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
 from tabpfn.priors.utils import uniform_int_sampler_f
+from tabpfn.priors.flexible_categorical import ClassificationAdapter
 
 @pytest.mark.parametrize("num_features", [11, 51])
 @pytest.mark.parametrize("batch_size", [4, 8])
@@ -57,13 +58,12 @@ def test_classification_prior(batch_size, num_features, n_samples, n_classes):
         assert float(y[0, 0]) == 1.0
 
 
-def test_classification_prior_with_sampling():
+def test_classification_adapter_with_sampling():
     batch_size = 16
     num_features = 100
     n_samples = 900
     # test the mlp prior
     L.seed_everything(42)
-    prior = ClassificationAdapterPrior(MLPPrior())
     hyperparameters = {
         'prior_mlp_activations': lambda: torch.nn.ReLU, # relu is callable so we'd try to call it thinking it's a sampling function....
         'is_causal' : False,
@@ -94,7 +94,13 @@ def test_classification_prior_with_sampling():
         "num_classes": uniform_int_sampler_f(2, 10),
         "num_features_used": uniform_int_sampler_f(1, 10)
     }
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
+    adapter = ClassificationAdapter(MLPPrior(), hyperparameters)
+    assert adapter.h['num_layers'] == 4
+    assert adapter.h['num_features_used'] == 8
+    assert adapter.h['num_classes'] == 10
+
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
