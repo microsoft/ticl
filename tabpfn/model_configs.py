@@ -45,7 +45,7 @@ def get_flexible_categorical_config(max_features):
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
         "num_classes": uniform_int_sampler_f(2, max_num_classes),
-        "noise_type": "Gaussian",  # NN
+        # "noise_type": "Gaussian",  # NN unused?!
         "balanced": False,
         "num_features_used":
             {'uniform_int_sampler_f(3,max_features)': uniform_int_sampler_f(1, max_features)}
