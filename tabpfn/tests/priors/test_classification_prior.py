@@ -6,6 +6,7 @@ import pytest
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
 from tabpfn.priors.utils import uniform_int_sampler_f
 from tabpfn.priors.flexible_categorical import ClassificationAdapter
+from tabpfn.priors.differentiable_prior import parse_distributions
 
 @pytest.mark.parametrize("num_features", [11, 51])
 @pytest.mark.parametrize("batch_size", [4, 8])
@@ -65,15 +66,20 @@ def test_classification_adapter_with_sampling():
     # test the mlp prior
     L.seed_everything(42)
     hyperparameters = {
-        'prior_mlp_activations': lambda: torch.nn.ReLU, # relu is callable so we'd try to call it thinking it's a sampling function....
         'is_causal' : False,
-        'num_causes': 3, # actually ignored because is_causal is False
-        'prior_mlp_hidden_dim': 128,
-        'num_layers': uniform_int_sampler_f(1, 10),
+        'prior_mlp_activations': {'distribution': 'meta_choice_mixed', 'choice_values': [
+            torch.nn.Tanh, torch.nn.Identity, torch.nn.ReLU
+        ]},
+        'is_causal' : False,
+        'num_causes': {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 7, 'round': True,
+                       'lower_bound': 2}, # actually ignored because is_causal is False
+        'prior_mlp_hidden_dim': {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 100, 'round': True, 'lower_bound': 4},
+        'num_layers': {'distribution': 'meta_gamma', 'max_alpha': 2, 'max_scale': 3, 'round': True,
+                       'lower_bound': 2},
         'noise_std': 0.1,
         'y_is_effect': True,
         'pre_sample_weights': False,
-        'prior_mlp_dropout_prob': 0.1,
+        'prior_mlp_dropout_prob': {'distribution': 'meta_beta', 'scale': 0.6, 'min': 0.1, 'max': 5.0},        'noise_std': 0.1,
         'block_wise_dropout': True,
         'init_std': 0.1,
         'sort_features': False,
@@ -94,6 +100,8 @@ def test_classification_adapter_with_sampling():
         "num_classes": uniform_int_sampler_f(2, 10),
         "num_features_used": uniform_int_sampler_f(1, 100)
     }
+    hyperparameters = parse_distributions(hyperparameters)
+
     adapter = ClassificationAdapter(MLPPrior(), hyperparameters)
     assert adapter.h['num_layers'] == 4
     assert adapter.h['num_features_used'] == 73
