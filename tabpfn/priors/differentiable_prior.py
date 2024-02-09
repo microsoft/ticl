@@ -9,12 +9,27 @@ from tabpfn.utils import default_device
 from .utils import (beta_sampler_f, gamma_sampler_f, uniform_int_sampler_f,
                     trunc_norm_sampler_f, uniform_sampler_f, log_uniform_sampler_f)
 
+class HyperParameter:
+    def __repr__(self):
+        init_signature = inspect.signature(self.__init__)
+        parameters = [
+            p for p in init_signature.parameters.values()
+            if p.name != "self" and p.kind != p.VAR_KEYWORD
+        ]
+        return f"{self.__class__.__name__}({', '.join([f'{p.name}={getattr(self, p.name)}' for p in parameters])})"
 
-def make_gamma(alpha, scale, do_round, lower_bound):
-    if do_round:
-        return lambda alpha=alpha, scale=scale: lower_bound + round(gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))())
-    else:
-        return lambda alpha=alpha, scale=scale: lower_bound + gamma_sampler_f(math.exp(alpha), scale / math.exp(alpha))()
+
+class make_gamma(HyperParameter):
+    def __init__(self, alpha, scale, do_round, lower_bound):
+        self.alpha = alpha
+        self.scale = scale
+        self.do_round = do_round
+        self.lower_bound = lower_bound
+    def __call__(self):
+        if self.do_round:
+            return self.lower_bound + round(gamma_sampler_f(math.exp(self.alpha), self.scale / math.exp(self.alpha))())
+        else:
+            return self.lower_bound + gamma_sampler_f(math.exp(self.alpha), self.scale / math.exp(self.alpha))()
 
 
 def meta_trunc_norm_log_scaled(log_mean, log_std, do_round, lower_bound):
@@ -33,13 +48,19 @@ def make_trunc_norm(mean, std, do_round, lower_bound):
         return lambda: lower_bound + dist()
     
 
-def make_choice_mixed(*, choice_values, choices):
-    weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
+class make_choice_mixed:
+    def __init__(self, *, choice_values, choices):
+        self.choice_values = choice_values
+        self.choices = choices
+        self.weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
 
-    def sample():
-        s = torch.multinomial(weights, 1, replacement=True).numpy()[0]
-        return choice_values[s]()
-    return lambda: sample
+    def __call__(self):
+        s = torch.multinomial(self.weights, 1, replacement=True).numpy()[0]
+        return self.choice_values[s]()
+    
+    def __repr__(self) -> str:
+        return f'make_choice_mixed({self.choice_values}, {self.choices})'
+    
     
 
 def make_choice(*, choice_values, choices):
@@ -48,14 +69,7 @@ def make_choice(*, choice_values, choices):
     sample = torch.multinomial(weights, 1, replacement=True).numpy()[0]
     return choice_values[sample]
             
-class HyperParameter:
-    def __repr__(self):
-        init_signature = inspect.signature(self.__init__)
-        parameters = [
-            p for p in init_signature.parameters.values()
-            if p.name != "self" and p.kind != p.VAR_KEYWORD
-        ]
-        return f"{self.__class__.__name__}({', '.join([f'{p.name}={getattr(self, p.name)}' for p in parameters])})"
+
 
 class UniformHyperparameter(HyperParameter):
     def __init__(self, name, min, max):
