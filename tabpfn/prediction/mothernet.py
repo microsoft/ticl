@@ -326,7 +326,7 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
 
 
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator, n_estimators=32, random_state=0, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
+    def __init__(self, base_estimator, n_estimators=32, random_state=None, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
@@ -336,6 +336,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.n_jobs = n_jobs
 
     def fit(self, X, y):
+        X = np.array(X)
         self.n_features_ = X.shape[1]
         self.n_classes_ = len(np.unique(y))
         use_power_transformer = [True, False] if self.power else [False]
@@ -363,12 +364,14 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         return self.base_estimator.device
 
     def predict_proba(self, X):
+        X = np.array(X)
         # numeric instabilities propagate and sklearn's metrics don't like it.
         probs = self.vc_.predict_proba(X)
         probs /= probs.sum(axis=1).reshape(-1, 1)
         return probs
 
     def predict(self, X):
+        X = np.array(X)
         return self.vc_.predict(X)
 
     @property
