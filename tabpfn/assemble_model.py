@@ -1,7 +1,7 @@
 
 
 def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
-                   model_maker, max_num_classes, efficient_eval_masking=False,
+                   model_type, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
                    model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, weight_embedding_rank=None, num_latents=512, shared_embedding=False, **model_extra_args):
@@ -17,7 +17,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
         n_out = max_num_classes
     else:
         n_out = 1
-    if model_maker == "mlp":
+    if model_type == "mlp":
         model = MotherNet(
             encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
             y_encoder=y_encoder, input_normalization=input_normalization,
@@ -27,7 +27,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
             no_double_embedding=no_double_embedding, pre_norm=pre_norm, predicted_hidden_layers=predicted_hidden_layers, weight_embedding_rank=weight_embedding_rank,
             **model_extra_args
         )
-    elif model_maker == 'perceiver':
+    elif model_type == 'perceiver':
         model = TabPerceiver(
             encoder=encoder, input_dim=emsize, depth=nlayers, n_out=n_out, latent_dim=emsize, latent_heads=nhead, ff_dropout=dropout,
             y_encoder=y_encoder, output_attention=output_attention, special_token=special_token,
@@ -37,17 +37,19 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
             num_latents=num_latents,
             **model_extra_args
         )
-    elif model_maker == "additive":
+    elif model_type == "additive":
         model = MotherNetAdditive(
             n_features=num_features, n_out=n_out, ninp=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, shared_embedding=shared_embedding)
-    else:
+    elif model_type == "tabpfn":
         model = TabPFN(
             encoder, n_out, emsize, nhead, nhid, nlayers, dropout,
             y_encoder=y_encoder, input_normalization=input_normalization,
             efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
         )
+    else:
+        raise ValueError(f"Unknown model type {model_type}.")
     if model_state is not None:
         if not load_model_strict:
             for k, v in model.state_dict().items():

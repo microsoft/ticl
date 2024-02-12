@@ -244,10 +244,10 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         le = LabelEncoder()
         y = le.fit_transform(y)
         model, config = load_model(self.path, device=self.device)
-        if "model_maker" not in config:
+        if "model_type" not in config:
             raise ValueError("Cannot load tabpfn weights into MotherNetClassifier")
-        if config['model_maker'] != "mlp":
-            raise ValueError(f"Incompatible model_maker: {config['model_maker']}")
+        if config['model_type'] != "mlp":
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)

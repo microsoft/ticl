@@ -9,11 +9,11 @@ from git import Repo
 
 from tabpfn.mlflow_utils import MLFLOW_HOSTNAME
 from tabpfn.model_builder import get_model
-from tabpfn.model_configs import get_base_config_paper
+from tabpfn.model_configs import get_base_config
 from tabpfn.utils import compare_dicts, argparser_from_config, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 
 def main(argv):
-    config = get_base_config_paper()
+    config = get_base_config()
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
 
@@ -42,7 +42,7 @@ def main(argv):
     config['num_steps'] = args.num_steps or 1024 * 64 // config['batch_size'] // config['aggregate_k_gradients']
     config['weight_embedding_rank'] = args.weight_embedding_rank if args.low_rank_weights else None
 
-    if config['model_maker'] == 'perceiver' and config['perceiver_large_dataset']:
+    if config['model_type'] == 'perceiver' and config['perceiver_large_dataset']:
         config['max_eval_pos'] = 8 * 1000
         config['n_samples'] = 8 * 1024+128
 

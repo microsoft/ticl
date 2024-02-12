@@ -19,12 +19,28 @@ def trunc_norm_sampler_f(mu, sigma):
         return dist.rvs(1)[0]
     return sampler
  
-def beta_sampler_f(a, b, scale=1):
-    return lambda: np.random.beta(a, b) * scale
+class beta_sampler_f:
+    def __init__(self, a, b, scale=1):
+        self.a = a
+        self.b = b
+        self.scale = scale
+    def __call__(self):
+        return np.random.beta(self.a, self.b) * self.scale
+    def __repr__(self) -> str:
+        return f'beta_sampler_f({self.a},{self.b},{self.scale})'
 
 def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
 def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
-def uniform_int_sampler_f(a, b): return lambda: round(np.random.uniform(a, b))
+
+class uniform_int_sampler_f:
+    def __init__(self,a, b):
+        self.a = a
+        self.b = b
+    def __repr__(self):
+        return f'uniform_int_sampler_f({self.a},{self.b})'
+    def __call__(self):
+        return round(np.random.uniform(self.a, self.b))
+
 def log_uniform_sampler_f(a, b): return lambda: np.exp(np.random.uniform(np.log(a), np.log(b)))
 
 def zipf_sampler_f(a, b, c):

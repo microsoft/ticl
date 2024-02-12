@@ -8,6 +8,7 @@ from torch import nn
 from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers, to_ranking_low_mem)
+from tabpfn.priors.differentiable_prior import sample_distributions
 
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
@@ -83,9 +84,7 @@ class ClassificationAdapter:
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, hyperparameters):
-
-        self.h = {k: hyperparameters[k]() if callable(hyperparameters[k]) else hyperparameters[k] for k in
-                  hyperparameters.keys()}
+        self.h = sample_distributions(hyperparameters)
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:

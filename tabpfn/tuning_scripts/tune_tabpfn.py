@@ -30,7 +30,7 @@ config_space = {
     'experiment': f'synetune-{tuner_name}',
     'warmup-epochs': randint(0, 30),
     # 'num-steps': 128,
-    'model-maker': 'tabpfn',
+    'model-type': 'tabpfn',
 }
 
 early_checkpoint_removal_kwargs = {"max_num_checkpoints": 80}

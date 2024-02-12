@@ -1,5 +1,7 @@
 from tabpfn.dataloader import get_dataloader
-from tabpfn.model_configs import get_base_config_paper
+from tabpfn.model_configs import get_base_config
+from tabpfn.priors import SamplerPrior, BagPrior, ClassificationAdapterPrior
+from tabpfn.priors.differentiable_prior import LogUniformHyperparameter
 
 import lightning as L
 
@@ -7,7 +9,7 @@ import pytest
 
 def test_get_dataloader_base_config():
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     # config['num_causes'] = 3
     # config['num_features'] = 10
     # num_features really doesn't work lol
@@ -17,25 +19,40 @@ def test_get_dataloader_base_config():
     config['num_features'] = n_features
     dataloader = get_dataloader(prior_type="prior_bag", config=config, steps_per_epoch=1, batch_size=batch_size, n_samples=n_samples, device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
-    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert x.shape == (n_samples, batch_size, n_features)
-    assert y.shape == (n_samples, batch_size)
-    assert config_sample['prior_bag_exp_weights_1'] == 4.9963209507789
-    assert config_sample['is_causal'] == False
-    assert config_sample['sort_features'] == False
-    assert (x[:, :, 46] == 0).all()
-    assert (x[:, :, 45] != 0).all()
-    assert config_sample['num_layers']() == 5
-    assert config_sample['num_layers']() == 3
-    
-    assert config_sample['noise_std'] == 0.016730402817820244
+    prior = dataloader.prior
+    assert isinstance(prior, SamplerPrior)
+    assert isinstance(prior.base_prior, BagPrior)
+    assert isinstance(prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
+    assert isinstance(prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
+    assert set(prior.hyper_dists.keys()) == set(['prior_bag_exp_weights_1', 'num_layers', 'prior_mlp_hidden_dim', 'prior_mlp_dropout_prob', 'init_std', 'noise_std', 'num_causes', 'is_causal', 'pre_sample_weights', 'y_is_effect', 'prior_mlp_activations',
+                                                 'block_wise_dropout', 'sort_features', 'in_clique', 'outputscale', 'lengthscale', 'noise'])
+    assert prior.hyper_dists['prior_bag_exp_weights_1'].max == 10
+    assert isinstance(prior.hyper_dists['noise_std'], LogUniformHyperparameter)
+    assert prior.hyper_dists['noise_std'].min == 1e-4
+    assert prior.hyper_dists['noise_std'].max == 0.5
+    assert prior.hyper_dists['noise_std']() == 0.002428916946974888
+    assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 52] == 0).all()
-    assert (x[:, :, 51] != 0).all()
-    assert config_sample['noise_std'] == 0.0036156294364456955
+    assert prior.hyper_dists['noise_std']() == 0.09381271387714264
+    assert x.shape == (n_samples, batch_size, n_features)
+    assert y.shape == (n_samples, batch_size)
+    assert config_sample['prior_bag_exp_weights_1'] == 9.60571445127933
+    assert config_sample['is_causal'] == False
+    assert config_sample['sort_features'] == False
+    assert (x[:, :, 79:] == 0).all()
+    assert (x[:, :, 78] != 0).all()
+    assert config_sample['num_layers']() == 3
+    assert config_sample['num_layers']() == 4
+    
+    assert config_sample['noise_std'] == 0.04160439645256607
+
+    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
+    assert (x[:, :, 49] == 0).all()
+    assert (x[:, :, 48] != 0).all()
+    assert config_sample['noise_std'] == 0.0040123682639395565
     assert config_sample['sort_features'] == True
-    assert config_sample['is_causal'] == True
+    assert config_sample['is_causal'] == False
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
@@ -44,7 +61,7 @@ def test_get_dataloader_base_config():
 @pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
 def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['num_features'] = n_features
     # we shouldn't use these parameters from the config here, only what was explicitly passed
     config.pop("n_samples")
@@ -56,7 +73,7 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
 
 def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['nan_prob_a_reason'] = .5
     config['nan_prob_no_reason'] = .5
     config['nan_prob_unknown_reason'] = .5
@@ -74,7 +91,7 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
 
 def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config_paper()
+    config = get_base_config()
     config['add_uninformative_features'] = True
     config['num_features'] = n_features
     # we shouldn't use these parameters from the config here, only what was explicitly passed

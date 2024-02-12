@@ -28,7 +28,7 @@ config_space = {
     'lr-decay': uniform(0.90, 0.9999),
     'reduce-lr-on-spike': choice([True, False]),
     'save-every': 1,
-    'model-maker': 'perceiver',
+    'model-type': 'perceiver',
     'spike-tolerance': randint(1, 10),
     'warmup-epochs': randint(0, 30),
 }
