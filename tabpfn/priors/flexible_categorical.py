@@ -84,7 +84,6 @@ class ClassificationAdapter:
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, hyperparameters):
-
         self.h = sample_distributions(hyperparameters)
 
         self.base_prior = base_prior

@@ -46,7 +46,7 @@ def make_trunc_norm(mean, std, do_round, lower_bound):
         return lambda: lower_bound + round(dist())
     else:
         return lambda: lower_bound + dist()
-    
+
 
 class make_choice_mixed:
     def __init__(self, *, choice_values, choices):
@@ -55,6 +55,9 @@ class make_choice_mixed:
         self.weights = torch.softmax(torch.tensor([1.0] + [choices[i] for i in choices], dtype=torch.float), 0)  # create a tensor of weights
 
     def __call__(self):
+        return self.sample
+    
+    def sample(self):
         s = torch.multinomial(self.weights, 1, replacement=True).numpy()[0]
         return self.choice_values[s]()
     
