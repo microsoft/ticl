@@ -90,8 +90,11 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         config['prior']['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config['transformer']:
         config['transformer']['y_encoder'] = 'linear'
-    if 'model_type' not in passed_config['general']:
-        config['general']['model_type'] = 'tabpfn'
+    if 'model_type' not in passed_config:
+        if 'model_maker' in passed_config:
+            config['model_type'] = config['model_maker']
+        else:
+            config['model_type'] = 'tabpfn'
 
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], diff_config=config['differentiable_hyperparameters'], device=device)
     y_encoder = get_y_encoder(config)

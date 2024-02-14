@@ -46,7 +46,6 @@ def make_trunc_norm(mean, std, do_round, lower_bound):
         return lambda: lower_bound + round(dist())
     else:
         return lambda: lower_bound + dist()
-    
 
 class make_choice_mixed:
     def __init__(self, *, choice_values, choices):
