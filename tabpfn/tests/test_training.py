@@ -236,12 +236,11 @@ def test_train_additive_defaults():
 
 
 def test_train_additive_shared_embedding():
-    pytest.skip("This is not working yet")
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--shared-embedding', 'True'])
-    assert results['loss'] == 2.110102653503418
-    assert count_parameters(results['model']) == 9690634
+    assert results['loss'] == pytest.approx(2.45271897315979)
+    assert count_parameters(results['model']) == 9078730
     assert isinstance(results['model'], MotherNetAdditive)
 
 
