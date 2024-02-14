@@ -69,10 +69,10 @@ def main(argv):
         if args.continue_run:
             config = old_config
             # we want to overwrite specific parts of the old config with current values
-            config['device'] = device
-            config['warm_start_from'] = warm_start_weights
+            config['general']['device'] = device
+            config['orchestration']['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
-            config['stop_after_epochs'] = args.stop_after_epochs
+            config['orchestration']['stop_after_epochs'] = args.stop_after_epochs
             if not args.restart_scheduler:
                 scheduler = old_scheduler
         else:
