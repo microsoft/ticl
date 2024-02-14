@@ -644,7 +644,7 @@ def load_model_state(load_path, config):
             scheduler = old_scheduler
     else:
         print("WARNING warm starting with new settings")
-        compare_dicts(config_sample, old_config, all=True)
+        compare_dicts(config_sample, old_config)
 
     return model_state, optimizer_state, scheduler, config_sample
 

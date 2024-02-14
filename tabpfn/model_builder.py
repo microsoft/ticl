@@ -96,8 +96,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         else:
             config['model_type'] = 'tabpfn'
 
-    config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
-
     epochs = 0 if not should_train else config['epochs']
 
     dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
@@ -116,7 +114,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            output_attention=config['output_attention'], predicted_hidden_layers=config['predicted_hidden_layers'],
                            special_token=config['special_token'], weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
                            num_latents=config['num_latents'], input_bin_embedding=config['input_bin_embedding'], factorized_output=config['factorized_output'], output_rank=config['output_rank'],
-                           bin_embedding_rank=config['bin_embedding_rank'])
+                           bin_embedding_rank=config['bin_embedding_rank'], low_rank_weights=config['low_rank_weights'])
 
     if 'losses' in config:
         # for continuing training
