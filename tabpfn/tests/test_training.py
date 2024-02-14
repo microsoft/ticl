@@ -316,6 +316,7 @@ def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(1.6826519966125488, rel=1e-5)
+    assert results['model'].decoder.shared_weights[0].shape == (16, 64)
+    assert results['model'].decoder.mlp[2].out_features == 2314
     assert count_parameters(results['model']) == 1126666
-    assert isinstance(results['model'], TabPerceiver)
+    assert results['loss'] == pytest.approx(1.6826519966125488, rel=1e-5)
