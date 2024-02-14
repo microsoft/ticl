@@ -175,7 +175,11 @@ def get_base_config():
 
     config['perceiver'] = {'num_latents': 512}
 
-    config['additive'] = {'shared_embedding' : False}
+    config['additive'] = {
+        'input_bin_embedding' : False,
+        'factorized_output' : False,
+        'output_rank' : None,
+        'bin_embedding_rank' : 16}
     
     config['transformer'].update({
         'recompute_attn': True,

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from tabpfn.models.decoders import AdditiveModelDecoder
+from tabpfn.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
 from tabpfn.models.encoders import BinEmbeddingEncoder, Linear
 from tabpfn.models.layer import TransformerEncoderLayer
 from tabpfn.models.transformer import TransformerEncoderDiffInit
@@ -13,7 +13,8 @@ class MotherNetAdditive(nn.Module):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16, y_encoder=None,
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, output_attention=None, special_token=None, no_double_embedding=None, predicted_hidden_layers=None):
         super().__init__()
         nhid = emsize *  nhid_factor
@@ -25,8 +26,8 @@ class MotherNetAdditive(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.emsize = emsize
-        if shared_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=shared_embedding_rank)
+        if input_bin_embedding:
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank)
         else:
             self.encoder = Linear(num_features=n_features*n_bins, emsize=emsize, replace_nan_by_zero=True)
         self.y_encoder = y_encoder_layer
@@ -37,11 +38,18 @@ class MotherNetAdditive(nn.Module):
         self.n_bins = n_bins
         self.n_out = n_out
         self.nhid = nhid
-        self.shared_embedding = shared_embedding
+        self.input_bin_embedding = input_bin_embedding
+        self.output_rank = output_rank
+        self.factorized_output = factorized_output
 
-        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
-                                            embed_dim=decoder_embed_dim,
-                                            decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, shared_embedding=shared_embedding)
+        if factorized_output:
+            self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
+                                                          embed_dim=decoder_embed_dim,
+                                                          decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, rank=output_rank)
+        else:
+            self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
+                                                embed_dim=decoder_embed_dim,
+                                                decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
 
         self.init_weights()
 
@@ -99,15 +107,21 @@ class MotherNetAdditive(nn.Module):
 
         _, x_src_org, y_src = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
-        X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
+        X_onehot = X_onehot.float()
+        if self.input_bin_embedding:
+            X_onehot_flat = X_onehot
+        else:
+            # would be more elegant to do this in the actual encoder
+            X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1))
+
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
         output = self.transformer_encoder(train_x)
         weights, biases = self.decoder(output)
-
-        h = (X_onehot[single_eval_pos:].unsqueeze(-1) * weights.unsqueeze(0)).sum([2, 3])
+        # n samples, b batch, k feature, d bins, o outputs
+        h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
         h = h + biases
 
         if h.isnan().all():

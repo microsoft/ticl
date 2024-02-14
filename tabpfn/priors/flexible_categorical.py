@@ -123,6 +123,7 @@ class ClassificationAdapter:
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
         args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **args)
+
         assert x.shape[2] == self.h['num_features_used']
 
         if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
@@ -139,15 +140,17 @@ class ClassificationAdapter:
                     x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
 
         # Categorical features
+        categorical_features = []
         if random.random() < self.h['categorical_feature_p']:
             p = random.random()
             for col in range(x.shape[2]):
                 num_unique_features = max(round(random.gammavariate(1, 10)), 2)
                 m = MulticlassRank(num_unique_features, ordered_p=0.3)
                 if random.random() < p:
+                    categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
-
-        x = remove_outliers(x)
+                    
+        x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled

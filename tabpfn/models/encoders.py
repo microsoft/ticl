@@ -252,13 +252,16 @@ class BinEmbeddingEncoder(nn.Module):
         self.n_bins = n_bins
         self.rank = rank
         self.embedding = nn.Parameter(torch.randn(n_bins, rank))
+        self.bias = nn.Parameter(torch.randn(1, 1, num_features, rank))
         self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
 
     def forward(self, x):
-        import pdb
-        pdb.set_trace()
-        x = torch.einsum('bfn,qrn->bqfr', x, self.query)
-        return x.reshape(x.shape[0], self.num_features * self.n_bins * self.rank)
+        # n samples, b batch, k feature, d bins, r rank
+        embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding) + self.bias
+        embedded = torch.nn.functional.relu(embedded)
+        # n samples, b batch, k feature, r rank, e embedding dim in transformer
+        out = torch.einsum('nbkr,kre->nbe', embedded, self.weights)
+        return out
 
 
 class OneHotAndLinear(nn.Linear):
