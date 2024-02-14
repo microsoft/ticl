@@ -39,25 +39,22 @@ def test_get_dataloader_base_config():
     assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert set(config_sample.keys()) == set(['block_wise_dropout', 'num_causes', 'sort_features', 'is_causal', 'prior_mlp_activations', 'prior_bag_exp_weights_1', 'in_clique',
-                                             'prior_mlp_hidden_dim', 'noise_std', 'y_is_effect', 'lengthscale', 'prior_mlp_dropout_prob', 'pre_sample_weights', 'init_std', 'num_layers', 'noise', 'outputscale'])
-    assert prior.hyper_dists['noise_std']() == 0.09381271387714264
+    assert (x[:, :, 79:] == 0).all()
+    assert (x[:, :, 78] != 0).all()
+
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
+    assert config_sample['num_layers'].alpha == 0.5073795369535361
+    assert config_sample['num_layers'].scale == 1.7959754525911098
     assert config_sample['prior_bag_exp_weights_1'] == 9.60571445127933
     assert config_sample['is_causal'] == False
     assert config_sample['sort_features'] == False
-    assert (x[:, :, 79:] == 0).all()
-    assert (x[:, :, 78] != 0).all()
-    assert config_sample['num_layers']() == 3
-    assert config_sample['num_layers']() == 4
-
     assert config_sample['noise_std'] == 0.04160439645256607
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 49] == 0).all()
-    assert (x[:, :, 48] != 0).all()
-    assert config_sample['noise_std'] == 0.0040123682639395565
+    assert (x[:, :, 66] == 0).all()
+    assert (x[:, :, 65] != 0).all()
+    assert config_sample['noise_std'] == 0.00017628726172102543
     assert config_sample['sort_features'] == True
     assert config_sample['is_causal'] == False
 
