@@ -218,10 +218,10 @@ def test_train_tabpfn_heterogeneous_batches():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--heterogeneous-batches', 'True'])
-    assert results['loss'] == pytest.approx(2.3380088806152344)
-    assert count_parameters(results['model']) == 579850
+    assert results['dataloader'].prior.heterogeneous_batches
     assert isinstance(results['model'], TabPFN)
-
+    assert count_parameters(results['model']) == 579850
+    assert results['loss'] == pytest.approx(2.3380088806152344)
 
 def test_train_tabpfn_refactored():
     pytest.skip("This is not working yet")
@@ -317,7 +317,6 @@ def test_train_perceiver_two_hidden_layers():
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
     assert results['loss'] == pytest.approx(2.054527997970581)
-
 
 
 def test_train_perceiver_low_rank():
