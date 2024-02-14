@@ -9,7 +9,6 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers, to_ranking_low_mem)
 from tabpfn.priors.differentiable_prior import sample_distributions
-
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
 
@@ -75,7 +74,6 @@ class MulticlassRank:
         reverse_classes = torch.rand((d.shape[1],)) > 0.5
         d[:, reverse_classes] = self.num_classes - 1 - d[:, reverse_classes]
         return d
-
 
 
 class ClassificationAdapter:
@@ -162,11 +160,9 @@ class ClassificationAdapter:
             [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.h['num_features_used']),
                             device=device)], -1)
 
-
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
 
-        # if self.h['check_is_compatible']: always true
         for b in range(y.shape[1]):
             is_compatible, N = False, 0
             while not is_compatible and N < 10:
@@ -185,7 +181,6 @@ class ClassificationAdapter:
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
-        #if self.h['normalize_labels']: this was always true
         for b in range(y.shape[1]):
             valid_labels = y[:, b] != -100
             y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()

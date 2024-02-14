@@ -127,8 +127,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     model = train(dl,
                   model, criterion=criterion,
                   optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'],
-                  warmup_epochs=config['warmup_epochs'], gpu_device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
-                  lr=config['lr'], min_lr=config['min_lr'],
+                  warmup_epochs=config['warmup_epochs'], device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
+                  learning_rate=config['lr'], min_lr=config['min_lr'],
                   learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config['lr_decay'], verbose=verbose_train, train_mixed_precision=config['train_mixed_precision'],
                   weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
                   reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
