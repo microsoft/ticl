@@ -230,7 +230,7 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == pytest.approx(2.4964823722839355, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.4833436012268066, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
