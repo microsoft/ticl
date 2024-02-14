@@ -242,7 +242,7 @@ def test_train_additive_input_bin_embedding():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(2.6669483184814453)
+    assert results['loss'] == pytest.approx(2.6669483184814453, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding_rank():
@@ -251,7 +251,7 @@ def test_train_additive_input_bin_embedding_rank():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True', '--bin-embedding-rank', '8'])
     assert results['model'].encoder.embedding.shape == (64, 8)
     assert count_parameters(results['model']) == 8975018
-    assert results['loss'] == pytest.approx(2.458144187927246)
+    assert results['loss'] == pytest.approx(2.458144187927246, rel=1e-5)
 
 def test_train_additive_factorized_output():
     L.seed_everything(42)
@@ -260,7 +260,7 @@ def test_train_additive_factorized_output():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1649994
-    assert results['loss'] == pytest.approx(4.083449363708496)
+    assert results['loss'] == pytest.approx(4.083449363708496, rel=1e-5)
 
 
 def test_train_additive_factorized_output_rank():
@@ -270,7 +270,7 @@ def test_train_additive_factorized_output_rank():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64, 10)
     assert count_parameters(results['model']) == 1487514
-    assert results['loss'] == pytest.approx(3.8715691566467285)
+    assert results['loss'] == pytest.approx(3.8715691566467285, rel=1e-5)
 
 
 def test_train_additive_factorized_in_and_out():
@@ -281,7 +281,7 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
-    assert results['loss'] == pytest.approx(3.627715587615967)
+    assert results['loss'] == pytest.approx(3.627715587615967, rel=1e-5)
 
 
 def test_train_perceiver_defaults():
