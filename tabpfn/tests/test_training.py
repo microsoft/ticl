@@ -254,9 +254,12 @@ def test_train_perceiver_defaults():
     assert model.input_dim == 128
     assert len(model.layers) == 4
     assert model.latents.shape == (512, 128)
-    assert count_parameters(model) == 1744842
     assert model.decoder.hidden_size == 128
     assert model.decoder.emsize == 128
+    assert count_parameters(model.decoder) == 1000394
+    assert count_parameters(model.encoder) == 12928
+    assert count_parameters(model.layers) == 664576
+    assert count_parameters(model) == 1744842
     assert results['loss'] == pytest.approx(2.4954166412353516)
 
 def test_train_perceiver_two_hidden_layers():
