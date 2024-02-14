@@ -103,6 +103,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
     def forward(self, x):
         res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
         res = res.reshape(x.shape[1], self.n_features, self.rank)
+        # b batch, k feature, r rank, o outputs
         out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
         return out, self.output_biases
     

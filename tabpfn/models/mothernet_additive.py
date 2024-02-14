@@ -104,11 +104,12 @@ class MotherNetAdditive(nn.Module):
 
         _, x_src_org, y_src = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
+        X_onehot = X_onehot.float()
         if self.input_bin_embedding:
-            X_onehot_flat = X_onehot.float()
+            X_onehot_flat = X_onehot
         else:
             # would be more elegant to do this in the actual encoder
-            X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
+            X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1))
 
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
@@ -116,8 +117,8 @@ class MotherNetAdditive(nn.Module):
 
         output = self.transformer_encoder(train_x)
         weights, biases = self.decoder(output)
-
-        h = (X_onehot[single_eval_pos:].unsqueeze(-1) * weights.unsqueeze(0)).sum([2, 3])
+        # n samples, b batch, k feature, d bins, o outputs
+        h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
         h = h + biases
 
         if h.isnan().all():

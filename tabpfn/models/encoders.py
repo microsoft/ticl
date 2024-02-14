@@ -256,6 +256,7 @@ class BinEmbeddingEncoder(nn.Module):
         self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
 
     def forward(self, x):
+        # n samples, b batch, k feature, d bins, r rank
         embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding) + self.bias
         embedded = torch.nn.functional.relu(embedded)
         out = torch.einsum('nbkr,kre->nbe', embedded, self.weights)
