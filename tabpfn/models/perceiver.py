@@ -253,7 +253,6 @@ class TabPerceiver(MLPModelPredictor):
         emsize=512,
         input_axis=1,
         num_latents=512,
-        latent_dim=512,
         cross_heads=1,
         latent_heads=8,
         cross_dim_head=64,
@@ -310,6 +309,7 @@ class TabPerceiver(MLPModelPredictor):
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = emsize
+        latent_dim = emsize
         self.n_out = n_out
         assert not special_token
         self.special_token = special_token
