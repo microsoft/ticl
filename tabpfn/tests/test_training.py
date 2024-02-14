@@ -290,6 +290,8 @@ def test_train_perceiver_defaults():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
     model = results['model']
     assert isinstance(model, TabPerceiver)
+    assert model.ff_dropout == 0
+    assert model.no_double_embedding
     assert model.input_dim == 128
     assert len(model.layers) == 4
     assert model.latents.shape == (512, 128)

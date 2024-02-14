@@ -303,6 +303,7 @@ class TabPerceiver(MLPModelPredictor):
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = input_dim
         self.n_out = n_out
+        self.ff_dropout = ff_dropout
         assert not special_token
         self.special_token = special_token
         self.no_double_embedding = no_double_embedding
