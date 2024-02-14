@@ -37,27 +37,24 @@ def test_get_dataloader_base_config():
     assert prior.hyper_dists['noise_std'].max == 0.5
     assert prior.hyper_dists['noise_std']() == 0.002428916946974888
     assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
-
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
     assert (x[:, :, 79:] == 0).all()
     assert (x[:, :, 78] != 0).all()
-
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
-    assert config_sample['num_layers'].alpha == 0.5073795369535361
-    assert config_sample['num_layers'].scale == 1.7959754525911098
-    assert config_sample['prior_bag_exp_weights_1'] == 9.60571445127933
-    assert config_sample['is_causal'] == False
+    assert config_sample['num_layers'].alpha == 0.6722902794233997
+    assert config_sample['num_layers'].scale == 2.497327922401265
+    assert config_sample['prior_bag_exp_weights_1'] == 3.4672360788274705
+    assert config_sample['is_causal'] == True
     assert config_sample['sort_features'] == False
-    assert config_sample['noise_std'] == 0.04160439645256607
+    assert config_sample['noise_std'] == 0.016730402817820244
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 66] == 0).all()
-    assert (x[:, :, 65] != 0).all()
-    assert config_sample['noise_std'] == 0.00017628726172102543
-    assert config_sample['sort_features'] == True
-    assert config_sample['is_causal'] == False
-
+    assert (x[:, :, 91] == 0).all()
+    assert (x[:, :, 90] != 0).all()
+    assert config_sample['noise_std'] == 0.0017734885626861144
+    assert config_sample['sort_features'] == False
+    assert config_sample['is_causal'] == True
 
 @pytest.mark.parametrize("batch_size", [16, 32])
 @pytest.mark.parametrize("n_samples", [256, 512])
