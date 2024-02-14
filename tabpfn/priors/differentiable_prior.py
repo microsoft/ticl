@@ -243,7 +243,7 @@ class SamplerPrior:
                     ys_.append(y_)
                     x, y, y_ = torch.cat(xs, 1), torch.cat(ys, 1), torch.cat(ys_, 1)
             else:
-                sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
+                sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
                 combined_hypers = {**hyperparameters, **sampled_hypers}
                 x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
         x, y, y_ = x.detach(), y.detach(), y_.detach()
