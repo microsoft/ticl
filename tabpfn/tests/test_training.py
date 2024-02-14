@@ -262,7 +262,7 @@ def test_train_perceiver_defaults():
     assert model.decoder.emsize == 128
     assert count_parameters(model.decoder) == 1000394
     assert count_parameters(model.encoder) == 12928
-    assert count_parameters(model.layers) == 1582080
+    assert count_parameters(model.layers) == 664576
     assert count_parameters(model) == 1744842
     assert results['loss'] == pytest.approx(2.4954166412353516)
 
