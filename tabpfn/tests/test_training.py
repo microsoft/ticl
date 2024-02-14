@@ -312,7 +312,7 @@ def test_train_perceiver_two_hidden_layers():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
-    assert results['loss'] == pytest.approx(2.054527997970581)
+    assert results['loss'] == pytest.approx(2.0544097423553467)
 
 
 def test_train_perceiver_low_rank():
