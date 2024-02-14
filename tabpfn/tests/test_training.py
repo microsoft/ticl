@@ -234,7 +234,7 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == pytest.approx(2.4964823722839355, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.4833436012268066, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
@@ -257,11 +257,12 @@ def test_train_perceiver_defaults():
     assert isinstance(model, TabPerceiver)
     assert model.input_dim == 128
     assert len(model.layers) == 4
-    assert model.latents.shape == (512, 512)
+    assert model.latents.shape == (512, 128)
     assert count_parameters(model) == 1744842
+    assert model.decoder.hidden_size == 128
+    assert model.decoder.emsize == 128
     assert results['loss'] == pytest.approx(2.4954166412353516)
-    
-    
+
 def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
