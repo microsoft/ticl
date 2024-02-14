@@ -213,7 +213,7 @@ def parse_distributions(hyperparameters):
 def sample_distributions(hyperparameters):
     # sample any distributions in the hyperparameters that are represented as functions
     new_hypers = {}
-    for name, dist in hyperparameters.items():
+    for name, dist in sorted(hyperparameters.items(), key=lambda x: x[0]):
         if isinstance(dist, HyperParameter):
             dist = dist()
         if callable(dist):
