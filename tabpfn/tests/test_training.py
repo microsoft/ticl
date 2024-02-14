@@ -267,9 +267,8 @@ def test_train_additive_factorized_in_and_out():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--input-bin-embedding', 'True'])
     assert isinstance(results['model'], MotherNetAdditive)
-    assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(2.45271897315979)
-
+    assert count_parameters(results['model']) == 1038090
+    assert results['loss'] == pytest.approx(2.365969657897949)
 
 
 def test_train_perceiver_defaults():
