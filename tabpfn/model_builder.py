@@ -84,14 +84,17 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['verbose'] = verbose_prior
 
     criterion = get_criterion(config['max_num_classes'])
-    
+
     # backwards compatibility for cases where absence of parameter doesn't correspond to current default
     if 'n_samples' not in passed_config:
         config['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config:
         config['y_encoder'] = 'linear'
     if 'model_type' not in passed_config:
-        config['model_type'] = 'tabpfn'
+        if 'model_maker' in passed_config:
+            config['model_type'] = config['model_maker']
+        else:
+            config['model_type'] = 'tabpfn'
 
     config['low_rank_weights'] = passed_config.get('low_rank_weights', passed_config.get('weight_embedding_rank', None) is not None)
 
