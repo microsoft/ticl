@@ -122,6 +122,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     if should_train:    
         model = train(dl, model, criterion=criterion, optimizer_state=optimizer_state, scheduler=scheduler,
-                      epoch_callback=epoch_callback, verbose=verbose_train, **config['optimizer'])
+                      epoch_callback=epoch_callback, verbose=verbose_train, device=device, **config['optimizer'])
 
     return model

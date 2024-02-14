@@ -90,12 +90,11 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, stop_after_epochs=None, learning_rate=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
-          validation_period=10, gpu_device='cuda:0',
+          validation_period=10, device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
           spike_tolerance=4
           ):
-    device = gpu_device if torch.cuda.is_available() else 'cpu:0'
     using_dist, rank, device = init_dist(device)
     if rank == 0 and verbose:
         print(f'Using {device} device')
