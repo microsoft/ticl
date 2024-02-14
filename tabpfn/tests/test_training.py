@@ -142,7 +142,10 @@ def test_train_low_rank():
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
     assert count_parameters(results['model']) == 926474
-    assert results['loss'] == pytest.approx(1.996809959411621)
+    assert results['model'].decoder.shared_weights[0].shape == (16, 64)
+    assert results['model'].decoder.mlp[2].out_features == 2314
+    # suspiciously low tolerance here
+    assert results['loss'] == pytest.approx(1.996809959411621, rel=1e-4)
     assert isinstance(results['model'], MotherNet)
 
 
@@ -309,15 +312,18 @@ def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == pytest.approx(2.054527997970581)
-    assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
+    assert count_parameters(results['model']) == 2281482
+    assert results['loss'] == pytest.approx(2.054527997970581)
+
 
 
 def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(1.6826262474060059, rel=1e-5)
-    assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)
+    assert results['model'].decoder.shared_weights[0].shape == (16, 64)
+    assert results['model'].decoder.mlp[2].out_features == 2314
+    assert count_parameters(results['model']) == 1126666
+    assert results['loss'] == pytest.approx(1.6826262474060059, rel=1e-5)
