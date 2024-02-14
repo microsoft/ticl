@@ -40,6 +40,8 @@ class uniform_int_sampler_f:
         return f'uniform_int_sampler_f({self.a},{self.b})'
     def __call__(self):
         return round(np.random.uniform(self.a, self.b))
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, uniform_int_sampler_f) and self.a == o.a and self.b == o.b
 
 def log_uniform_sampler_f(a, b): return lambda: np.exp(np.random.uniform(np.log(a), np.log(b)))
 

@@ -10,6 +10,7 @@ from tabpfn.models.mothernet_additive import MotherNetAdditive
 from tabpfn.models.perceiver import TabPerceiver
 from tabpfn.models.transformer import TabPFN
 from tabpfn.models.mothernet import MotherNet
+from tabpfn.utils import compare_dicts
 
 
 def count_parameters(model):
@@ -63,10 +64,13 @@ def test_train_reload():
         assert results_new['loss'] == np.inf
         assert results_new['base_path'] == results['base_path']
         assert results_new['model_string'].startswith(results['model_string'])
+        ignored_configs = ['warm_start_from', 'continue_run']
         for k, v in results['config'].items():
-            # fixme num_classes really shouldn't be a callable in config
-            if k not in ['warm_start_from', 'continue_run', 'num_classes', 'num_features_used']:
-                assert results_new['config'][k] == v
+            if k not in ignored_configs:
+                if isinstance(v, dict):
+                    assert compare_dicts(results_new['config'][k], v, return_bool=True, skip=ignored_configs)
+                else:
+                    assert results_new['config'][k] == v
         # strict loading should fail if we change model arch
         with pytest.raises(RuntimeError):
             main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-L', '2'])
@@ -74,12 +78,12 @@ def test_train_reload():
         # strict loading should work if we change learning rate
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-l', '1e-3'])
         assert results['epoch'] == 2
-        assert results['config']['lr'] == 1e-3
+        assert results['config']['optimizer']['learning_rate'] == 1e-3
 
         # non-strict loading should allow changing architecture
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-L', '2'])
         assert results['epoch'] == 2
-        assert results['config']['predicted_hidden_layers'] == 2
+        assert results['config']['mothernet']['predicted_hidden_layers'] == 2
 
 
 def test_train_double_embedding():

@@ -237,30 +237,34 @@ def normalize_by_used_features_f(x, num_features_used, num_features):
     return x / (num_features_used / num_features)
 
 
-def compare_dicts(left, right, prefix=None, all=False):
-    if not all:
-        for d in [left, right]:
-            d.pop("losses", None)
-            d.pop("learning_rates", None)
-            d.pop("wallclock_times", None)
-            d.pop("n_samples_extra_samples", None)
-            d.pop("num_classes", None)
-            d.pop("differentiable_hyperparameters", None)
-            d.pop("num_features_used", None)
+def compare_dicts(left, right, prefix=None, skip=None, return_bool=False):
+    skip = skip or {}
 
     prefix = prefix or ""
     for k in set(left).union(set(right)):
+        if k in skip:
+            continue
         if k not in left:
+            if return_bool:
+                return False
             print(f"{prefix}{k} missing in left")
             continue
         if k not in right:
+            if return_bool:
+                return False
             print(f"{prefix}{k} missing in right")
             continue
         if isinstance(left[k], dict):
-            compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->", all=all)
+            res = compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->", skip=skip, return_bool=return_bool)
+            if return_bool and not res:
+                return False
         else:
             if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
+                if return_bool:
+                    return False
                 print(f"{prefix}{k}: left: {left[k]}, right: {right[k]}")
+    if return_bool:
+        return True
 
 def merge_dicts(*dicts):
     keys = set([k for d in dicts for k in d])
