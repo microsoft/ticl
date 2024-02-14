@@ -13,7 +13,8 @@ class MotherNetAdditive(nn.Module):
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False, input_bin_embedding_rank=16, output_rank=16, factorized_output=False):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False):
         super().__init__()
         self.model_type = 'Transformer'
         def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
@@ -22,7 +23,7 @@ class MotherNetAdditive(nn.Module):
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
         if input_bin_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=input_bin_embedding_rank)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank)
         else:
             self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
         self.y_encoder = y_encoder

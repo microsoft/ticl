@@ -180,6 +180,7 @@ def get_base_config():
     config['input_bin_embedding'] = False
     config['factorized_output'] = False
     config['output_rank'] = None
+    config['bin_embedding_rank'] = None
     
     # architecture
     config['pre_norm'] = False

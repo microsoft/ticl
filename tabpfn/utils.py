@@ -506,11 +506,11 @@ def argparser_from_config(config, description="Train Mothernet"):
 
     # Additive model (WIP)
     parser.add_argument('--input-bin-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    parser.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
     parser.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
     parser.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)
-    # fixme add number of bins, add input embedding rank
 
-    # Perceiver
+    # Perceiver (even more WIP)
     parser.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
     parser.add_argument('--perceiver-large-dataset', action='store_true')
 
