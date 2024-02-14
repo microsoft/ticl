@@ -4,7 +4,8 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
                    model_type, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
-                   model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, weight_embedding_rank=None, num_latents=512, input_bin_embedding=False, **model_extra_args):
+                   model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, weight_embedding_rank=None, num_latents=512, input_bin_embedding=False,
+                   factorized_output=False, output_rank=None, **model_extra_args):
     encoder = encoder_generator(num_features, emsize)
     decoder_hidden_size = decoder_hidden_size or nhid
 
@@ -41,7 +42,8 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
         model = MotherNetAdditive(
             n_features=num_features, n_out=n_out, ninp=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
-            decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, input_bin_embedding=input_bin_embedding)
+            decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, input_bin_embedding=input_bin_embedding,
+            factorized_output=factorized_output, output_rank=output_rank,)
     elif model_type == "tabpfn":
         model = TabPFN(
             encoder, n_out, emsize, nhead, nhid, nlayers, dropout,

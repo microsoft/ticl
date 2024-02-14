@@ -257,9 +257,9 @@ class BinEmbeddingEncoder(nn.Module):
 
     def forward(self, x):
         x = x.reshape(x.shape[0], x.shape[1], self.num_features, self.n_bins)
-        embedded = torch.einsum('nbfd,dr->nbfr', x, self.embedding) + self.bias
+        embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding) + self.bias
         embedded = torch.nn.functional.relu(embedded)
-        out = torch.einsum('nbfr,fre->nbe', embedded, self.weights)
+        out = torch.einsum('nbkr,kre->nbe', embedded, self.weights)
         return out
 
 

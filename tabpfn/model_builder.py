@@ -115,7 +115,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            verbose=verbose_train, pre_norm=config['pre_norm'], efficient_eval_masking=config['efficient_eval_masking'],
                            output_attention=config['output_attention'], predicted_hidden_layers=config['predicted_hidden_layers'],
                            special_token=config['special_token'], weight_embedding_rank=config['weight_embedding_rank'] if config['low_rank_weights'] else None,
-                           num_latents=config['num_latents'], input_bin_embedding=config['input_bin_embedding'])
+                           num_latents=config['num_latents'], input_bin_embedding=config['input_bin_embedding'], factorized_output=config['factorized_output'], output_rank=config['output_rank'])
 
     if 'losses' in config:
         # for continuing training

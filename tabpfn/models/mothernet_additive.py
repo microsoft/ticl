@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from tabpfn.models.decoders import AdditiveModelDecoder
+from tabpfn.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
 from tabpfn.models.encoders import BinEmbeddingEncoder, Linear
 from tabpfn.models.layer import TransformerEncoderLayer
 from tabpfn.models.transformer import TransformerEncoderDiffInit
@@ -13,7 +13,7 @@ class MotherNetAdditive(nn.Module):
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False, input_bin_embedding_rank=16):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False, input_bin_embedding_rank=16, output_rank=16, factorized_output=False):
         super().__init__()
         self.model_type = 'Transformer'
         def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
@@ -27,7 +27,7 @@ class MotherNetAdditive(nn.Module):
             self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
         self.y_encoder = y_encoder
         self.pos_encoder = pos_encoder
-        self.input_ln = SeqBN(ninp) if input_normalization else None
+        self.input_ln = SeqBN(ninp) if input_normalization else None 
         self.init_method = init_method
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
@@ -35,10 +35,17 @@ class MotherNetAdditive(nn.Module):
         self.n_out = n_out
         self.nhid = nhid
         self.input_bin_embedding = input_bin_embedding
+        self.output_rank = output_rank
+        self.factorized_output = factorized_output
 
-        self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
-                                            embed_dim=decoder_embed_dim,
-                                            decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, input_bin_embedding=input_bin_embedding)
+        if factorized_output:
+            self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
+                                                          embed_dim=decoder_embed_dim,
+                                                          decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, rank=output_rank)
+        else:
+            self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
+                                                embed_dim=decoder_embed_dim,
+                                                decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
 
         self.init_weights()
 

@@ -244,6 +244,34 @@ def test_train_additive_input_bin_embedding():
     assert isinstance(results['model'], MotherNetAdditive)
 
 
+def test_train_additive_factorized_output():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True'])
+    assert results['loss'] == pytest.approx(2.45271897315979)
+    assert count_parameters(results['model']) == 9078730
+    assert isinstance(results['model'], MotherNetAdditive)
+
+
+def test_train_additive_factorized_output_rank():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--output-rank', '4'])
+    assert results['loss'] == pytest.approx(2.45271897315979)
+    assert count_parameters(results['model']) == 9078730
+    assert isinstance(results['model'], MotherNetAdditive)
+
+
+def test_train_additive_factorized_in_and_out():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--factorized-input', 'True'])
+    assert results['loss'] == pytest.approx(2.45271897315979)
+    assert count_parameters(results['model']) == 9078730
+    assert isinstance(results['model'], MotherNetAdditive)
+
+
+
 def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
