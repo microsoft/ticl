@@ -254,7 +254,7 @@ class TabPerceiver(MLPModelPredictor):
         input_axis=1,
         num_latents=512,
         cross_heads=1,
-        latent_heads=8,
+        nhead=8,
         cross_dim_head=64,
         latent_dim_head=64,
         n_out=10,
@@ -275,7 +275,6 @@ class TabPerceiver(MLPModelPredictor):
         pre_norm=None, # ignored
         efficient_eval_masking=None, # ignored
         input_normalization=None, # ignored
-        nhead=None, # ignored
         low_rank_weights=None,
         y_encoder=None, # ignored, y_encoder_layer is passed
         weight_embedding_rank=None,
@@ -310,6 +309,8 @@ class TabPerceiver(MLPModelPredictor):
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = emsize
         latent_dim = emsize
+        # FIXME cross heads one is too little!
+        latent_heads = nhead
         self.n_out = n_out
         assert not special_token
         self.special_token = special_token
