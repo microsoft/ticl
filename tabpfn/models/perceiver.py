@@ -312,7 +312,7 @@ class TabPerceiver(MLPModelPredictor):
         # FIXME cross heads one is too little!
         latent_heads = nhead
         self.n_out = n_out
-        self.ff_dropout = ff_dropout
+        self.ff_dropout = dropout
         assert not special_token
         self.special_token = special_token
         self.no_double_embedding = no_double_embedding
@@ -326,13 +326,13 @@ class TabPerceiver(MLPModelPredictor):
                 latent_block = nn.Module()
                 latent_block.add_module('latent_attn', PreNorm(latent_dim, Attention(
                     latent_dim, heads=latent_heads, dim_head=latent_dim_head, dropout=attn_dropout)))
-                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=dropout, mult=1)))
+                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
                 self_attns.append(latent_block)
 
             cross_attn_layer = nn.Module()
             cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, emsize, heads=cross_heads,
                                         dim_head=cross_dim_head, dropout=attn_dropout), context_dim=emsize))
-            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=dropout, mult=1)))
+            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=output_attention,
