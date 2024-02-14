@@ -312,6 +312,7 @@ class TabPerceiver(MLPModelPredictor):
         # FIXME cross heads one is too little!
         latent_heads = nhead
         self.n_out = n_out
+        self.ff_dropout = ff_dropout
         assert not special_token
         self.special_token = special_token
         self.no_double_embedding = no_double_embedding
