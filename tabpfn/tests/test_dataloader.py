@@ -34,8 +34,7 @@ def test_get_dataloader_base_config():
     assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 79:] == 0).all()
-    assert (x[:, :, 78] != 0).all()
+
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
     assert config_sample['num_layers'].alpha == 0.6722902794233997
@@ -45,12 +44,15 @@ def test_get_dataloader_base_config():
     assert config_sample['sort_features'] == False
     assert config_sample['noise_std'] == 0.016730402817820244
 
+    assert (x[:, :, 60:] == 0).all()
+    assert (x[:, :, 59] != 0).all()
+
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
-    assert (x[:, :, 91] == 0).all()
-    assert (x[:, :, 90] != 0).all()
-    assert config_sample['noise_std'] == 0.0017734885626861144
-    assert config_sample['sort_features'] == False
-    assert config_sample['is_causal'] == True
+    assert (x[:, :, 66] == 0).all()
+    assert (x[:, :, 65] != 0).all()
+    assert config_sample['noise_std'] == 0.0004896957955177838
+    assert config_sample['sort_features'] == True
+    assert config_sample['is_causal'] == False
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
