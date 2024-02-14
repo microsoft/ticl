@@ -177,7 +177,7 @@ def get_base_config():
     config['num_latents'] = 512
 
     # additive
-    config['shared_embedding'] = False
+    config['input_bin_embedding'] = False
     
     # architecture
     config['pre_norm'] = False

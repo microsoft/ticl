@@ -13,7 +13,7 @@ class MotherNetAdditive(nn.Module):
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, shared_embedding=False, shared_embedding_rank=16):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False, input_bin_embedding_rank=16):
         super().__init__()
         self.model_type = 'Transformer'
         def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
@@ -21,8 +21,8 @@ class MotherNetAdditive(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
-        if shared_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=shared_embedding_rank)
+        if input_bin_embedding:
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=input_bin_embedding_rank)
         else:
             self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
         self.y_encoder = y_encoder
@@ -34,11 +34,11 @@ class MotherNetAdditive(nn.Module):
         self.n_bins = n_bins
         self.n_out = n_out
         self.nhid = nhid
-        self.shared_embedding = shared_embedding
+        self.input_bin_embedding = input_bin_embedding
 
         self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
                                             embed_dim=decoder_embed_dim,
-                                            decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, shared_embedding=shared_embedding)
+                                            decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, input_bin_embedding=input_bin_embedding)
 
         self.init_weights()
 

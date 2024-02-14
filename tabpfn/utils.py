@@ -505,7 +505,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
 
     # Additive model (WIP)
-    parser.add_argument('--shared-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    parser.add_argument('--input-bin-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
 
     # Perceiver
     parser.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)

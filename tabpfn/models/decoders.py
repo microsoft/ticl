@@ -19,7 +19,7 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, shared_embedding=False):
+                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, input_bin_embedding=False):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -33,7 +33,7 @@ class AdditiveModelDecoder(nn.Module):
         out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
-        self.shared_embedding = shared_embedding
+        self.input_bin_embedding = input_bin_embedding
 
         self.predicted_hidden_layers = predicted_hidden_layers
         self.query = nn.Parameter(torch.randn(1, 1, embed_dim))

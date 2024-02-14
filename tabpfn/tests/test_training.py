@@ -235,10 +235,10 @@ def test_train_additive_defaults():
     assert isinstance(results['model'], MotherNetAdditive)
 
 
-def test_train_additive_shared_embedding():
+def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--shared-embedding', 'True'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True'])
     assert results['loss'] == pytest.approx(2.45271897315979)
     assert count_parameters(results['model']) == 9078730
     assert isinstance(results['model'], MotherNetAdditive)
