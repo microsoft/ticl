@@ -71,7 +71,7 @@ def main(argv):
                 scheduler = old_scheduler
         else:
             print("WARNING warm starting with new settings")
-            compare_dicts(config, old_config, all=True)
+            compare_dicts(config, old_config)
 
     model_string = get_model_string(config, args, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, args.no_mlflow, args.st_checkpoint_dir)

@@ -56,7 +56,7 @@ class MotherNet(MLPModelPredictor):
                  pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
         super().__init__()
         self.model_type = 'Transformer'
         def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
@@ -85,7 +85,7 @@ class MotherNet(MLPModelPredictor):
         self.decoder = MLPModelDecoder(emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
-                                       weight_embedding_rank=weight_embedding_rank)
+                                       weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, ninp))
 
