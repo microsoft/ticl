@@ -235,7 +235,7 @@ class SamplerPrior:
                 args['batch_size'] = 1
                 xs, ys, ys_ = [], [], []
                 for i in range(0, batch_size):
-                    sampled_hypers = {hp: dist() for hp, dist in self.hyper_dists.items()}
+                    sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
                     combined_hypers = {**hyperparameters, **sampled_hypers}
                     x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
                     xs.append(x)
