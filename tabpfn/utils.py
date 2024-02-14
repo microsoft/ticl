@@ -134,9 +134,12 @@ def normalize_data(data, normalize_positions=-1):
     return data
 
 
-def remove_outliers(X, n_sigma=4, normalize_positions=-1):
+def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=None):
     # Expects T, B, H
     assert len(X.shape) == 3, "X must be T,B,H"
+    categorical_mask = torch.zeros(X.shape[2], dtype=torch.bool, device=X.device)
+    categorical_mask.scatter_(0, torch.tensor(categorical_features), 1.)
+    
 
     data = X if normalize_positions == -1 else X[:normalize_positions]
 
@@ -150,8 +153,8 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1):
     cut_off = data_std * n_sigma
     lower, upper = data_mean - cut_off, data_mean + cut_off
 
-    X = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)
-    X = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)
+    X[:, :, ~categorical_mask] = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)[:, :, ~categorical_mask]
+    X[:, :, ~categorical_mask] = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)[:, :, ~categorical_mask]
     # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
     return X
 
