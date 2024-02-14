@@ -141,8 +141,8 @@ def test_train_low_rank():
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(1.996809959411621)
     assert count_parameters(results['model']) == 926474
+    assert results['loss'] == pytest.approx(1.996809959411621)
     assert isinstance(results['model'], MotherNet)
 
 
@@ -253,25 +253,23 @@ def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
-    assert results['loss'] == pytest.approx(2.4954166412353516)
-    assert count_parameters(results['model']) == 1744842
     assert isinstance(results['model'], TabPerceiver)
+    assert count_parameters(results['model']) == 1744842
+    assert results['loss'] == pytest.approx(2.4954166412353516)
     
-
-
 def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
-    assert results['loss'] == pytest.approx(2.054527997970581)
-    assert count_parameters(results['model']) == 2281482
     assert isinstance(results['model'], TabPerceiver)
+    assert count_parameters(results['model']) == 2281482
+    assert results['loss'] == pytest.approx(2.054527997970581)
 
 
 def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
-    assert results['loss'] == pytest.approx(1.6826262474060059, rel=1e-5)
-    assert count_parameters(results['model']) == 1126666
     assert isinstance(results['model'], TabPerceiver)
+    assert count_parameters(results['model']) == 1126666
+    assert results['loss'] == pytest.approx(1.6826262474060059, rel=1e-5)
