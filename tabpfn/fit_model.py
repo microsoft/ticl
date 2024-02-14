@@ -66,14 +66,14 @@ def main(argv):
             warm_start_weights, map_location='cpu')
         module_prefix = 'module.'
         model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-        if args.continue_run:
+        if args.orchestration.continue_run:
             config = old_config
             # we want to overwrite specific parts of the old config with current values
             config['general']['device'] = device
             config['orchestration']['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
-            config['orchestration']['stop_after_epochs'] = args.stop_after_epochs
-            if not args.restart_scheduler:
+            config['orchestration']['stop_after_epochs'] = args.orchestration.stop_after_epochs
+            if not args.orchestration.restart_scheduler:
                 scheduler = old_scheduler
         else:
             print("WARNING warm starting with new settings")
