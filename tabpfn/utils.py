@@ -134,8 +134,10 @@ def normalize_data(data, normalize_positions=-1):
 def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=None):
     # Expects T, B, H
     assert len(X.shape) == 3, "X must be T,B,H"
-    categorical_mask = torch.zeros(X.shape[2], dtype=torch.bool, device=X.device)
-    categorical_mask.scatter_(0, torch.tensor(categorical_features, device=X.device), 1.)
+
+    if categorical_features:
+        categorical_mask = torch.zeros(X.shape[2], dtype=torch.bool, device=X.device)
+        categorical_mask.scatter_(0, torch.tensor(categorical_features, device=X.device, dtype=int), 1.)
     
 
     data = X if normalize_positions == -1 else X[:normalize_positions]
@@ -150,8 +152,12 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=N
     cut_off = data_std * n_sigma
     lower, upper = data_mean - cut_off, data_mean + cut_off
 
-    X[:, :, ~categorical_mask] = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)[:, :, ~categorical_mask]
-    X[:, :, ~categorical_mask] = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)[:, :, ~categorical_mask]
+    if categorical_features:
+        X = torch.where(categorical_mask, X, torch.maximum(-torch.log(1+torch.abs(X)) + lower, X))
+        X = torch.where(categorical_mask, X, torch.minimum(torch.log(1+torch.abs(X)) + upper, X))
+    else:
+        X = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)
+        X = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)
     # print(ds[1][data < lower, col], ds[1][data > upper, col], ds[1][~np.isnan(data), col].shape, data_mean, data_std)
     return X
 
@@ -559,7 +565,7 @@ def load_model_state(load_path, config):
             scheduler = old_scheduler
     else:
         print("WARNING warm starting with new settings")
-        compare_dicts(config_sample, old_config, all=True)
+        compare_dicts(config_sample, old_config)
 
     return model_state, optimizer_state, scheduler, config_sample
 

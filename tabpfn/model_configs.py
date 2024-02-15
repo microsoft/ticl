@@ -164,6 +164,7 @@ def get_base_config():
 
     config['mothernet'] = {
         'weight_embedding_rank': None,
+        'low_rank_weights': False,
         'predicted_hidden_layer_size': 128,
         'output_attention': True,
         'decoder_embed_dim': 2048,
