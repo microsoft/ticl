@@ -256,6 +256,14 @@ def test_train_additive_input_bin_embedding_rank():
     assert count_parameters(results['model']) == 8975018
     assert results['loss'] == pytest.approx(2.458144187927246, rel=1e-5)
 
+def test_train_additive_input_bin_embedding_linear():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'linear'])
+    assert results['model'].encoder.embedding.shape == (64, 16)
+    assert count_parameters(results['model']) == 9078730
+    assert results['loss'] == pytest.approx(2.427090883255005, rel=1e-5)
+
 def test_train_additive_factorized_output():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -459,7 +459,7 @@ def argparser_from_config(config, description="Train Mothernet"):
     parser.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
 
     # Additive model (WIP)
-    parser.add_argument('--input-bin-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    parser.add_argument('--input-bin-embedding', help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str, default="none")
     parser.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
     parser.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
     parser.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)

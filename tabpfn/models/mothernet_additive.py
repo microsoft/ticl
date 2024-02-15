@@ -14,7 +14,7 @@ class MotherNetAdditive(nn.Module):
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False):
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, nonlinear_bin_embedding=True):
         super().__init__()
         self.model_type = 'Transformer'
         def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
@@ -22,10 +22,14 @@ class MotherNetAdditive(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.ninp = ninp
-        if input_bin_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank)
-        else:
+        if input_bin_embedding == "linear":
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=False)
+        elif input_bin_embedding in ["True", "nonlinear"] or isinstance(input_bin_embedding, bool) and input_bin_embedding:
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True)
+        elif input_bin_embedding in ["none", "False"] or isinstance(input_bin_embedding, bool) and not input_bin_embedding:
             self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
+        else:
+            raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
         self.y_encoder = y_encoder
         self.pos_encoder = pos_encoder
         self.input_ln = SeqBN(ninp) if input_normalization else None 
@@ -105,11 +109,13 @@ class MotherNetAdditive(nn.Module):
         _, x_src_org, y_src = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
         X_onehot = X_onehot.float()
-        if self.input_bin_embedding:
+        if self.input_bin_embedding in ['linear', 'True', 'nonlinear']:
             X_onehot_flat = X_onehot
-        else:
+        elif self.input_bin_embedding in ['none', 'False']:
             # would be more elegant to do this in the actual encoder
             X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1))
+        else:
+            raise ValueError(f"Unknown input_bin_embedding: {self.input_bin_embedding}")
 
         x_src = self.encoder(X_onehot_flat)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
