@@ -8,7 +8,6 @@ from tabpfn import TabPFNClassifier
 
 
 def test_load_module_inference_only():
-    torch.autograd.set_detect_anomaly(True)
 
     x, y = load_breast_cancer(return_X_y=True)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
