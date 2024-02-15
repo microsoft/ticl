@@ -135,6 +135,7 @@ def normalize_data(data, normalize_positions=-1):
 def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=None):
     # Expects T, B, H
     assert len(X.shape) == 3, "X must be T,B,H"
+    categorical_features = categorical_features or []
     categorical_mask = torch.zeros(X.shape[2], dtype=torch.bool, device=X.device)
     categorical_mask.scatter_(0, torch.tensor(categorical_features, device=X.device, dtype=int), 1.)
     

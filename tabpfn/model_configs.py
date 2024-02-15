@@ -164,6 +164,7 @@ def get_base_config():
 
     # mothernet
     config['weight_embedding_rank'] = None
+    config['low_rank_weights'] = False
     config['predicted_hidden_layer_size'] = 128
     config['output_attention'] = True
     config['decoder_embed_dim'] = 2048
