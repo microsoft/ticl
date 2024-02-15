@@ -154,8 +154,8 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=N
     lower, upper = data_mean - cut_off, data_mean + cut_off
 
     if categorical_features:
-        X = X.masked_scatter(torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)[:, :, ~categorical_mask], ~categorical_mask)
-        X = X.masked_scatter(torch.minimum(torch.log(1+torch.abs(X)) + upper, X)[:, :, ~categorical_mask], ~categorical_mask)
+        X = torch.where(categorical_mask, X, torch.maximum(-torch.log(1+torch.abs(X)) + lower, X))
+        X = torch.where(categorical_mask, X, torch.minimum(torch.log(1+torch.abs(X)) + upper, X))
     else:
         X = torch.maximum(-torch.log(1+torch.abs(X)) + lower, X)
         X = torch.minimum(torch.log(1+torch.abs(X)) + upper, X)
