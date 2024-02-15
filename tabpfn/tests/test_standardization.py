@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 import torch
 
@@ -45,26 +43,25 @@ def old_remove_outliers(X, n_sigma=4, normalize_positions=-1):
     return X
 
 
-class TestNewRemoveOutliers(unittest.TestCase):
-    def test_main(self):
-        test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids)
+def test_outlier_detection():
+    test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids)
 
-        for dataset in test_datasets:
-            xs = dataset[1].unsqueeze(1)
+    for dataset in test_datasets:
+        xs = dataset[1].unsqueeze(1)
 
-            xs_new = remove_outliers(xs)
-            xs_old = old_remove_outliers(xs)
+        xs_new = remove_outliers(xs)
+        xs_old = old_remove_outliers(xs)
 
-            xs_new = xs_new.squeeze(1)
-            xs_old = xs_old.squeeze(1)
+        xs_new = xs_new.squeeze(1)
+        xs_old = xs_old.squeeze(1)
 
-            number_of_samples, number_of_classes = xs_old.shape
+        number_of_samples, number_of_classes = xs_old.shape
 
-            for number in range(number_of_samples):
-                for class_nr in range(number_of_classes):
-                    if torch.isnan(xs_new[number][class_nr]) and torch.isnan(xs_old[number][class_nr]):
-                        continue
-                    if float(xs_new[number][class_nr]) != float(xs_old[number][class_nr]):
-                        print(float(xs_new[number][class_nr]) - float(xs_old[number][class_nr]))
-                    # checks that every class probability has difference of at most
-                    self.assertEqual(float(xs_new[number][class_nr]), float(xs_old[number][class_nr]))
+        for number in range(number_of_samples):
+            for class_nr in range(number_of_classes):
+                if torch.isnan(xs_new[number][class_nr]) and torch.isnan(xs_old[number][class_nr]):
+                    continue
+                if float(xs_new[number][class_nr]) != float(xs_old[number][class_nr]):
+                    print(float(xs_new[number][class_nr]) - float(xs_old[number][class_nr]))
+                # checks that every class probability has difference of at most
+                assert float(xs_new[number][class_nr]) == float(xs_old[number][class_nr])

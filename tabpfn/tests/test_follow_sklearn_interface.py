@@ -5,7 +5,7 @@ import numpy as np
 from tabpfn import TabPFNClassifier
 
 
-def test_main():
+def test_follow_sklearn_interface():
     xs = np.random.rand(100, 99)
     ys = np.random.randint(0, 3, 100)
 
