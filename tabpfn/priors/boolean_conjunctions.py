@@ -3,7 +3,7 @@ import torch
 from tabpfn.utils import default_device, normalize_data
 
 def safe_randint(low, high):
-    if low == high:
+    if high <= low:
         return low
     return np.random.randint(low, high)
 
@@ -36,11 +36,11 @@ class BooleanConjunctionPrior:
         # num_features is always 100, i.e. the number of inputs of the transformer model
         # num_features_active is the number of synthetic datasets features
         # num_features_important is the number of features that actually determine the output
-        num_features_active = safe_randint(1, num_features)
+        num_features_important = safe_randint(1, num_features)
         if np.random.random() < self.p_uninformative:
-            num_features_important = safe_randint(max(1, num_features_active  * (1 - self.max_fraction_uninformative)), num_features_active)
+            num_features_active = num_features_important + min(safe_randint(1, int(self.max_fraction_uninformative * num_features_important)), num_features - num_features_important)
         else:
-            num_features_important = num_features_active
+            num_features_active = num_features_important
         rank = safe_randint(1, min(self.max_rank, num_features_important))
         num_terms_max = int(np.exp((rank - 1)/ 1.5))
         inputs = 2 * torch.randint(0, 2, (n_samples, num_features_active), device=device) - 1

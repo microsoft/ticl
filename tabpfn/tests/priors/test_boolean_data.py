@@ -21,10 +21,10 @@ def test_boolean_data(num_features, n_samples, device, max_fraction_uninformativ
     assert sample_params['num_features_active'] <= sample_params['num_features']
     assert sample_params['num_features_important'] <= sample_params['num_features_active']
     assert len(sample_params['features_in_terms']) <= sample_params['num_features_important']
-    assert sample_params['num_features_important'] >= int((1 - max_fraction_uninformative) * sample_params['num_features_active'])
+    assert sample_params['num_features_important'] >=  max_fraction_uninformative * (sample_params['num_features_active'] - sample_params['num_features_important'])
     if p_uninformative == 0:
         assert sample_params['num_features_important'] == sample_params['num_features_active']
-    if p_uninformative == 1 and max_fraction_uninformative > 0 and sample_params['num_features_active'] > 1:
+    if p_uninformative == 1 and max_fraction_uninformative > 0 and sample_params['num_features'] > 1:
         assert sample_params['num_features_important'] < sample_params['num_features_active']
     assert (x[:, sample_params['num_features_active']:] == 0).all()
     assert .1 <= y.float().mean() <= .8
