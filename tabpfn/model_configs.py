@@ -15,6 +15,7 @@ def get_general_config(max_features, n_samples):
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
         'prior_type': 'prior_bag',
+        'train_mixed_precision': True,
         'mlp': {"pre_sample_causes": True,
                 'prior_mlp_scale_weights_sqrt': True,
                 'random_feature_rotation': True},
@@ -38,6 +39,8 @@ def get_general_config(max_features, n_samples):
         "nlayers": 12,
         "dropout": 0.0,
         "nhid_factor": 2,
+        'nhead': 512 // 128
+
     }
 
     return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer, 'dataloader': dataloader}
@@ -160,7 +163,7 @@ def get_base_config():
             'p_uninformative': 0.5},
     })
 
-    config['model-type'] = 'mothernet'
+    config['general'] = {'model_type': 'mothernet'}
 
     config['mothernet'] = {
         'weight_embedding_rank': None,

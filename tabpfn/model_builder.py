@@ -75,10 +75,41 @@ def get_y_encoder(config):
     return y_encoder
 
 
+def old_config_to_new(old_config, new_config):
+    old_config['learning_rate'] = old_config.pop('lr')
+    old_config['n_samples'] = old_config.pop('bptt')
+    if "y_encoder" not in old_config:
+        old_config['y_encoder'] = 'linear'
+    if "model_maker" in old_config:
+        old_config['model_type'] = old_config.pop('model_maker')
+    if "model_type" not in old_config:
+        old_config['model_type'] = 'tabpfn'
+    ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a', 'differentiable',
+                       'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample', 'normalize_ignore_label_too',
+                       'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder', 'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training']
+    for k in ignored_configs:
+        old_config.pop(k)
+    for k, v in new_config.items():
+        if k in old_config:
+            new_config[k] = old_config.pop(k)
+        elif isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(v2, dict):
+                    for k3, v3 in v2.items():
+                        if k3 in old_config:
+                            new_config[k][k2][k3] = old_config.pop(k3)
+                elif k2 in old_config:
+                    new_config[k][k2] = old_config.pop(k2)
+    assert len(old_config) == 0
+    return new_config
+
+
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
     config = get_base_config()
+    if 'optimizer' not in passed_config:
+        passed_config = old_config_to_new(passed_config, config)
     config.update(passed_config)
     verbose_train, verbose_prior = verbose >= 1, verbose >= 2
     config['verbose'] = verbose_prior
@@ -123,5 +154,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     if should_train:    
         model = train(dl, model, criterion=criterion, optimizer_state=optimizer_state, scheduler=scheduler,
                       epoch_callback=epoch_callback, verbose=verbose_train, device=device, **config['optimizer'])
+    else:
+        model = None, model, None, None
 
     return model
