@@ -73,7 +73,7 @@ def argparser_from_config(description="Train Mothernet"):
 
     # Additive model (WIP)
     additive = parser.add_argument_group('additive')
-    additive.add_argument('--input-bin-embedding', help="whether to use a shared low-rank embedding over bins in additive model", type=str2bool, default=False)
+    additive.add_argument('--input-bin-embedding', help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str, default="none")
     additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
     additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
     additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)

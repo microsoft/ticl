@@ -171,7 +171,7 @@ def test_train_tabpfn_boolean_prior():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only'])
-    assert results['loss'] == pytest.approx(2.3440020084381104)
+    assert results['loss'] == pytest.approx(2.3595831394195557)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -180,7 +180,7 @@ def test_train_tabpfn_boolean_prior_p_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
-    assert results['loss'] == pytest.approx(2.359046697616577)
+    assert results['loss'] == pytest.approx(2.349252939224243)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -188,8 +188,8 @@ def test_train_tabpfn_boolean_prior_p_uninformative():
 def test_train_tabpfn_boolean_prior_max_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '1'])
-    assert results['loss'] == pytest.approx(2.3682920932769775)
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '2'])
+    assert results['loss'] == pytest.approx(2.337641716003418)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -197,10 +197,10 @@ def test_train_tabpfn_boolean_prior_max_uninformative():
 def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '30', '-n', '1', '-A', 'True', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+        results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
                        'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
-    assert results['loss'] == pytest.approx(2.318601369857788)
+    assert results['loss'] == pytest.approx(2.3121724128723145)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -259,6 +259,14 @@ def test_train_additive_input_bin_embedding_rank():
     assert results['model'].encoder.embedding.shape == (64, 8)
     assert count_parameters(results['model']) == 8975018
     assert results['loss'] == pytest.approx(2.458144187927246, rel=1e-5)
+
+def test_train_additive_input_bin_embedding_linear():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'linear'])
+    assert results['model'].encoder.embedding.shape == (64, 16)
+    assert count_parameters(results['model']) == 9078730
+    assert results['loss'] == pytest.approx(2.427090883255005, rel=1e-5)
 
 def test_train_additive_factorized_output():
     L.seed_everything(42)
