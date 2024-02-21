@@ -36,6 +36,7 @@ class MLP(torch.nn.Module):
         self.random_feature_rotation = random_feature_rotation
         self.pre_sample_causes = pre_sample_causes
         self.add_uninformative_features = add_uninformative_features
+        
         self.is_causal = hyperparameters['is_causal']
         self.num_causes = hyperparameters['num_causes']
         self.prior_mlp_hidden_dim = hyperparameters['prior_mlp_hidden_dim']
