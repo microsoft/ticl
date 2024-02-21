@@ -1,6 +1,6 @@
 
 
-def assemble_model(encoder_layer, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder_layer, input_normalization,
+def assemble_model(encoder_layer, num_features, emsize, nhead, nhid_factor, nlayers, dropout, y_encoder_layer, input_normalization,
                    model_type, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
@@ -18,7 +18,7 @@ def assemble_model(encoder_layer, num_features, emsize, nhead, nhid, nlayers, dr
         n_out = 1
     if model_type == "mlp":
         model = MotherNet(
-            encoder_layer, n_out=n_out, emsize=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout,
+            encoder_layer, n_out=n_out, emsize=emsize, nhead=nhead, nhid_factor=nhid_factor, nlayers=nlayers, dropout=dropout,
             y_encoder_layer=y_encoder_layer, input_normalization=input_normalization,
             efficient_eval_masking=efficient_eval_masking, output_attention=output_attention, special_token=special_token,
             predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
@@ -38,13 +38,13 @@ def assemble_model(encoder_layer, num_features, emsize, nhead, nhid, nlayers, dr
         )
     elif model_type == "additive":
         model = MotherNetAdditive(
-            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder_layer,
+            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid_factor=nhid_factor, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder_layer,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, input_bin_embedding=input_bin_embedding,
             factorized_output=factorized_output, output_rank=output_rank, bin_embedding_rank=bin_embedding_rank)
     elif model_type == "tabpfn":
         model = TabPFN(
-            encoder_layer, n_out=n_out, emsize=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout,
+            encoder_layer, n_out=n_out, emsize=emsize, nhead=nhead, nhid_factor=nhid_factor, nlayers=nlayers, dropout=dropout,
             y_encoder_layer=y_encoder_layer, input_normalization=input_normalization,
             efficient_eval_masking=efficient_eval_masking, pre_norm=pre_norm, **model_extra_args
         )

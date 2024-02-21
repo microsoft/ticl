@@ -143,7 +143,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     encoder = get_encoder(config)
     model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
-                           nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
+                           nhid_factor=config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config['input_normalization'],  model_type=config['model_type'], max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
                            model_state=model_state, load_model_strict=load_model_strict,

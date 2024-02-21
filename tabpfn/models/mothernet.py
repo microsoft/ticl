@@ -52,12 +52,13 @@ class MLPModelPredictor(nn.Module):
 
 
 class MotherNet(MLPModelPredictor):
-    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid, nlayers, dropout=0.0,
+    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder_layer=None, low_rank_weights=False):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
         super().__init__()
+        nhid = emsize *  nhid_factor
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\

@@ -267,7 +267,8 @@ class TabPerceiver(MLPModelPredictor):
         decoder_embed_dim=512,
         special_token=False,
         decoder_two_hidden_layers=False, no_double_embedding=False,
-        encoder=None,
+        y_encoder_layer=None,
+        encoder_layer=None,
         predicted_hidden_layers=1,
         recompute_attn=None, # ignored
         nhid_factor=None, # ignored
@@ -275,7 +276,7 @@ class TabPerceiver(MLPModelPredictor):
         efficient_eval_masking=None, # ignored
         input_normalization=None, # ignored
         low_rank_weights=None,
-        y_encoder_layer=None, 
+        y_encoder=None, # ignored, y_encoder_layer is passed
         weight_embedding_rank=None,
         
     ):
@@ -303,7 +304,7 @@ class TabPerceiver(MLPModelPredictor):
         """
         super().__init__()
         self.y_encoder = y_encoder_layer
-        self.encoder = encoder
+        self.encoder = encoder_layer
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = emsize
