@@ -28,7 +28,7 @@ def assemble_model(encoder_layer, num_features, emsize, nhead, nhid_factor, nlay
         )
     elif model_type == 'perceiver':
         model = TabPerceiver(
-            encoder=encoder_layer, emsize=emsize, nlayers=nlayers, n_out=n_out, nhead=nhead, dropout=dropout,
+            encoder_layer=encoder_layer, emsize=emsize, nlayers=nlayers, n_out=n_out, nhead=nhead, dropout=dropout,
             y_encoder_layer=y_encoder_layer, output_attention=output_attention, special_token=special_token,
             predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
             decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
@@ -38,7 +38,7 @@ def assemble_model(encoder_layer, num_features, emsize, nhead, nhid_factor, nlay
         )
     elif model_type == "additive":
         model = MotherNetAdditive(
-            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid_factor=nhid_factor, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder_layer,
+            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid_factor=nhid_factor, nlayers=nlayers, dropout=dropout, y_encoder_layer=y_encoder_layer,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, input_bin_embedding=input_bin_embedding,
             factorized_output=factorized_output, output_rank=output_rank, bin_embedding_rank=bin_embedding_rank)
