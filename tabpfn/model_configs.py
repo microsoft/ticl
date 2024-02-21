@@ -24,7 +24,7 @@ def get_general_config(max_features, n_samples):
         "batch_size": 8,
         "num_steps": None,
         'min_eval_pos': 2,
-        'max_eval_pos': n_samples}
+        'max_eval_pos': 1000}
     
     optimizer = {
         "aggregate_k_gradients": 1,
