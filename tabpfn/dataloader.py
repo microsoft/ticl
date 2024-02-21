@@ -40,8 +40,9 @@ class PriorDataLoader(DataLoader):
 
 def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, device):
     gp_flexible = ClassificationAdapterPrior(priors.GPPrior())
-    mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior())
-
+    mlp_config = dict(prior_mlp_scale_weights_sqrt=config['prior_mlp_scale_weights_sqrt'], random_feature_rotation=config['random_feature_rotation'],
+                                                              pre_sample_causes=config['pre_sample_causes'], add_uninformative_features=config['add_uninformative_features'])
+    mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior(config=mlp_config))
     hyperparameters = config.copy()
     # if 'num_features_used' in hyperparameters:
     #     hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
