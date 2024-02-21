@@ -36,7 +36,7 @@ class MotherNetAdditive(nn.Module):
         else:
             raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
 
-        self.input_ln = SeqBN(ninp) if input_normalization else None 
+        self.input_ln = SeqBN(emsize) if input_normalization else None 
         self.init_method = init_method
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
