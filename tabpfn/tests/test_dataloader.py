@@ -95,21 +95,26 @@ def test_get_dataloader_heterogeneous_batches():
 
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
-    assert config_sample['num_layers'].alpha == 0.1283677857195334
-    assert config_sample['num_layers'].scale == 0.522328006002253
-    assert config_sample['prior_bag_exp_weights_1'] == 8.114981297773888
-    assert config_sample['is_causal'] == False
-    assert config_sample['sort_features'] == False
-    assert config_sample['noise_std'] == 0.001965810983472645
+    alphas = [x['num_layers'].alpha for x in config_sample]
+    assert alphas[-1] == 0.1283677857195334
+    assert alphas[0] == 0.6722902794233997
+    scales = [x['num_layers'].alpha for x in config_sample]
+    assert scales[-1] == 0.1283677857195334
+    assert scales[0] == 0.6722902794233997
+    assert config_sample[-1]['prior_bag_exp_weights_1'] == 8.114981297773888
+    assert config_sample[-1]['is_causal'] == False
+    assert config_sample[-1]['sort_features'] == False
+    assert config_sample[-1]['noise_std'] == 0.001965810983472645
+    assert len(config_sample) == batch_size
 
     # 98 features
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 98
 
     x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu", hyperparameters=dataloader.hyperparameters)
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 97
-    assert config_sample['noise_std'] == 0.23350879018430812
-    assert config_sample['sort_features'] == True
-    assert config_sample['is_causal'] == True
+    assert config_sample[-1]['noise_std'] == 0.23350879018430812
+    assert config_sample[-1]['sort_features'] == True
+    assert config_sample[-1]['is_causal'] == True
 
 
 

@@ -233,15 +233,17 @@ class SamplerPrior:
         with torch.no_grad():
             if self.heterogeneous_batches:
                 args['batch_size'] = 1
-                xs, ys, ys_ = [], [], []
+                xs, ys, ys_, sampled_hypers_ = [], [], [], []
                 for i in range(0, batch_size):
                     sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
+                    sampled_hypers_.append(sampled_hypers)
                     combined_hypers = {**hyperparameters, **sampled_hypers}
                     x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
                     xs.append(x)
                     ys.append(y)
                     ys_.append(y_)
                     x, y, y_ = torch.cat(xs, 1), torch.cat(ys, 1), torch.cat(ys_, 1)
+                sampled_hypers = sampled_hypers_
             else:
                 sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
                 combined_hypers = {**hyperparameters, **sampled_hypers}
