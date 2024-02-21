@@ -15,7 +15,7 @@ class TabPFN(nn.Module):
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None):
         super().__init__()
-        self.y_encoder = y_encoder # unused for now, y_encoder_layer was passed
+        self.y_encoder = y_encoder_layer
         nhid = emsize * nhid_factor
 
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
@@ -24,7 +24,6 @@ class TabPFN(nn.Module):
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.emsize = emsize
         self.encoder = encoder_layer
-        self.y_encoder = y_encoder_layer
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method

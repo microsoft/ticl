@@ -59,7 +59,6 @@ class MotherNet(MLPModelPredictor):
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
         super().__init__()
         nhid = emsize *  nhid_factor
-
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
