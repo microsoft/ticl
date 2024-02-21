@@ -9,7 +9,7 @@ from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
 class MotherNetAdditive(nn.Module):
-    def __init__(self, *, n_features, n_out, emsize, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+    def __init__(self, *, n_features, n_out, emsize, nhead, nhid, nlayers, dropout=0.0,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
@@ -17,7 +17,7 @@ class MotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, 
                  predicted_hidden_layer_size=None, output_attention=None, special_token=None, no_double_embedding=None, predicted_hidden_layers=None):
         super().__init__()
-        self.y_encoder = y_encoder_layer
+        self.y_encoder = y_encoder
         self.low_rank_weights = low_rank_weights # ignored for now
         self.weight_embedding_rank = weight_embedding_rank # ignored for now
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
