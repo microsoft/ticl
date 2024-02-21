@@ -11,7 +11,6 @@ def get_general_config(max_features, n_samples):
         "num_features": max_features,
         "n_samples": n_samples,
         "eval_positions": [n_samples * 0.95],
-        "max_eval_pos": n_samples,
         "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
         'prior_type': 'prior_bag',
@@ -25,7 +24,7 @@ def get_general_config(max_features, n_samples):
         "batch_size": 8,
         "num_steps": None,
         'min_eval_pos': 2,
-        'max_eval_pos': 1000,}
+        'max_eval_pos': n_samples}
     
     optimizer = {
         "aggregate_k_gradients": 1,

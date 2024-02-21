@@ -55,7 +55,7 @@ def main(argv):
     config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * 64 // config['dataloader']['batch_size'] // config['dataloader']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
-        config['prior']['max_eval_pos'] = 16
+        config['dataloader']['max_eval_pos'] = 16
         config['prior']['n_samples'] = 2 * 16
         config['transformer']['nhead'] = 1
 
