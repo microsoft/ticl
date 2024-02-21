@@ -8,14 +8,26 @@ import torch
 import tabpfn.models.encoders as encoders
 from tabpfn.assemble_model import assemble_model
 from tabpfn.dataloader import get_dataloader
-from tabpfn.train import get_criterion, train
+from tabpfn.train import train
 from tabpfn.model_configs import get_base_config
+from torch import nn
+
 
 try:
     from functools import cache
 except ImportError:
     from functools import lru_cache
     cache = lru_cache(maxsize=None)
+
+
+def get_criterion(max_num_classes):
+    if max_num_classes == 2:
+        loss = nn.BCEWthLogitsLoss(reduction='none')
+    elif max_num_classes > 2:
+        loss = nn.CrossEntropyLoss(reduction='none', weight=torch.ones(max_num_classes))
+    else:
+        raise ValueError(f"Invalid number of classes: {max_num_classes}")
+    return loss
 
 
 def save_model(model, optimizer, scheduler, path, filename, config_sample):
