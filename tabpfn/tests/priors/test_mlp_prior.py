@@ -10,7 +10,6 @@ import pytest
 def test_mlp_prior(batch_size, num_features, n_samples):
     # test the mlp prior
     L.seed_everything(42)
-    prior = MLPPrior()
     hyperparameters = {
         'pre_sample_causes': True,
         'prior_mlp_activations': torch.nn.ReLU,
@@ -31,6 +30,10 @@ def test_mlp_prior(batch_size, num_features, n_samples):
         'random_feature_rotation': True,
         'add_uninformative_features': False,
     }
+    mlp_config = dict(prior_mlp_scale_weights_sqrt=hyperparameters['prior_mlp_scale_weights_sqrt'], random_feature_rotation=hyperparameters['random_feature_rotation'],
+                                                              pre_sample_causes=hyperparameters['pre_sample_causes'], add_uninformative_features=hyperparameters['add_uninformative_features'])
+    prior = MLPPrior(mlp_config)
+
     x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)

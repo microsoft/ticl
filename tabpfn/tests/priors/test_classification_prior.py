@@ -15,7 +15,6 @@ from tabpfn.priors.differentiable_prior import parse_distributions
 def test_classification_prior(batch_size, num_features, n_samples, n_classes):
     # test the mlp prior
     L.seed_everything(42)
-    prior = ClassificationAdapterPrior(MLPPrior())
     hyperparameters = {
         'prior_mlp_activations': lambda: torch.nn.ReLU, # relu is callable so we'd try to call it thinking it's a sampling function....
         'is_causal' : False,
@@ -47,6 +46,9 @@ def test_classification_prior(batch_size, num_features, n_samples, n_classes):
         'categorical_feature_p': 0.2,
 
     }
+    mlp_config = dict(prior_mlp_scale_weights_sqrt=hyperparameters['prior_mlp_scale_weights_sqrt'], random_feature_rotation=hyperparameters['random_feature_rotation'],
+                                                              pre_sample_causes=hyperparameters['pre_sample_causes'], add_uninformative_features=hyperparameters['add_uninformative_features'])
+    prior = ClassificationAdapterPrior(MLPPrior(mlp_config))
     x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
