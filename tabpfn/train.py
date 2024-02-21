@@ -22,7 +22,7 @@ def eval_criterion(criterion, targets, output, device, n_out):
     elif isinstance(criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
         losses = criterion(output.flatten(), targets.to(device).flatten())
     elif isinstance(criterion, nn.CrossEntropyLoss):
-        losses = criterion(output.reshape(-1, n_out), targets.to(device).long().flatten())
+        losses = criterion(output.reshape(-1, n_out)[:, :int(targets.max()) + 1], targets.to(device).long().flatten())
     else:
         losses = criterion(output, targets)
     losses = losses.view(*output.shape[0:2])

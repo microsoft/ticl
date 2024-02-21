@@ -24,7 +24,7 @@ def get_criterion(max_num_classes):
     if max_num_classes == 2:
         loss = nn.BCEWthLogitsLoss(reduction='none')
     elif max_num_classes > 2:
-        loss = nn.CrossEntropyLoss(reduction='none', weight=torch.ones(max_num_classes))
+        loss = nn.CrossEntropyLoss(reduction='none')
     else:
         raise ValueError(f"Invalid number of classes: {max_num_classes}")
     return loss
