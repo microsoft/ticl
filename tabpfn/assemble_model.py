@@ -30,7 +30,7 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
         )
     elif model_type == 'perceiver':
         model = TabPerceiver(
-            encoder=encoder, emsize=emsize, depth=nlayers, n_out=n_out, latent_dim=emsize, latent_heads=nhead, ff_dropout=dropout,
+            encoder=encoder, emsize=emsize, nlayers=nlayers, n_out=n_out, nhead=nhead, dropout=dropout,
             y_encoder=y_encoder, output_attention=output_attention, special_token=special_token,
             predicted_hidden_layer_size=predicted_hidden_layer_size, decoder_embed_dim=decoder_embed_dim,
             decoder_hidden_size=decoder_hidden_size, decoder_two_hidden_layers=decoder_two_hidden_layers,
