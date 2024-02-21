@@ -38,7 +38,7 @@ def assemble_model(encoder_layer, num_features, emsize, nhead, nhid, nlayers, dr
         )
     elif model_type == "additive":
         model = MotherNetAdditive(
-            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder,
+            n_features=num_features, n_out=n_out, emsize=emsize, nhead=nhead, nhid=nhid, nlayers=nlayers, dropout=dropout, y_encoder=y_encoder_layer,
             input_normalization=input_normalization, pre_norm=pre_norm, decoder_embed_dim=decoder_embed_dim,
             decoder_two_hidden_layers=decoder_two_hidden_layers, decoder_hidden_size=decoder_hidden_size, n_bins=64, input_bin_embedding=input_bin_embedding,
             factorized_output=factorized_output, output_rank=output_rank, bin_embedding_rank=bin_embedding_rank)
