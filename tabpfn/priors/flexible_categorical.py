@@ -8,6 +8,7 @@ from torch import nn
 from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers)
+
 from tabpfn.priors.differentiable_prior import sample_distributions
 from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
 
@@ -200,11 +201,7 @@ class ClassificationAdapterPrior:
 
     def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
-            # Sample one n_samples for entire batch
-            # n_samples = hyperparameters['n_samples_used']() if callable(hyperparameters['n_samples_used']) else n_samples
-
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-
             x, y, y_ = ClassificationAdapter(self.base_prior, hyperparameters)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
