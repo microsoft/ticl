@@ -10,15 +10,6 @@ import tabpfn.utils as utils
 from tabpfn.utils import ExponentialLR, ReduceLROnSpike, init_dist
 
 
-def get_criterion(max_num_classes):
-    if max_num_classes == 2:
-        loss = nn.BCEWthLogitsLoss(reduction='none')
-    elif max_num_classes > 2:
-        loss = nn.CrossEntropyLoss(reduction='none', weight=torch.ones(max_num_classes))
-    else:
-        raise ValueError(f"Invalid number of classes: {max_num_classes}")
-    return loss
-
 
 def eval_criterion(criterion, targets, output, device, n_out):
     if isinstance(criterion, nn.GaussianNLLLoss):
@@ -31,7 +22,7 @@ def eval_criterion(criterion, targets, output, device, n_out):
     elif isinstance(criterion, (nn.MSELoss, nn.BCEWithLogitsLoss)):
         losses = criterion(output.flatten(), targets.to(device).flatten())
     elif isinstance(criterion, nn.CrossEntropyLoss):
-        losses = criterion(output.reshape(-1, n_out), targets.to(device).long().flatten())
+        losses = criterion(output.reshape(-1, n_out)[:, :int(targets.max()) + 1], targets.to(device).long().flatten())
     else:
         losses = criterion(output, targets)
     losses = losses.view(*output.shape[0:2])
