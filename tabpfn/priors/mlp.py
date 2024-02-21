@@ -42,7 +42,6 @@ class MLP(torch.nn.Module):
         self.pre_sample_weights = hyperparameters['pre_sample_weights']
         self.prior_mlp_dropout_prob = hyperparameters['prior_mlp_dropout_prob']
         self.pre_sample_causes = hyperparameters['pre_sample_causes']
-        self.verbose = hyperparameters['verbose']
         self.block_wise_dropout = hyperparameters['block_wise_dropout']
         self.init_std = hyperparameters['init_std']
         self.prior_mlp_scale_weights_sqrt = hyperparameters['prior_mlp_scale_weights_sqrt']
