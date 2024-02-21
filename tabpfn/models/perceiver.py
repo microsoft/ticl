@@ -134,7 +134,6 @@ class Perceiver(nn.Module):
         num_classes=1000,
         attn_dropout=0.,
         ff_dropout=0.,
-        weight_tie_layers=False,
         fourier_encode_data=True,
         self_per_cross_attn=1,
         final_classifier_head=True
@@ -250,18 +249,17 @@ class TabPerceiver(MLPModelPredictor):
     def __init__(
         self,
         *,
-        depth,
-        input_dim=512,
+        nlayers,
+        emsize=512,
         input_axis=1,
         num_latents=512,
-        latent_dim=512,
         cross_heads=1,
-        latent_heads=8,
+        nhead=8,
         cross_dim_head=64,
         latent_dim_head=64,
         n_out=10,
         attn_dropout=0.,
-        ff_dropout=0.,
+        dropout=0., # feed forward dropout
         self_per_cross_attn=1,
         decoder_hidden_size=512,
         predicted_hidden_layer_size=128,
@@ -269,17 +267,24 @@ class TabPerceiver(MLPModelPredictor):
         decoder_embed_dim=512,
         special_token=False,
         decoder_two_hidden_layers=False, no_double_embedding=False,
-        y_encoder=None,
-        encoder=None,
+        y_encoder_layer=None,
+        encoder_layer=None,
         predicted_hidden_layers=1,
+        recompute_attn=None, # ignored
+        nhid_factor=None, # ignored
+        pre_norm=None, # ignored
+        efficient_eval_masking=None, # ignored
+        input_normalization=None, # ignored
+        low_rank_weights=None,
+        y_encoder=None, # ignored, y_encoder_layer is passed
         weight_embedding_rank=None,
-        low_rank_weights=False
+        
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)
 
         Args:
-          depth: Depth of net.
+          nlayers: Depth of net.
           input_channels: Number of channels for each token of the input.
           input_axis: Number of axes for input data (2 for images, 3 for video)
           num_latents: Number of latents, or induced set points, or centroids.
@@ -298,33 +303,36 @@ class TabPerceiver(MLPModelPredictor):
           final_classifier_head: mean pool and project embeddings to number of classes (num_classes) at the end
         """
         super().__init__()
-        self.y_encoder = y_encoder
-        self.encoder = encoder
+        self.y_encoder = y_encoder_layer
+        self.encoder = encoder_layer
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
-        self.input_dim = input_dim
+        self.input_dim = emsize
+        latent_dim = emsize
+        # FIXME cross heads one is too little!
+        latent_heads = nhead
         self.n_out = n_out
-        self.ff_dropout = ff_dropout
+        self.ff_dropout = dropout
         assert not special_token
         self.special_token = special_token
         self.no_double_embedding = no_double_embedding
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
         self.layers = nn.ModuleList([])
-        for i in range(depth):
+        for i in range(nlayers):
             self_attns = nn.ModuleList([])
 
             for block_ind in range(self_per_cross_attn):
                 latent_block = nn.Module()
                 latent_block.add_module('latent_attn', PreNorm(latent_dim, Attention(
                     latent_dim, heads=latent_heads, dim_head=latent_dim_head, dropout=attn_dropout)))
-                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=ff_dropout, mult=1)))
+                latent_block.add_module('latent_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
                 self_attns.append(latent_block)
 
             cross_attn_layer = nn.Module()
-            cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, input_dim, heads=cross_heads,
-                                        dim_head=cross_dim_head, dropout=attn_dropout), context_dim=input_dim))
-            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=ff_dropout, mult=1)))
+            cross_attn_layer.add_module('cross_attn', PreNorm(latent_dim, Attention(latent_dim, emsize, heads=cross_heads,
+                                        dim_head=cross_dim_head, dropout=attn_dropout), context_dim=emsize))
+            cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=output_attention,

@@ -9,30 +9,33 @@ from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
 class MotherNetAdditive(nn.Module):
-    def __init__(self, n_features, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, y_encoder=None,
-                 pos_encoder=None, input_normalization=False, init_method=None, pre_norm=False,
+    def __init__(self, *, n_features, n_out, emsize, nhead, nhid, nlayers, dropout=0.0, y_encoder_layer=None,
+                 input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048,
+                 all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False, nonlinear_bin_embedding=True):
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, 
+                 predicted_hidden_layer_size=None, output_attention=None, special_token=None, no_double_embedding=None, predicted_hidden_layers=None):
         super().__init__()
-        self.model_type = 'Transformer'
-        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+        self.y_encoder = y_encoder_layer
+        self.low_rank_weights = low_rank_weights # ignored for now
+        self.weight_embedding_rank = weight_embedding_rank # ignored for now
+        def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
-        self.ninp = ninp
+        self.emsize = emsize
+
         if input_bin_embedding == "linear":
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=False)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=False)
         elif input_bin_embedding in ["True", "nonlinear"] or isinstance(input_bin_embedding, bool) and input_bin_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=ninp, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True)
         elif input_bin_embedding in ["none", "False"] or isinstance(input_bin_embedding, bool) and not input_bin_embedding:
-            self.encoder = Linear(num_features=n_features*n_bins, emsize=ninp, replace_nan_by_zero=True)
+            self.encoder = Linear(num_features=n_features*n_bins, emsize=emsize, replace_nan_by_zero=True)
         else:
             raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
-        self.y_encoder = y_encoder
-        self.pos_encoder = pos_encoder
-        self.input_ln = SeqBN(ninp) if input_normalization else None 
+
+        self.input_ln = SeqBN(emsize) if input_normalization else None 
         self.init_method = init_method
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
@@ -44,11 +47,11 @@ class MotherNetAdditive(nn.Module):
         self.factorized_output = factorized_output
 
         if factorized_output:
-            self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
+            self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim,
                                                           decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, rank=output_rank)
         else:
-            self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=ninp, hidden_size=decoder_hidden_size, n_out=n_out,
+            self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim,
                                                 decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
 

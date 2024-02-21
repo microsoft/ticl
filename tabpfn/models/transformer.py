@@ -10,27 +10,25 @@ from tabpfn.utils import SeqBN, bool_mask_to_att_mask
 
 
 class TabPFN(nn.Module):
-    def __init__(self, encoder, n_out, ninp, nhead, nhid, nlayers, dropout=0.0, style_encoder=None, y_encoder=None,
-                 pos_encoder=None, decoder=None, input_normalization=False, init_method=None, pre_norm=False,
+    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid, nlayers, dropout=0.0,  
+                 decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
-                 all_layers_same_init=False, efficient_eval_masking=True):
+                 all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None):
         super().__init__()
-        self.model_type = 'Transformer'
-        def encoder_layer_creator(): return TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation=activation,
+        self.y_encoder = y_encoder
+
+        def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
-        self.ninp = ninp
-        self.encoder = encoder
-        self.y_encoder = y_encoder
-        self.pos_encoder = pos_encoder
-        self.decoder = decoder(ninp, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(ninp, nhid), nn.GELU(), nn.Linear(nhid, n_out))
-        self.input_ln = SeqBN(ninp) if input_normalization else None
-        self.style_encoder = style_encoder
+        self.emsize = emsize
+        self.encoder = encoder_layer
+        self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
+        self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         if num_global_att_tokens is not None:
             assert not full_attention
-        self.global_att_embeddings = nn.Embedding(num_global_att_tokens, ninp) if num_global_att_tokens else None
+        self.global_att_embeddings = nn.Embedding(num_global_att_tokens, emsize) if num_global_att_tokens else None
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
 
@@ -97,8 +95,7 @@ class TabPFN(nn.Module):
         style_src, x_src, y_src = src
         x_src = self.encoder(x_src)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        style_src = self.style_encoder(style_src).unsqueeze(0) if self.style_encoder else \
-            torch.tensor([], device=x_src.device)
+        style_src = torch.tensor([], device=x_src.device)
         global_src = torch.tensor([], device=x_src.device) if self.global_att_embeddings is None else \
             self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
 
@@ -126,9 +123,6 @@ class TabPFN(nn.Module):
 
         if self.input_ln is not None:
             src = self.input_ln(src)
-
-        if self.pos_encoder is not None:
-            src = self.pos_encoder(src)
 
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
