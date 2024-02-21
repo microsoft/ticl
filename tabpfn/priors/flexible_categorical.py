@@ -198,7 +198,6 @@ class ClassificationAdapter:
 
         return x, y, y  # x.shape = (T,B,H)
 
-
 class ClassificationAdapterPrior:
     def __init__(self, base_prior, **config):
         self.base_prior = base_prior
