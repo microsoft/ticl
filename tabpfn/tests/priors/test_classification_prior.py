@@ -101,8 +101,9 @@ def test_classification_adapter_with_sampling():
         "num_features_used": uniform_int_sampler_f(1, 100)
     }
     hyperparameters = parse_distributions(hyperparameters)
-
-    adapter = ClassificationAdapter(MLPPrior(), hyperparameters, config={})
+    mlp_config = dict(prior_mlp_scale_weights_sqrt=hyperparameters['prior_mlp_scale_weights_sqrt'], random_feature_rotation=hyperparameters['random_feature_rotation'],
+                                                              pre_sample_causes=hyperparameters['pre_sample_causes'], add_uninformative_features=hyperparameters['add_uninformative_features'])
+    adapter = ClassificationAdapter(MLPPrior(mlp_config), hyperparameters, config={})
     assert adapter.h['num_layers'] == 6
     assert adapter.h['num_features_used'] == 7
     assert adapter.h['num_classes'] == 3
