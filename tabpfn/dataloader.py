@@ -43,8 +43,8 @@ def get_dataloader(prior_type, config, steps_per_epoch, batch_size, n_samples, d
     mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior())
 
     hyperparameters = config.copy()
-    if 'num_features_used' in hyperparameters:
-        hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
+    # if 'num_features_used' in hyperparameters:
+    #     hyperparameters['num_features_used'] = config['num_features_used']['uniform_int_sampler_f(3,max_features)']
     
     if prior_type == 'prior_bag':
         # Prior bag combines priors
