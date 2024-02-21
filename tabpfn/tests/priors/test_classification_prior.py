@@ -102,7 +102,7 @@ def test_classification_adapter_with_sampling():
     }
     hyperparameters = parse_distributions(hyperparameters)
 
-    adapter = ClassificationAdapter(MLPPrior(), hyperparameters)
+    adapter = ClassificationAdapter(MLPPrior(), hyperparameters, config={})
     assert adapter.h['num_layers'] == 6
     assert adapter.h['num_features_used'] == 7
     assert adapter.h['num_classes'] == 3
