@@ -180,5 +180,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                         weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
                         reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
                         )
-
+    else:
+        model = None, model, None, None
     return model
