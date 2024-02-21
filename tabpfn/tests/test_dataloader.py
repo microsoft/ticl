@@ -62,11 +62,11 @@ def test_get_dataloader_base_config():
 def test_get_dataloader_heterogeneous_batches():
     L.seed_everything(42)
     config = get_base_config()
-    config['heterogeneous_batches'] = True
     # config['num_causes'] = 3
     # config['num_features'] = 10
     # num_features really doesn't work lol
     prior_config = config['prior']
+    prior_config['heterogeneous_batches'] = True
     dataloader_config = config['dataloader']
     batch_size = 16
     dataloader_config['steps_per_epoch'] = 1
