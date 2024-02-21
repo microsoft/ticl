@@ -275,7 +275,7 @@ class TabPerceiver(MLPModelPredictor):
         efficient_eval_masking=None, # ignored
         input_normalization=None, # ignored
         low_rank_weights=None,
-        y_encoder=None, # ignored, y_encoder_layer is passed
+        y_encoder_layer=None, 
         weight_embedding_rank=None,
         
     ):
@@ -302,7 +302,7 @@ class TabPerceiver(MLPModelPredictor):
           final_classifier_head: mean pool and project embeddings to number of classes (num_classes) at the end
         """
         super().__init__()
-        self.y_encoder = y_encoder
+        self.y_encoder = y_encoder_layer
         self.encoder = encoder
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize

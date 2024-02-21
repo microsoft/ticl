@@ -14,10 +14,10 @@ class MotherNetAdditive(nn.Module):
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, 
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder_layer=None, 
                  predicted_hidden_layer_size=None, output_attention=None, special_token=None, no_double_embedding=None, predicted_hidden_layers=None):
         super().__init__()
-        self.y_encoder = y_encoder
+        self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights # ignored for now
         self.weight_embedding_rank = weight_embedding_rank # ignored for now
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,

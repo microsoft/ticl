@@ -56,7 +56,7 @@ class MotherNet(MLPModelPredictor):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder_layer=None, low_rank_weights=False):
         super().__init__()
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
@@ -64,7 +64,7 @@ class MotherNet(MLPModelPredictor):
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.emsize = emsize
         self.encoder = encoder_layer
-        self.y_encoder = y_encoder
+        self.y_encoder = y_encoder_layer
         self.decoder = LinearModelDecoder(emsize=emsize, hidden_size=nhid, n_out=n_out)
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
