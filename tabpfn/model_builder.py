@@ -68,9 +68,9 @@ def get_encoder(config):
     if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
         ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
             ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
-        encoder = encoders.NanHandlingEncoder
+        encoder = encoders.NanHandlingEncoder(config['num_features'], config['emsize'])
     else:
-        encoder = partial(encoders.Linear, replace_nan_by_zero=True)
+        encoder = encoders.Linear(config['num_features'], config['emsize'], replace_nan_by_zero=True)
 
     if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
         encoder = encoders.FeaturewiseMLP
@@ -85,6 +85,35 @@ def get_y_encoder(config):
     else:
         raise ValueError(f"Unknown y_encoder: {config['y_encoder']}")
     return y_encoder
+
+
+def old_config_to_new(old_config, new_config):
+    old_config['learning_rate'] = old_config.pop('lr')
+    old_config['n_samples'] = old_config.pop('bptt')
+    if "y_encoder" not in old_config:
+        old_config['y_encoder'] = 'linear'
+    if "model_maker" in old_config:
+        old_config['model_type'] = old_config.pop('model_maker')
+    if "model_type" not in old_config:
+        old_config['model_type'] = 'tabpfn'
+    ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a', 'differentiable',
+                       'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample', 'normalize_ignore_label_too',
+                       'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder', 'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training']
+    for k in ignored_configs:
+        old_config.pop(k)
+    for k, v in new_config.items():
+        if k in old_config:
+            new_config[k] = old_config.pop(k)
+        elif isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(v2, dict):
+                    for k3, v3 in v2.items():
+                        if k3 in old_config:
+                            new_config[k][k2][k3] = old_config.pop(k3)
+                elif k2 in old_config:
+                    new_config[k][k2] = old_config.pop(k2)
+    assert len(old_config) == 0
+    return new_config
 
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
@@ -108,14 +137,12 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         else:
             config['model_type'] = 'tabpfn'
 
-    epochs = 0 if not should_train else config['epochs']
-
     dl = get_dataloader(config=config, steps_per_epoch=config['num_steps'], batch_size=config['batch_size'], n_samples=config['n_samples'], device=device,
                         prior_type=config['prior_type'])
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
-    model = assemble_model(encoder_generator=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
+    model = assemble_model(encoder=encoder, y_encoder=y_encoder, num_features=config['num_features'], emsize=config['emsize'], nhead=config['nhead'],
                            nhid=config['emsize'] * config['nhid_factor'], nlayers=config['nlayers'], dropout=config['dropout'],
                            input_normalization=config['input_normalization'],  model_type=config['model_type'], max_num_classes=config['max_num_classes'],
                            predicted_hidden_layer_size=config['predicted_hidden_layer_size'],
@@ -128,20 +155,30 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
                            num_latents=config['num_latents'], input_bin_embedding=config['input_bin_embedding'], factorized_output=config['factorized_output'], output_rank=config['output_rank'],
                            bin_embedding_rank=config['bin_embedding_rank'], low_rank_weights=config['low_rank_weights'])
 
+    if model_state is not None:
+        if not load_model_strict:
+            for k, v in model.state_dict().items():
+                if k in model_state and model_state[k].shape != v.shape:
+                    model_state.pop(k)
+        model.load_state_dict(model_state, strict=load_model_strict)
+
+    if verbose:
+        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
+
     if 'losses' in config:
         # for continuing training
         model.losses = config['losses']
         model.learning_rates = config['learning_rates']
         model.wallclock_times = config.get('wallclock_times', [])
-
-    model = train(dl,
-                  model, criterion=criterion,
-                  optimizer_state=optimizer_state, scheduler=scheduler, epochs=epochs, stop_after_epochs=config['stop_after_epochs'],
-                  warmup_epochs=config['warmup_epochs'], device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
-                  learning_rate=config['lr'], min_lr=config['min_lr'],
-                  learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config['lr_decay'], verbose=verbose_train, train_mixed_precision=config['train_mixed_precision'],
-                  weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
-                  reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
-                  )
+    if should_train:
+        model = train(dl,
+                      model, criterion=criterion,
+                      optimizer_state=optimizer_state, scheduler=scheduler, epochs=config['epochs'], stop_after_epochs=config['stop_after_epochs'],
+                        warmup_epochs=config['warmup_epochs'], device=device, aggregate_k_gradients=config['aggregate_k_gradients'], epoch_callback=epoch_callback,
+                        learning_rate=config['lr'], min_lr=config['min_lr'],
+                        learning_rate_schedule=config['learning_rate_schedule'], lr_decay=config['lr_decay'], verbose=verbose_train, train_mixed_precision=config['train_mixed_precision'],
+                        weight_decay=config['weight_decay'], adaptive_batch_size=config['adaptive_batch_size'],
+                        reduce_lr_on_spike=config['reduce_lr_on_spike'], adam_beta1=config['adam_beta1'], spike_tolerance=config['spike_tolerance']
+                        )
 
     return model

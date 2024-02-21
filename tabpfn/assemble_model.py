@@ -1,13 +1,11 @@
 
 
-def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
+def assemble_model(encoder, num_features, emsize, nhead, nhid, nlayers, dropout, y_encoder, input_normalization,
                    model_type, max_num_classes, efficient_eval_masking=False,
                    output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=None,
                    decoder_hidden_size=None, decoder_two_hidden_layers=False, no_double_embedding=False,
                    model_state=None, load_model_strict=True, verbose=False, pre_norm=False, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False, num_latents=512, input_bin_embedding=False,
                    factorized_output=False, output_rank=None, bin_embedding_rank=None, **model_extra_args):
-    encoder = encoder_generator(num_features, emsize)
-    decoder_hidden_size = decoder_hidden_size or nhid
 
     from tabpfn.models.mothernet_additive import MotherNetAdditive
     from tabpfn.models.perceiver import TabPerceiver
@@ -52,14 +50,4 @@ def assemble_model(encoder_generator, num_features, emsize, nhead, nhid, nlayers
         )
     else:
         raise ValueError(f"Unknown model type {model_type}.")
-    if model_state is not None:
-        if not load_model_strict:
-            for k, v in model.state_dict().items():
-                if k in model_state and model_state[k].shape != v.shape:
-                    model_state.pop(k)
-        model.load_state_dict(model_state, strict=load_model_strict)
-
-    if verbose:
-        print(f"Using a Transformer with {sum(p.numel() for p in model.parameters())/1000/1000:.{2}f} M parameters")
-
     return model
