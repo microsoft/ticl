@@ -59,25 +59,14 @@ class TabPFN(nn.Module):
         x_src = self.encoder(x_src)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         style_src = torch.tensor([], device=x_src.device)
-        global_src = torch.tensor([], device=x_src.device) if self.global_att_embeddings is None else \
-            self.global_att_embeddings.weight.unsqueeze(1).repeat(1, x_src.shape[1], 1)
+        global_src = torch.tensor([], device=x_src.device)
 
-        if src_mask is not None:
-            assert self.global_att_embeddings is None or isinstance(src_mask, tuple)
         if src_mask is None:
-            if self.global_att_embeddings is None:
-                full_len = len(x_src) + len(style_src)
-                if self.efficient_eval_masking:
-                    src_mask = single_eval_pos + len(style_src)
-                else:
-                    src_mask = self.generate_D_q_matrix(full_len, len(x_src) - single_eval_pos).to(x_src.device)
+            full_len = len(x_src) + len(style_src)
+            if self.efficient_eval_masking:
+                src_mask = single_eval_pos + len(style_src)
             else:
-                src_mask_args = (self.global_att_embeddings.num_embeddings,
-                                 len(x_src) + len(style_src),
-                                 len(x_src) + len(style_src) - single_eval_pos)
-                src_mask = (self.generate_global_att_globaltokens_matrix(*src_mask_args).to(x_src.device),
-                            self.generate_global_att_trainset_matrix(*src_mask_args).to(x_src.device),
-                            self.generate_global_att_query_matrix(*src_mask_args).to(x_src.device))
+                src_mask = self.generate_D_q_matrix(full_len, len(x_src) - single_eval_pos).to(x_src.device)
 
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
@@ -87,7 +76,7 @@ class TabPFN(nn.Module):
 
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
-        return output[single_eval_pos+len(style_src)+(self.global_att_embeddings.num_embeddings if self.global_att_embeddings else 0):]
+        return output[single_eval_pos+len(style_src):]
 
 
 class TransformerEncoderDiffInit(Module):
