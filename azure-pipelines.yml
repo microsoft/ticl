@@ -1,6 +1,6 @@
 trigger:
 - main
-- clean_code
+- rename_package
 
 pool:
   vmImage: ubuntu-latest
