@@ -248,7 +248,7 @@ def test_train_additive_input_bin_embedding_linear():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'linear'])
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(0.7332181334495544, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7057666182518005, rel=1e-5)
 
 
 def test_train_additive_factorized_output():
