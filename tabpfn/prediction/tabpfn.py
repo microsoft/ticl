@@ -2,6 +2,7 @@ import os
 import pathlib
 import random
 from pathlib import Path
+import itertools
 
 import numpy as np
 import torch
@@ -72,7 +73,7 @@ def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', 
 class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     models_in_memory = {}
-
+    
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
@@ -111,7 +112,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         self.verbose = verbose
         self.device = device
-        self.style = None
         self.N_ensemble_configurations = N_ensemble_configurations
         self.base__path = base_path
         self.base_path = base_path
@@ -224,7 +224,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         prediction = transformer_predict(self.model, X_full, y_full, eval_pos,
                                          device=self.device,
-                                         style=self.style,
                                          inference_mode=True,
                                          preprocess_transform='none' if self.no_preprocess_mode else 'mix',
                                          normalize_with_test=normalize_with_test,
@@ -250,13 +249,13 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         return y
 
 
-def predict(eval_xs, eval_ys, used_style, softmax_temperature, return_logits, model, eval_position, num_classes, inference_mode, no_grad):
+def predict(eval_xs, eval_ys, softmax_temperature, return_logits, model, eval_position, num_classes, inference_mode, no_grad):
     # Initialize results array size S, B, Classes
     # no_grad disables inference_mode, because otherwise the gradients are lost
     inference_mode_call = torch.inference_mode() if inference_mode and no_grad else NOP()
     with inference_mode_call:
         output = model(
-            (used_style.repeat(eval_xs.shape[1], 1) if used_style is not None else None, eval_xs, eval_ys.float()),
+            (eval_xs, eval_ys.float()),
             single_eval_pos=eval_position)[:, :, 0:num_classes]
 
         output = output[:, :, 0:num_classes] / torch.exp(softmax_temperature)
@@ -320,7 +319,7 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
 
 
 def transformer_predict(
-        model, eval_xs, eval_ys, eval_position, device='cpu', max_features=100, style=None, inference_mode=False,
+        model, eval_xs, eval_ys, eval_position, device='cpu', max_features=100, inference_mode=False,
         num_classes=2, extend_features=True, normalize_with_test=False, softmax_temperature=0.0,
         multiclass_decoder='permutation', preprocess_transform='mix', categorical_feats=[], feature_shift_decoder=False,
         N_ensemble_configurations=10, batch_size_inference=16, average_logits=True,
@@ -332,18 +331,9 @@ def transformer_predict(
     eval_ys = eval_ys[:eval_position]
 
     model.to(device)
-
     model.eval()
 
-    import itertools
-    style = None
-
-    num_styles = 1
-    style = None
     softmax_temperature = torch.log(torch.tensor([0.8]))
-
-    styles_configurations = range(0, num_styles)
-
     preprocess_transform_configurations = ['none', 'power_all'] if preprocess_transform == 'mix' else [preprocess_transform]
 
     if seed is not None:
@@ -357,17 +347,14 @@ def transformer_predict(
 
     rng = random.Random(seed)
     rng.shuffle(ensemble_configurations)
-    ensemble_configurations = list(itertools.product(ensemble_configurations, preprocess_transform_configurations, styles_configurations))
+    ensemble_configurations = list(itertools.product(ensemble_configurations, preprocess_transform_configurations))
     ensemble_configurations = ensemble_configurations[0:N_ensemble_configurations]
 
     output = None
     eval_xs_transformed = {}
     inputs, labels = [], []
     for ensemble_configuration in ensemble_configurations:
-        (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration, styles_configuration = ensemble_configuration
-
-        style_ = style[styles_configuration:styles_configuration+1, :] if style is not None else style
-        softmax_temperature_ = softmax_temperature[styles_configuration]
+        (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration = ensemble_configuration
 
         eval_xs_, eval_ys_ = eval_xs.clone(), eval_ys.clone()
 
@@ -406,18 +393,18 @@ def transformer_predict(
             warnings.filterwarnings("ignore",
                                     message="torch.cuda.amp.autocast only affects CUDA ops, but CUDA is not available.  Disabling.")
             if device == 'cpu':
-                output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_,
+                output_batch = checkpoint(predict, batch_input, batch_label, softmax_temperature,
                                           True,  model, eval_position, num_classes, inference_mode, no_grad)
 
             else:
                 with torch.cuda.amp.autocast(enabled=fp16_inference):
-                    output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_,
+                    output_batch = checkpoint(predict, batch_input, batch_label, softmax_temperature,
                                               True, model, eval_position, num_classes, inference_mode, no_grad)
         outputs += [output_batch]
 
     outputs = torch.cat(outputs, 1)
     for i, ensemble_configuration in enumerate(ensemble_configurations):
-        (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration, styles_configuration = ensemble_configuration
+        (class_shift_configuration, feature_shift_configuration), preprocess_transform_configuration = ensemble_configuration
         output_ = outputs[:, i:i+1, :]
         output_ = torch.cat([output_[..., class_shift_configuration:], output_[..., :class_shift_configuration]], dim=-1)
 

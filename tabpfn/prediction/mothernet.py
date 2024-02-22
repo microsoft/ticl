@@ -32,7 +32,6 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
-    # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
     output = model.transformer_encoder(train_x)
     linear_model_coefs = model.decoder(output)
     encoder_weight = model.encoder.get_parameter("weight")
@@ -123,37 +122,6 @@ def predict_with_linear_model(X_train, X_test, weights, biases):
     res2 = np.dot(X_test_scaled, weights) + biases
     from scipy.special import softmax
     return softmax(res2 / .8, axis=1)
-
-
-def predict_with_linear_model_complicated(model, X_train, y_train, X_test):
-    max_features = 100
-    eval_position = X_train.shape[0]
-    n_classes = len(np.unique(y_train))
-    n_features = X_train.shape[1]
-
-    ys = torch.Tensor(y_train)
-    xs = torch.Tensor(np.vstack([X_train, X_test]))
-
-    eval_xs_ = normalize_data(xs, eval_position)
-
-    eval_xs = normalize_by_used_features_f(eval_xs_, X_train.shape[-1], max_features)
-    x_all_torch = torch.Tensor(np.hstack([eval_xs, np.zeros((eval_xs.shape[0], 100 - eval_xs.shape[1]))]))
-
-    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
-    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-    train_x = x_src + y_src
-    # src = torch.cat([global_src, style_src, train_x, x_src[single_eval_pos:]], 0)
-    output = model.transformer_encoder(train_x)
-    linear_model_coefs = model.decoder(output)
-    encoder_weight = model.encoder.get_parameter("weight")
-    encoder_bias = model.encoder.get_parameter("bias")
-
-    total_weights = torch.matmul(encoder_weight[:, :n_features].T, linear_model_coefs[0, :-1, :n_classes])
-    total_biases = torch.matmul(encoder_bias, linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
-
-    pred_simple = torch.matmul(model.encoder(x_all_torch),  linear_model_coefs[0, :-1, :n_classes]) + linear_model_coefs[0, -1, :n_classes]
-    probs = torch.nn.functional.softmax(pred_simple / 0.8, dim=1)
-    return total_weights.detach().numpy() / (n_features / max_features), total_biases.detach().numpy(), probs[eval_position:]
 
 
 class ForwardLinearModel(ClassifierMixin, BaseEstimator):
