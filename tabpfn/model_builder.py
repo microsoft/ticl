@@ -67,9 +67,9 @@ def load_model(path, device, verbose=False):
 
 
 def get_encoder(config):
-    if (('nan_prob_no_reason' in config and config['nan_prob_no_reason'] > 0.0) or
-        ('nan_prob_a_reason' in config and config['nan_prob_a_reason'] > 0.0) or
-            ('nan_prob_unknown_reason' in config and config['nan_prob_unknown_reason'] > 0.0)):
+    if ((config['prior']['classification']['nan_prob_no_reason'] > 0.0) or
+        (config['prior']['classification']['nan_prob_a_reason'] > 0.0) or
+            (config['prior']['classification']['nan_prob_unknown_reason'] > 0.0)):
         encoder = encoders.NanHandlingEncoder(config['prior']['num_features'], config['transformer']['emsize'])
     else:
         encoder = encoders.Linear(config['prior']['num_features'], config['transformer']['emsize'], replace_nan_by_zero=True)
@@ -140,8 +140,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         else:
             config['model_type'] = 'tabpfn'
 
-    dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'],
-                        diff_config=config['differentiable_hyperparameters'], device=device)
+    dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], device=device)
 
     y_encoder = get_y_encoder(config)
 

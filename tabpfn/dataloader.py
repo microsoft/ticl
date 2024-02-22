@@ -38,7 +38,7 @@ class PriorDataLoader(DataLoader):
         return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
 
 
-def get_dataloader(prior_config, dataloader_config, diff_config, device):
+def get_dataloader(prior_config, dataloader_config, device):
 
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.GPPrior(prior_config['gp']), **prior_config['classification'])

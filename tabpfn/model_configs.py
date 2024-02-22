@@ -76,12 +76,12 @@ def get_general_config(max_features, n_samples):
     return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer, 'dataloader': dataloader}
 
 
-def get_flexible_categorical_config(max_features, n_samples):
+def get_classification_prior_config(max_features, n_samples):
     """"
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
     max_num_classes = 10
-    config_flexible_categorical = {
+    config_classsification_prior = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
@@ -99,14 +99,13 @@ def get_flexible_categorical_config(max_features, n_samples):
         'set_value_to_nan': .1,
 
     }
-    return {'prior': {'classification': config_flexible_categorical}}
+    return {'prior': {'classification': config_classsification_prior}}
 
 
 def get_prior_config_causal(max_features=100):
     config_general = get_general_config(max_features, n_samples=1024+128)
-    config_flexible_categorical = get_flexible_categorical_config(max_features, n_samples=1024+128)
-
-    config = merge_dicts(config_general, config_flexible_categorical, {'differentiable_hyperparameters': {}})
+    config_classsification_prior = get_classification_prior_config(max_features, n_samples=1024+128)
+    config = merge_dicts(config_general, config_classsification_prior)
     return config
 
 
