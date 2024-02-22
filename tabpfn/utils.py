@@ -542,26 +542,6 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
     return save_callback
 
 
-def load_model_state(load_path, config):
-    model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
-        load_path, map_location='cpu')
-    module_prefix = 'module.'
-    model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
-    if config['continue_run']:
-        config_sample = old_config
-        config_sample['device'] = config['device']
-        config_sample['warm_start_from'] = load_path
-        optimizer_state = old_optimizer_state
-        config_sample['stop_after_epochs'] = config['stop_after_epochs']
-        if not config['restart_scheduler']:
-            scheduler = old_scheduler
-    else:
-        print("WARNING warm starting with new settings")
-        compare_dicts(config_sample, old_config)
-
-    return model_state, optimizer_state, scheduler, config_sample
-
-
 def synetune_handle_checkpoint(args):
     # handle syne-tune restarts
     checkpoint_dir = args.st_checkpoint_dir
