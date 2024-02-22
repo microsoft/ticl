@@ -14,13 +14,13 @@ steps:
 
 - script: |
     echo "Creating Conda environment..."
-    $HOME/miniconda/bin/conda env create -f testing_environment.yml
+    $HOME/miniconda/bin/conda env create -f environment.yml
   displayName: 'Create Conda environment'
 
 - script: |
     echo "Activating Conda environment..."
     source $HOME/miniconda/bin/activate
-    conda activate tabpfn_testing_environment
+    conda activate mothernet
     echo "Running tests..."
     ls
     pytest -sv tabpfn/tests/
