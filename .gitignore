@@ -159,15 +159,15 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-tabpfn/models_diff/
+mothernet/models_diff/
 *.csv
 
-tabpfn/results
+mothernet/results
 *.pdf
 *.png
 *.pickle
 *.prof
-tabpfn/joblib_cache
-tabpfn/catboost_info
-tabpfn/mlruns
-tabpfn/models_diff
+mothernet/joblib_cache
+mothernet/catboost_info
+mothernet/mlruns
+mothernet/models_diff

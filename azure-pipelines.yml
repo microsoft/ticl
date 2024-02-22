@@ -23,5 +23,5 @@ steps:
     conda activate mothernet
     echo "Running tests..."
     ls
-    pytest -sv tabpfn/tests/
+    pytest -sv mothernet/tests/
   displayName: 'Run tests'
