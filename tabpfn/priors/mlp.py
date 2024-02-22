@@ -194,8 +194,7 @@ class MLPPrior:
         self.config = parse_distributions(config or {})
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
-        hypers = sample_distributions(self.config)
-        sample = [MLP(device, num_features, num_outputs, n_samples, **hypers).to(device)() for _ in range(0, batch_size)]
+        sample = [MLP(device, num_features, num_outputs, n_samples, **sample_distributions(self.config)).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

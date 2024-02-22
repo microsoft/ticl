@@ -48,7 +48,7 @@ def test_get_dataloader_base_config():
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 73
 
     x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 8
+    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 74
     # assert config_sample['noise_std'] == 0.0004896957955177838
     # assert config_sample['sort_features'] == True
     # assert config_sample['is_causal'] == False
