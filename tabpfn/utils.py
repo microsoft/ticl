@@ -46,25 +46,6 @@ def get_nan_value(v, set_value_to_nan=0.0):
         return random.choice([-999, 0, 1, 999])
 
 
-def to_ranking(data):
-    x = (data >= data.unsqueeze(-3))
-    x = x.sum(0)
-    return x
-# TODO: Is there a better way to do this?
-#   1. Cmparing to unique elements: When all values are different we still get quadratic blowup
-#   2. Argsort(Argsort()) returns ranking, but with duplicate values there is an ordering which is problematic
-#   3. Argsort(Argsort(Unique))->Scatter seems a bit complicated, doesn't have quadratic blowup, but how fast?
-
-
-def to_ranking_low_mem(data):
-    x = torch.zeros_like(data)
-    for col in range(data.shape[-1]):
-        x_ = (data[:, :, col] >= data[:, :, col].unsqueeze(-2))
-        x_ = x_.sum(0)
-        x[:, :, col] = x_
-    return x
-
-
 def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
     return get_nan_value(float('nan'), set_value_to_nan)
 
@@ -221,13 +202,6 @@ def check_compatibility(dl):
         print('`num_outputs` for the DataLoader is deprecated. It is assumed to be 1 from now on.')
         assert dl.num_outputs != 1, "We assume num_outputs to be 1. Instead of the num_ouputs change your loss." \
                                     "We specify the number of classes in the CE loss."
-
-
-def product_dict(dic):
-    keys = dic.keys()
-    vals = dic.values()
-    for instance in itertools.product(*vals):
-        yield dict(zip(keys, instance))
 
 
 def normalize_by_used_features_f(x, num_features_used, num_features):

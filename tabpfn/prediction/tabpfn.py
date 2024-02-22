@@ -312,7 +312,6 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
 
     eval_xs = eval_xs.unsqueeze(1)
 
-    # TODO: Caution there is information leakage when to_ranking is used, we should not use it
     eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     # Rescale X
     eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
