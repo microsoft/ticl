@@ -128,7 +128,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     config['verbose'] = verbose_prior
 
     criterion = get_criterion(config['prior']['classification']['max_num_classes'])
-    
+
     # backwards compatibility for cases where absence of parameter doesn't correspond to current default
     if 'n_samples' not in passed_config['prior']:
         config['prior']['n_samples'] = config['bptt']
@@ -140,14 +140,15 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         else:
             config['model_type'] = 'tabpfn'
 
-    dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], diff_config=config['differentiable_hyperparameters'], device=device)
+    dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'],
+                        diff_config=config['differentiable_hyperparameters'], device=device)
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
     model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'], config_transformer=config['transformer'],
                            config_mothernet=config['mothernet'], config_additive=config['additive'], config_perceiver=config['perceiver'],
                            num_features=config['prior']['num_features'], max_num_classes=config['prior']['classification']['max_num_classes'])
-    
+
     if model_state is not None:
         if not load_model_strict:
             for k, v in model.state_dict().items():
@@ -164,7 +165,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         model.learning_rates = config['learning_rates']
         model.wallclock_times = config.get('wallclock_times', [])
 
-    if should_train:    
+    if should_train:
         model = train(dl, model, criterion=criterion, optimizer_state=optimizer_state, scheduler=scheduler,
                       epoch_callback=epoch_callback, verbose=verbose_train, device=device, **config['optimizer'])
     else:

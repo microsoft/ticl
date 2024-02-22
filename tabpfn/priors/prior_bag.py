@@ -1,5 +1,6 @@
 import torch
 
+
 class BagPrior:
     def __init__(self, base_priors, prior_weights, verbose=False):
         self.base_priors = base_priors
@@ -7,7 +8,6 @@ class BagPrior:
         self.prior_names = sorted(base_priors.keys())
         self.prior_weights = prior_weights
         self.verbose = verbose
-
 
     def get_batch(self, *, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         args = {'device': device, 'n_samples': n_samples, 'num_features': num_features,
@@ -19,4 +19,3 @@ class BagPrior:
 
         x, y, y_ = self.base_priors[self.prior_names[int(batch_assignments[0])]].get_batch(**args)
         return x.detach(), y.detach(), y_.detach()
-

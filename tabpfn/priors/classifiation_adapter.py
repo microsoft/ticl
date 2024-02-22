@@ -1,9 +1,6 @@
 import random
-import time
-
 import numpy as np
 import torch
-from torch import nn
 
 from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
@@ -11,7 +8,6 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
 
 from tabpfn.priors.distributions import sample_distributions, uniform_int_sampler_f
 from .utils import CategoricalActivation, randomize_classes
-
 
 
 class BalancedBinarize:
@@ -41,6 +37,7 @@ class RegressionNormalized:
 
 class MulticlassSteps:
     """"Sample piecewise constant functions with random number of steps and random class boundaries"""
+
     def __init__(self, num_classes, max_steps=10):
         self.num_classes = class_sampler_f(2, num_classes)()
         self.num_steps = np.random.randint(1, max_steps) if max_steps > 1 else 1
@@ -96,7 +93,7 @@ class ClassificationAdapter:
                         self.h['num_classes'], ordered_p=self.h['output_multiclass_ordered_p']
                     )
                 elif self.h['multiclass_type'] == 'steps':
-                    self.class_assigner =  MulticlassSteps(self.h['num_classes'], self.h['multiclass_max_steps'])
+                    self.class_assigner = MulticlassSteps(self.h['num_classes'], self.h['multiclass_max_steps'])
                 else:
                     raise ValueError("Unknow Multiclass type")
             elif self.h['num_classes'] == 2 and self.h['balanced']:
@@ -119,7 +116,8 @@ class ClassificationAdapter:
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
-        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'],
+                'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(**args)
 
         assert x.shape[2] == self.h['num_features_used']
@@ -147,7 +145,7 @@ class ClassificationAdapter:
                 if random.random() < p:
                     categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
-                    
+
         x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
@@ -195,6 +193,7 @@ class ClassificationAdapter:
                 y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
         return x, y, y  # x.shape = (T,B,H)
+
 
 class ClassificationAdapterPrior:
     def __init__(self, base_prior, **config):

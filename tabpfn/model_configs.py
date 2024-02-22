@@ -3,6 +3,7 @@ import torch
 from tabpfn.priors.distributions import uniform_int_sampler_f
 from tabpfn.utils import merge_dicts
 
+
 def get_general_config(max_features, n_samples):
     """"
     Returns the general PFN training hyperparameters.
@@ -13,33 +14,32 @@ def get_general_config(max_features, n_samples):
         "eval_positions": [n_samples * 0.95],
         'prior_type': 'prior_bag',
         'prior_bag': {'prior_bag_exp_weights_1': {'distribution': 'uniform', 'min': 2.0, 'max': 10.0}}}
-    
-    mlp_prior_config =  {"pre_sample_causes": True,
-            "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
-            'prior_mlp_scale_weights_sqrt': True,
-            'random_feature_rotation': True,
-            "num_layers": {'distribution': 'meta_gamma', 'max_alpha': 2, 'max_scale': 3, 'round': True, 'lower_bound': 2},
-            "prior_mlp_hidden_dim": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 100, 'round': True, 'lower_bound': 4},
-            "prior_mlp_dropout_prob": {'distribution': 'meta_beta', 'scale': 0.6, 'min': 0.1, 'max': 5.0},
-            # This mustn't be too high since activations get too large otherwise
-            "init_std": {'distribution': 'log_uniform', 'min': 1e-2, 'max': 12},
-            "noise_std": {'distribution': 'log_uniform', 'min': 1e-4, 'max': .5},
-            "num_causes": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 7, 'round': True,
-                        'lower_bound': 2},
-            "is_causal": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            "pre_sample_weights": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            "y_is_effect": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            # "sampling": {'distribution': 'meta_choice', 'choice_values': ['normal', 'mixed']},
-            "prior_mlp_activations": {'distribution': 'meta_choice', 'choice_values': [
-                torch.nn.Tanh, torch.nn.Identity, torch.nn.ReLU
-            ]},
-            "block_wise_dropout": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            "sort_features": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            "in_clique": {'distribution': 'meta_choice', 'choice_values': [True, False]},
-            'add_uninformative_features': False}
-    
-    prior['mlp'] = mlp_prior_config
 
+    mlp_prior_config = {"pre_sample_causes": True,
+                        "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
+                        'prior_mlp_scale_weights_sqrt': True,
+                        'random_feature_rotation': True,
+                        "num_layers": {'distribution': 'meta_gamma', 'max_alpha': 2, 'max_scale': 3, 'round': True, 'lower_bound': 2},
+                        "prior_mlp_hidden_dim": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 100, 'round': True, 'lower_bound': 4},
+                        "prior_mlp_dropout_prob": {'distribution': 'meta_beta', 'scale': 0.6, 'min': 0.1, 'max': 5.0},
+                        # This mustn't be too high since activations get too large otherwise
+                        "init_std": {'distribution': 'log_uniform', 'min': 1e-2, 'max': 12},
+                        "noise_std": {'distribution': 'log_uniform', 'min': 1e-4, 'max': .5},
+                        "num_causes": {'distribution': 'meta_gamma', 'max_alpha': 3, 'max_scale': 7, 'round': True,
+                                       'lower_bound': 2},
+                        "is_causal": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        "pre_sample_weights": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        "y_is_effect": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        # "sampling": {'distribution': 'meta_choice', 'choice_values': ['normal', 'mixed']},
+                        "prior_mlp_activations": {'distribution': 'meta_choice', 'choice_values': [
+                            torch.nn.Tanh, torch.nn.Identity, torch.nn.ReLU
+                        ]},
+                        "block_wise_dropout": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        "sort_features": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        "in_clique": {'distribution': 'meta_choice', 'choice_values': [True, False]},
+                        'add_uninformative_features': False}
+
+    prior['mlp'] = mlp_prior_config
 
     gp_prior_config = {
         'outputscale': {'distribution': 'log_uniform', 'min': 1e-5, 'max': 8},
@@ -55,7 +55,7 @@ def get_general_config(max_features, n_samples):
         "num_steps": None,
         'min_eval_pos': 2,
         'max_eval_pos': 1000}
-    
+
     optimizer = {
         "aggregate_k_gradients": 1,
         "learning_rate": 0.00003,
@@ -81,7 +81,7 @@ def get_flexible_categorical_config(max_features, n_samples):
     Returns the configuration parameters for the tabular multiclass wrapper.
     """
     max_num_classes = 10
-    config_flexible_categorical = { 
+    config_flexible_categorical = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
@@ -99,7 +99,7 @@ def get_flexible_categorical_config(max_features, n_samples):
         'set_value_to_nan': .1,
 
     }
-    return {'prior' : {'classification': config_flexible_categorical}}
+    return {'prior': {'classification': config_flexible_categorical}}
 
 
 def get_prior_config_causal(max_features=100):
@@ -136,11 +136,11 @@ def get_base_config():
     config['perceiver'] = {'num_latents': 512}
 
     config['additive'] = {
-        'input_bin_embedding' : False,
-        'factorized_output' : False,
-        'output_rank' : None,
-        'bin_embedding_rank' : 16}
-    
+        'input_bin_embedding': False,
+        'factorized_output': False,
+        'output_rank': None,
+        'bin_embedding_rank': 16}
+
     config['transformer'].update({
         'recompute_attn': True,
         'pre_norm': False,

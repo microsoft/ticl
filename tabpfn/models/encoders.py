@@ -258,7 +258,7 @@ class BinEmbeddingEncoder(nn.Module):
 
     def forward(self, x):
         # n samples, b batch, k feature, d bins, r rank
-        embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding) 
+        embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding)
         if self.nonlinear:
             embedded = embedded + self.bias
             embedded = torch.nn.functional.relu(embedded)

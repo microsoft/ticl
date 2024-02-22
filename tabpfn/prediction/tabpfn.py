@@ -158,7 +158,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             model, c, results_file = load_model_workflow(self.epoch, add_name=self.model_string, base_path=self.base_path, device=self.device,
                                                          eval_addition='')
             self.models_in_memory[model_key] = (model, c, results_file)
-            #if len(self.models_in_memory) == 2:
+            # if len(self.models_in_memory) == 2:
             #    print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
         if c.get("model_type", "tabpfn") != "tabpfn":
             raise ValueError(f"Cannot load {c['model_type']} weights into TabPFNClassifier.")
@@ -287,10 +287,10 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
         eval_xs = normalize_data(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     else:
         eval_xs = torch.clip(eval_xs, min=-100, max=100)
-        
 
     # Removing empty features
     eval_xs = eval_xs[:, 0, :]
+
     def check_col_values(col_tensor):
         return len(torch.unique(col_tensor[~col_tensor.isnan()])) > 1
     sel = [check_col_values(eval_xs[0:eval_ys.shape[0], col]) for col in range(eval_xs.shape[1])]
@@ -325,7 +325,7 @@ def transformer_predict(
         multiclass_decoder='permutation', preprocess_transform='mix', categorical_feats=[], feature_shift_decoder=False,
         N_ensemble_configurations=10, batch_size_inference=16, average_logits=True,
         fp16_inference=False, seed=0, no_grad=True, return_logits=False, scale=True, **kwargs):
-    
+
     num_classes = len(torch.unique(eval_ys))
 
     eval_xs, eval_ys = eval_xs.to(device), eval_ys.to(device)
@@ -406,11 +406,13 @@ def transformer_predict(
             warnings.filterwarnings("ignore",
                                     message="torch.cuda.amp.autocast only affects CUDA ops, but CUDA is not available.  Disabling.")
             if device == 'cpu':
-                output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_, True,  model, eval_position, num_classes, inference_mode, no_grad)
+                output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_,
+                                          True,  model, eval_position, num_classes, inference_mode, no_grad)
 
             else:
                 with torch.cuda.amp.autocast(enabled=fp16_inference):
-                    output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_, True, model, eval_position, num_classes, inference_mode, no_grad)
+                    output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_,
+                                              True, model, eval_position, num_classes, inference_mode, no_grad)
         outputs += [output_batch]
 
     outputs = torch.cat(outputs, 1)

@@ -259,7 +259,7 @@ class TabPerceiver(MLPModelPredictor):
         latent_dim_head=64,
         n_out=10,
         attn_dropout=0.,
-        dropout=0., # feed forward dropout
+        dropout=0.,  # feed forward dropout
         self_per_cross_attn=1,
         decoder_hidden_size=512,
         predicted_hidden_layer_size=128,
@@ -270,15 +270,15 @@ class TabPerceiver(MLPModelPredictor):
         y_encoder_layer=None,
         encoder_layer=None,
         predicted_hidden_layers=1,
-        recompute_attn=None, # ignored
-        nhid_factor=None, # ignored
-        pre_norm=None, # ignored
-        efficient_eval_masking=None, # ignored
-        input_normalization=None, # ignored
+        recompute_attn=None,  # ignored
+        nhid_factor=None,  # ignored
+        pre_norm=None,  # ignored
+        efficient_eval_masking=None,  # ignored
+        input_normalization=None,  # ignored
         low_rank_weights=None,
-        y_encoder=None, # ignored, y_encoder_layer is passed
+        y_encoder=None,  # ignored, y_encoder_layer is passed
         weight_embedding_rank=None,
-        
+
     ):
         """The shape of the final attention mechanism will be:
         depth * (cross attention -> self_per_cross_attn * self attention)

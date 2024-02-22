@@ -220,7 +220,8 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
                 data.iloc[:, c] = data.iloc[:, c].astype('int')
             return data
         x, test_x = make_pd_from_np(x),  make_pd_from_np(test_x)
-        transformer = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), cat_features)], remainder="passthrough")
+        transformer = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore',
+                                        sparse_output=False), cat_features)], remainder="passthrough")
         transformer.fit(x)
         x, test_x = transformer.transform(x), transformer.transform(test_x)
 

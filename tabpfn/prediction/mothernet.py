@@ -244,7 +244,8 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device, inference_device=self.inference_device, scale=self.scale)
+        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device,
+                                   inference_device=self.inference_device, scale=self.scale)
         if self.label_offset == 0:
             self.parameters_ = layers
         else:

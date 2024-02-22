@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 import tabpfn.priors as priors
 from tabpfn.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior
 
+
 class PriorDataLoader(DataLoader):
     def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features):
         self.prior = prior
@@ -25,7 +26,7 @@ class PriorDataLoader(DataLoader):
         # we return sampled hyperparameters from get_batch for testing but we don't want to use them as style.
         x, y, target_y, _ = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
         return (None, x, y), target_y, single_eval_pos
-    
+
     def __len__(self):
         return self.num_steps
 
@@ -42,20 +43,20 @@ def get_dataloader(prior_config, dataloader_config, diff_config, device):
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.GPPrior(prior_config['gp']), **prior_config['classification'])
     mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior(prior_config['mlp']), **prior_config['classification'])
-    
+
     if prior_type == 'prior_bag':
         # Prior bag combines priors
         prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
-                             prior_weights={'mlp': 0.961, 'gp': 0.039})
+                         prior_weights={'mlp': 0.961, 'gp': 0.039})
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionPrior(hyperparameters=prior_config['boolean'])
     elif prior_type == "bag_boolean":
         boolean = BooleanConjunctionPrior(hyperparameters=prior_config['boolean'])
         prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible, 'boolean': boolean},
-                             prior_weights={'mlp': 0.9, 'gp': 0.02, 'boolean': 0.08})
+                         prior_weights={'mlp': 0.9, 'gp': 0.02, 'boolean': 0.08})
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
-    
+
     return PriorDataLoader(prior=prior, num_steps=dataloader_config['num_steps'], batch_size=dataloader_config['batch_size'], n_samples=prior_config['n_samples'], min_eval_pos=dataloader_config['min_eval_pos'],
                            max_eval_pos=dataloader_config['max_eval_pos'], device=device,
                            num_features=prior_config['num_features'])

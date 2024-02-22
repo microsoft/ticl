@@ -8,6 +8,8 @@ from tabpfn.utils import default_device
 from tabpfn.priors.distributions import parse_distributions, sample_distributions
 
 # We will use the simplest form of GP model, exact inference
+
+
 class ExactGPModel(gpytorch.models.ExactGP):
     def __init__(self, train_x, train_y, likelihood):
         super(ExactGPModel, self).__init__(train_x, train_y, likelihood)
@@ -29,10 +31,10 @@ def get_model(x, y, hyperparameters):
         hyperparameters["lengthscale"]
     return model, likelihood
 
+
 class GPPrior:
     def __init__(self, config=None):
         self.config = parse_distributions(config or {})
-
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device,
                   equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
@@ -73,8 +75,8 @@ class GPPrior:
 
             if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
                 print({"noise": hypers['noise'], "outputscale": hypers['outputscale'],
-                        "lengthscale": hypers['lengthscale'], 'batch_size': batch_size})
+                       "lengthscale": hypers['lengthscale'], 'batch_size': batch_size})
 
             # TODO: Multi output
-            res =  x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
+            res = x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
         return res

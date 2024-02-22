@@ -93,7 +93,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
                 nn.Linear(out_size,  hidden_size),
                 nn.ReLU(),
                 nn.Linear(hidden_size, self.num_output_layer_weights))
-            
+
         # these serve as shared prototypes across features
         self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
         self.output_biases = nn.Parameter(torch.randn(n_out))
@@ -104,7 +104,6 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         # b batch, k feature, r rank, o outputs
         out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
         return out, self.output_biases
-    
 
 
 class MLPModelDecoder(nn.Module):

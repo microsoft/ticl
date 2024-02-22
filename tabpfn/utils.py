@@ -1,22 +1,15 @@
 import datetime
-import glob
 import itertools
-import math
 import os
 import random
-import re
 import shutil
-import socket
-import time
 import warnings
 
 import mlflow
 import numpy as np
-import pandas as pd
 import torch
 
 from pathlib import Path
-from scipy.signal import convolve
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -138,7 +131,6 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=N
     if categorical_features:
         categorical_mask = torch.zeros(X.shape[2], dtype=torch.bool, device=X.device)
         categorical_mask.scatter_(0, torch.tensor(categorical_features, device=X.device, dtype=int), 1.)
-    
 
     data = X if normalize_positions == -1 else X[:normalize_positions]
 
@@ -274,6 +266,7 @@ def compare_dicts(left, right, prefix=None, skip=None, return_bool=False):
                 print(f"{prefix}{k}: left: {left[k]}, right: {right[k]}")
     if return_bool:
         return True
+
 
 def merge_dicts(*dicts):
     keys = set([k for d in dicts for k in d])
@@ -416,7 +409,7 @@ class ReduceLROnSpike:
         """ Return last computed learning rate by current scheduler.
         """
         return self._last_lr
-    
+
 
 def init_device(gpu_id, use_cpu):
     # Single GPU training, get GPU ID from command line
@@ -480,6 +473,7 @@ def get_model_string(args, parser, num_gpus, device):
 def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir):
     from tabpfn.model_builder import save_model
     config = config.copy()
+
     def save_callback(model, optimizer, scheduler, epoch):
         if not hasattr(model, 'last_saved_epoch'):
             model.last_saved_epoch = 0
@@ -568,34 +562,6 @@ def load_model_state(load_path, config):
         compare_dicts(config_sample, old_config)
 
     return model_state, optimizer_state, scheduler, config_sample
-
-
-def init_mlflow(experiment_name, model_string, continue_run):
-    if socket.gethostname() == "amueller-tabpfn-4gpu":
-        mlflow.set_tracking_uri("http://localhost:5000")
-    else:
-        mlflow.set_tracking_uri("http://20.114.249.177:5000")
-
-    tries = 0
-    while tries < 5:
-        try:
-            mlflow.set_experiment(experiment_name)
-            break
-        except:
-            tries += 1
-            print(f"Failed to set experiment, retrying {tries}/5")
-            time.sleep(5)
-
-    if continue_run:
-        # find run id via mlflow
-        run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
-        if len(run_ids) > 1:
-            raise ValueError(f"Found more than one run with name {model_string}")
-        run_id = run_ids.iloc[0]
-        run_args = {'run_id': run_id}
-
-    else:
-        run_args = {'run_name': model_string}
 
 
 def synetune_handle_checkpoint(args):

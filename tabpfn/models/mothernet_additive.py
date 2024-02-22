@@ -14,13 +14,13 @@ class MotherNetAdditive(nn.Module):
                  activation='gelu', recompute_attn=False, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, 
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, output_attention=None, special_token=None, predicted_hidden_layers=None):
         super().__init__()
-        nhid = emsize *  nhid_factor
+        nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
-        self.low_rank_weights = low_rank_weights # ignored for now
-        self.weight_embedding_rank = weight_embedding_rank # ignored for now
+        self.low_rank_weights = low_rank_weights  # ignored for now
+        self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
@@ -36,7 +36,7 @@ class MotherNetAdditive(nn.Module):
         else:
             raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
 
-        self.input_ln = SeqBN(emsize) if input_normalization else None 
+        self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking

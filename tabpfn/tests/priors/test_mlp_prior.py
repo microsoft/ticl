@@ -4,6 +4,7 @@ import lightning as L
 import torch
 import pytest
 
+
 @pytest.mark.parametrize("num_features", [11, 51])
 @pytest.mark.parametrize("batch_size", [4, 8])
 @pytest.mark.parametrize("n_samples", [128, 900])
@@ -18,7 +19,7 @@ def test_mlp_prior(batch_size, num_features, n_samples):
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
     if n_samples == 128 and batch_size == 4 and num_features == 11:
-        assert float(x[0, 0, 0])== 3.7898247241973877
+        assert float(x[0, 0, 0]) == 3.7898247241973877
         assert float(y[0, 0]) == 9.330925941467285
 
 
@@ -29,8 +30,8 @@ def test_mlp_prior_no_sampling(batch_size=4, num_features=11, n_samples=128):
     # replace distributions with some values for this test
     hyperparameters = {
         'prior_mlp_activations': torch.nn.ReLU,
-        'is_causal' : False,
-        'num_causes': 3, # actually ignored because is_causal is False
+        'is_causal': False,
+        'num_causes': 3,  # actually ignored because is_causal is False
         'prior_mlp_hidden_dim': 128,
         'num_layers': 3,
         'noise_std': 0.1,
@@ -49,5 +50,5 @@ def test_mlp_prior_no_sampling(batch_size=4, num_features=11, n_samples=128):
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
-    assert float(x[0, 0, 0])== 1.0522834062576294
+    assert float(x[0, 0, 0]) == 1.0522834062576294
     assert float(y[0, 0]) == -0.1148308664560318

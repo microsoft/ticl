@@ -7,6 +7,7 @@ import lightning as L
 
 import pytest
 
+
 def test_get_dataloader_base_config():
     L.seed_everything(42)
     config = get_base_config()
@@ -21,8 +22,9 @@ def test_get_dataloader_base_config():
     n_samples = 1024
     prior_config['n_samples'] = n_samples
     n_features = 100
-    prior_config['num_features']  = n_features
-    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
+    prior_config['num_features'] = n_features
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config,
+                                diff_config=config['differentiable_hyperparameters'], device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
     prior = dataloader.prior
     assert isinstance(prior, BagPrior)
@@ -34,8 +36,8 @@ def test_get_dataloader_base_config():
     assert mlp_prior_config['noise_std'].max == 0.5
     assert mlp_prior_config['noise_std']() == 0.002428916946974888
     assert dataloader.prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
-    x, y, y_  = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-    
+    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
+
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
     # assert config_sample['num_layers'].alpha == 0.6722902794233997
@@ -66,9 +68,10 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
     dataloader_config['steps_per_epoch'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
-    prior_config['num_features']  = n_features
+    prior_config['num_features'] = n_features
     prior_config['prior_type'] = prior_type
-    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config,
+                                diff_config=config['differentiable_hyperparameters'], device="cpu")
     (_, x, y), target_y, single_eval_pos = dataloader.gbm()
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
@@ -88,7 +91,8 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
     prior_class['nan_prob_no_reason'] = .5
     prior_class['nan_prob_unknown_reason'] = .5
     prior_class['nan_prob_unknown_reason_reason_prior'] = .5
-    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config,
+                                diff_config=config['differentiable_hyperparameters'], device="cpu")
     for i in range(10):
         # sample a couple times to explore different code paths
         (_, x, y), target_y, single_eval_pos = dataloader.gbm()
@@ -107,7 +111,8 @@ def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_featur
     prior_config['num_features'] = n_features
     prior_config['mlp']['add_uninformative_features'] = True
 
-    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config,
+                                diff_config=config['differentiable_hyperparameters'], device="cpu")
     for i in range(10):
         # sample a couple times to explore different code paths
         (_, x, y), target_y, single_eval_pos = dataloader.gbm()

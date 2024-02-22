@@ -22,9 +22,9 @@ def test_load_module_inference_only():
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
     classifier = TabPFNClassifier(device=device,
-                                    N_ensemble_configurations=3,
-                                    no_preprocess_mode=True,
-                                    no_grad=False)
+                                  N_ensemble_configurations=3,
+                                  no_preprocess_mode=True,
+                                  no_grad=False)
     for i in range(10):
         classifier.fit(x_train, y_train)
 

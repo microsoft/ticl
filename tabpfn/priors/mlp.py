@@ -8,6 +8,7 @@ from torch import nn
 from tabpfn.utils import default_device
 from tabpfn.priors.distributions import parse_distributions, sample_distributions
 
+
 class GaussianNoise(nn.Module):
     def __init__(self, std, device):
         super().__init__()
@@ -71,7 +72,7 @@ class MLP(torch.nn.Module):
                 # Determine std of each noise term in initialization, so that is shared in runs
                 # torch.abs(torch.normal(torch.zeros((out_dim)), self.noise_std)) - Change std for each dimension?
                 noise = (GaussianNoise(torch.abs(torch.normal(torch.zeros(size=(1, out_dim), device=device), float(self.noise_std))), device=device)
-                            if self.pre_sample_weights else GaussianNoise(float(self.noise_std), device=device))
+                         if self.pre_sample_weights else GaussianNoise(float(self.noise_std), device=device))
                 return [
                     nn.Sequential(*[self.prior_mlp_activations(), nn.Linear(self.prior_mlp_hidden_dim, out_dim), noise])
                 ]
@@ -132,7 +133,7 @@ class MLP(torch.nn.Module):
                     return x
                 else:
                     x = torch.minimum(torch.tensor(np.random.zipf(2.0 + random.random() * 2, size=(n_samples)),
-                                                    device=device).unsqueeze(-1).float(), torch.tensor(10.0, device=device))
+                                                   device=device).unsqueeze(-1).float(), torch.tensor(10.0, device=device))
                     return x - torch.mean(x)
             causes = torch.cat([sample_cause(n).unsqueeze(-1) for n in range(self.num_causes)], -1)
         elif self.sampling == 'uniform':
@@ -189,6 +190,7 @@ class MLP(torch.nn.Module):
                 x = x[:, :, torch.randperm(num_features, device=device)]
         return x, y
 
+
 class MLPPrior:
     def __init__(self, config=None):
         self.config = parse_distributions(config or {})
@@ -196,7 +198,7 @@ class MLPPrior:
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
         sample = [MLP(device, num_features, num_outputs, n_samples, **sample_distributions(self.config)).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
-        
+
         y = torch.cat(y, 1).detach().squeeze(2)
         x = torch.cat(x, 1).detach()
 

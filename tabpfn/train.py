@@ -10,7 +10,6 @@ import tabpfn.utils as utils
 from tabpfn.utils import ExponentialLR, ReduceLROnSpike, init_dist
 
 
-
 def eval_criterion(criterion, targets, output, device, n_out):
     if isinstance(criterion, nn.GaussianNLLLoss):
         assert output.shape[-1] == 2, \
@@ -34,7 +33,6 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
     total_loss = 0.
     nan_steps = 0
     ignore_steps = 0
-    before_get_batch = time.time()
     steps_per_epoch = len(dl)
     assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
     for batch, (data, targets, single_eval_pos) in enumerate(dl):

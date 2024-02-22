@@ -26,6 +26,7 @@ TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128'
 
 DEFAULT_LOSS = pytest.approx(1.0794482231140137)
 
+
 def test_train_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -190,7 +191,7 @@ def test_train_tabpfn_boolean_mixed_prior():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
-                       'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
+                        'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
     assert results['loss'] == pytest.approx(0.6881492137908936)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)

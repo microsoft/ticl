@@ -14,6 +14,7 @@ from tabpfn.utils import compare_dicts, init_device, get_model_string, synetune_
 from tabpfn.cli_parsing import argparser_from_config
 from argparse import Namespace
 
+
 def main(argv):
     config = get_base_config()
     parser = argparser_from_config(config)
@@ -45,14 +46,15 @@ def main(argv):
     if args.orchestration.seed_everything:
         import lightning as L
         L.seed_everything(42)
-        
+
     config['general']['num_gpus'] = 1
     config['general']['device'] = device
 
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
-    config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * 64 // config['dataloader']['batch_size'] // config['optimizer']['aggregate_k_gradients']
+    config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * \
+        64 // config['dataloader']['batch_size'] // config['optimizer']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
         config['dataloader']['max_eval_pos'] = 16

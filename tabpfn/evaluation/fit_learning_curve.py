@@ -163,10 +163,10 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
     fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
     if legend:
         fig.update_layout(legend=dict(
-        yanchor="top",
-        y=0.99,
-        xanchor="left",
-        x=0.01
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
         ))
     else:
         fig.update_layout(showlegend=False)
