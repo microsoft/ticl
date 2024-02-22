@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from tabpfn.utils import default_device
+from tabpfn.priors.differentiable_prior import parse_distributions, sample_distributions
 
 class GaussianNoise(nn.Module):
     def __init__(self, std, device):
@@ -24,7 +25,9 @@ def causes_sampler_f(num_causes):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling, *, pre_sample_causes=False, add_uninformative_features=False, prior_mlp_scale_weights_sqrt=True, random_feature_rotation=True):
+    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling, *, num_layers, prior_mlp_hidden_dim, prior_mlp_activations,
+                 noise_std, y_is_effect, pre_sample_weights, prior_mlp_dropout_prob, pre_sample_causes, prior_mlp_scale_weights_sqrt, random_feature_rotation, add_uninformative_features,
+                 is_causal, num_causes, block_wise_dropout, init_std, sort_features, in_clique):
         super(MLP, self).__init__()
         self.device = device
         self.num_features = num_features
@@ -36,19 +39,19 @@ class MLP(torch.nn.Module):
         self.random_feature_rotation = random_feature_rotation
         self.pre_sample_causes = pre_sample_causes
         self.add_uninformative_features = add_uninformative_features
-        self.is_causal = hyperparameters['is_causal']
-        self.num_causes = hyperparameters['num_causes']
-        self.prior_mlp_hidden_dim = hyperparameters['prior_mlp_hidden_dim']
-        self.prior_mlp_activations = hyperparameters['prior_mlp_activations']
-        self.num_layers = hyperparameters['num_layers']
-        self.noise_std = hyperparameters['noise_std']
-        self.y_is_effect = hyperparameters['y_is_effect']
-        self.pre_sample_weights = hyperparameters['pre_sample_weights']
-        self.prior_mlp_dropout_prob = hyperparameters['prior_mlp_dropout_prob']
-        self.block_wise_dropout = hyperparameters['block_wise_dropout']
-        self.init_std = hyperparameters['init_std']
-        self.sort_features = hyperparameters['sort_features']
-        self.in_clique = hyperparameters['in_clique']
+        self.is_causal = is_causal
+        self.num_causes = num_causes
+        self.prior_mlp_hidden_dim = prior_mlp_hidden_dim
+        self.prior_mlp_activations = prior_mlp_activations
+        self.num_layers = num_layers
+        self.noise_std = noise_std
+        self.y_is_effect = y_is_effect
+        self.pre_sample_weights = pre_sample_weights
+        self.prior_mlp_dropout_prob = prior_mlp_dropout_prob
+        self.block_wise_dropout = block_wise_dropout
+        self.init_std = init_std
+        self.sort_features = sort_features
+        self.in_clique = in_clique
 
         with torch.no_grad():
             assert (self.num_layers >= 2)
@@ -191,13 +194,11 @@ class MLP(torch.nn.Module):
 
 class MLPPrior:
     def __init__(self, config=None):
-        self.config = config or {}
-    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
-        if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
-            s = hyperparameters['prior_mlp_activations']()
-            hyperparameters['prior_mlp_activations'] = lambda: s
+        self.config = parse_distributions(config or {})
 
-        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, **self.config).to(device)() for _ in range(0, batch_size)]
+    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
+        hypers = sample_distributions(self.config)
+        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, **hypers).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

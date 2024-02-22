@@ -216,7 +216,7 @@ def sample_distributions(hyperparameters):
     for name, dist in sorted(hyperparameters.items(), key=lambda x: x[0]):
         if isinstance(dist, HyperParameter):
             dist = dist()
-        if callable(dist):
+        if callable(dist) and not isinstance(dist, torch.nn.Module) and not isinstance(dist, type):
             dist = dist()
         new_hypers[name] = dist
     return new_hypers

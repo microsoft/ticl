@@ -41,7 +41,7 @@ class PriorDataLoader(DataLoader):
 def get_dataloader(prior_config, dataloader_config, diff_config, device):
 
     prior_type = prior_config['prior_type']
-    gp_flexible = ClassificationAdapterPrior(priors.GPPrior(sampling=prior_config['mlp']['sampling']), **prior_config['classification'])
+    gp_flexible = ClassificationAdapterPrior(priors.GPPrior(prior_config['gp']), **prior_config['classification'])
     mlp_flexible = ClassificationAdapterPrior(priors.MLPPrior(prior_config['mlp']), **prior_config['classification'])
     
     if prior_type == 'prior_bag':

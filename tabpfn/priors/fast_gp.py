@@ -30,15 +30,15 @@ def get_model(x, y, hyperparameters):
     return model, likelihood
 
 class GPPrior:
-    def __init__(self, sampling='uniform'):
-        self.sampling = sampling
+    def __init__(self, config=None):
+        self.config = config or {}
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
-                equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
+                  equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             assert not (equidistant_x and (fix_x is not None))
 
-            with gpytorch.settings.fast_computations(*hyperparameters.get('fast_computations', (True, True, True))):
+            with gpytorch.settings.fast_computations(*self.config.get('fast_computations', (True, True, True))):
                 if equidistant_x:
                     assert num_features == 1
                     x = torch.linspace(0, 1., n_samples).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
@@ -46,18 +46,18 @@ class GPPrior:
                     assert fix_x.shape == (n_samples, num_features)
                     x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
                 else:
-                    if self.sampling == 'uniform':
+                    if self.config['sampling'] == 'uniform':
                         x = torch.rand(batch_size, n_samples, num_features, device=device)
                     else:
                         x = torch.randn(batch_size, n_samples, num_features, device=device)
-                model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
+                model, likelihood = get_model(x, torch.Tensor(), self.config)
                 model.to(device)
 
                 is_fitted = False
                 while not is_fitted:
                     try:
                         with gpytorch.settings.prior_mode(True):
-                            model, likelihood = get_model(x, torch.Tensor(), hyperparameters)
+                            model, likelihood = get_model(x, torch.Tensor(), self.config)
                             model.to(device)
 
                             d = model(x)
@@ -67,11 +67,11 @@ class GPPrior:
                     except RuntimeError:  # This can happen when torch.linalg.eigh fails. Restart with new init resolves this.
                         print('GP Fitting unsuccessful, retrying.. ')
                         print(x)
-                        print(hyperparameters)
+                        print(self.config)
 
             if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
-                print({"noise": hyperparameters['noise'], "outputscale": hyperparameters['outputscale'],
-                        "lengthscale": hyperparameters['lengthscale'], 'batch_size': batch_size})
+                print({"noise": self.config['noise'], "outputscale": self.config['outputscale'],
+                        "lengthscale": self.config['lengthscale'], 'batch_size': batch_size})
 
             # TODO: Multi output
             res =  x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)
