@@ -91,7 +91,6 @@ def argparser_from_config(description="Train Mothernet"):
 
     mlp_prior = parser.add_argument_group('prior.mlp')
     mlp_prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
-    prior.add_argument('--heterogeneous-batches', help="Whether to resample MLP hypers for each sample instead of each batch.", default='False', type=str2bool)
     boolean = parser.add_argument_group('prior.boolean')
     boolean.add_argument('--boolean-p-uninformative', help="Probability of adding uninformative features in boolean prior", default=0.5, type=float, dest='p_uninformative')
     boolean.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior", default=0.5, type=float, dest='max_fraction_uninformative')

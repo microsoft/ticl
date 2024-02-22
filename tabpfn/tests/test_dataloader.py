@@ -25,17 +25,16 @@ def test_get_dataloader_base_config():
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
     prior = dataloader.prior
-    assert isinstance(prior, SamplerPrior)
-    assert isinstance(prior.base_prior, BagPrior)
-    assert isinstance(prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
-    assert isinstance(prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
-    mlp_prior_config = prior.base_prior.base_priors['mlp'].base_prior.config
+    assert isinstance(prior, BagPrior)
+    assert isinstance(prior.base_priors['gp'], ClassificationAdapterPrior)
+    assert isinstance(prior.base_priors['mlp'], ClassificationAdapterPrior)
+    mlp_prior_config = prior.base_priors['mlp'].base_prior.config
     assert isinstance(mlp_prior_config['noise_std'], LogUniformHyperparameter)
     assert mlp_prior_config['noise_std'].min == 1e-4
     assert mlp_prior_config['noise_std'].max == 0.5
     assert mlp_prior_config['noise_std']() == 0.002428916946974888
-    assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
-    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
+    assert dataloader.prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
+    x, y, y_  = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
     
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
@@ -48,7 +47,7 @@ def test_get_dataloader_base_config():
 
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 73
 
-    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
+    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 8
     # assert config_sample['noise_std'] == 0.0004896957955177838
     # assert config_sample['sort_features'] == True
@@ -74,19 +73,18 @@ def test_get_dataloader_heterogeneous_batches():
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
     # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
     prior = dataloader.prior
-    assert isinstance(prior, SamplerPrior)
-    assert isinstance(prior.base_prior, BagPrior)
-    assert isinstance(prior.base_prior.base_priors['gp'], ClassificationAdapterPrior)
-    assert isinstance(prior.base_prior.base_priors['mlp'], ClassificationAdapterPrior)
-    mlp_prior_config = prior.base_prior.base_priors['mlp'].base_prior.config
+    assert isinstance(prior, BagPrior)
+    assert isinstance(prior.base_priors['gp'], ClassificationAdapterPrior)
+    assert isinstance(prior.base_priors['mlp'], ClassificationAdapterPrior)
+    mlp_prior_config = prior.base_priors['mlp'].base_prior.config
 
     assert isinstance(mlp_prior_config['noise_std'], LogUniformHyperparameter)
     assert mlp_prior_config['noise_std'].min == 1e-4
     assert mlp_prior_config['noise_std'].max == 0.5
     assert mlp_prior_config['noise_std']() == 0.002428916946974888
-    assert dataloader.prior.base_prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
+    assert dataloader.prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
 
-    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
+    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
 
     assert x.shape == (n_samples, batch_size, n_features)
     assert y.shape == (n_samples, batch_size)
@@ -104,7 +102,7 @@ def test_get_dataloader_heterogeneous_batches():
     # 98 features
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 94
 
-    x, y, y_, config_sample = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
+    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
     assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 96
     # assert config_sample[-1]['noise_std'] == 0.23350879018430812
     # assert config_sample[-1]['sort_features'] == True
