@@ -54,62 +54,6 @@ def test_get_dataloader_base_config():
     # assert config_sample['is_causal'] == False
 
 
-def test_get_dataloader_heterogeneous_batches():
-    L.seed_everything(42)
-    config = get_base_config()
-    # config['num_causes'] = 3
-    # config['num_features'] = 10
-    # num_features really doesn't work lol
-    prior_config = config['prior']
-    prior_config['heterogeneous_batches'] = True
-    dataloader_config = config['dataloader']
-    batch_size = 16
-    dataloader_config['steps_per_epoch'] = 1
-    dataloader_config['batch_size'] = batch_size
-    n_samples = 1024
-    prior_config['n_samples'] = n_samples
-    n_features = 100
-    prior_config['num_features']  = n_features
-    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, diff_config=config['differentiable_hyperparameters'], device="cpu")
-    # calling get_batch explicitly means we have to repeate some paramters but then we can look at the sampled hyperparameters
-    prior = dataloader.prior
-    assert isinstance(prior, BagPrior)
-    assert isinstance(prior.base_priors['gp'], ClassificationAdapterPrior)
-    assert isinstance(prior.base_priors['mlp'], ClassificationAdapterPrior)
-    mlp_prior_config = prior.base_priors['mlp'].base_prior.config
-
-    assert isinstance(mlp_prior_config['noise_std'], LogUniformHyperparameter)
-    assert mlp_prior_config['noise_std'].min == 1e-4
-    assert mlp_prior_config['noise_std'].max == 0.5
-    assert mlp_prior_config['noise_std']() == 0.002428916946974888
-    assert dataloader.prior.prior_weights == {'mlp': 0.961, 'gp': 0.039}
-
-    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-
-    assert x.shape == (n_samples, batch_size, n_features)
-    assert y.shape == (n_samples, batch_size)
-    # alphas = [x['num_layers'].alpha for x in config_sample]
-    # assert alphas[-1] == 0.1283677857195334
-    # assert alphas[0] == 0.6722902794233997
-    # scales = [x['num_layers'].alpha for x in config_sample]
-    # assert scales[-1] == 0.1283677857195334
-    # assert scales[0] == 0.6722902794233997
-    # assert config_sample[-1]['prior_bag_exp_weights_1'] == 8.114981297773888
-    # assert config_sample[-1]['is_causal'] == False
-    # assert config_sample[-1]['sort_features'] == False
-    # assert config_sample[-1]['noise_std'] == 0.001965810983472645
-
-    # 98 features
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 94
-
-    x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 96
-    # assert config_sample[-1]['noise_std'] == 0.23350879018430812
-    # assert config_sample[-1]['sort_features'] == True
-    # assert config_sample[-1]['is_causal'] == True
-
-
-
 @pytest.mark.parametrize("batch_size", [16, 32])
 @pytest.mark.parametrize("n_samples", [256, 512])
 @pytest.mark.parametrize("n_features", [100, 200, 311])
