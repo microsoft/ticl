@@ -274,7 +274,7 @@ def test_train_additive_factorized_output_rank():
 def test_train_additive_factorized_in_and_out():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir '-m', 'additive', '--factorized-output', 'True', '--input-bin-embedding', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--input-bin-embedding', 'True'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
