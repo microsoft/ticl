@@ -11,11 +11,10 @@ def get_general_config(max_features, n_samples):
         "num_features": max_features,
         "n_samples": n_samples,
         "eval_positions": [n_samples * 0.95],
-        "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
         "mix_activations": False,  # False means to mix activations
         'prior_type': 'prior_bag',
-        'train_mixed_precision': True,
         'mlp': {"pre_sample_causes": True,
+                "sampling": 'normal',  # hp.choice('sampling', ['mixed', 'normal']), # uniform
                 'prior_mlp_scale_weights_sqrt': True,
                 'random_feature_rotation': True},
 }

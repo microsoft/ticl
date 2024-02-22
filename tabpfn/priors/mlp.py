@@ -193,12 +193,12 @@ class MLP(torch.nn.Module):
 class MLPPrior:
     def __init__(self, config=None):
         self.config = config or {}
-    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, sampling='normal', epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
         if not (('mix_activations' in hyperparameters) and hyperparameters['mix_activations']):
             s = hyperparameters['prior_mlp_activations']()
             hyperparameters['prior_mlp_activations'] = lambda: s
 
-        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, sampling, **self.config).to(device)() for _ in range(0, batch_size)]
+        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, **self.config).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

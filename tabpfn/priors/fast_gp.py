@@ -30,6 +30,9 @@ def get_model(x, y, hyperparameters):
     return model, likelihood
 
 class GPPrior:
+    def __init__(self, sampling='uniform'):
+        self.sampling = sampling
+
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
                 equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         with torch.no_grad():
@@ -43,7 +46,7 @@ class GPPrior:
                     assert fix_x.shape == (n_samples, num_features)
                     x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
                 else:
-                    if hyperparameters.get('sampling', 'uniform') == 'uniform':
+                    if self.sampling == 'uniform':
                         x = torch.rand(batch_size, n_samples, num_features, device=device)
                     else:
                         x = torch.randn(batch_size, n_samples, num_features, device=device)
