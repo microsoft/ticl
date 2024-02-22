@@ -4,11 +4,15 @@ import subprocess as sp
 import torch
 
 import tabpfn.models.encoders as encoders
-from tabpfn.assemble_model import assemble_model
 from tabpfn.dataloader import get_dataloader
 from tabpfn.train import train
 from tabpfn.model_configs import get_base_config
 from torch import nn
+
+from tabpfn.models.mothernet_additive import MotherNetAdditive
+from tabpfn.models.perceiver import TabPerceiver
+from tabpfn.models.tabpfn import TabPFN
+from tabpfn.models.mothernet import MotherNet
 
 
 try:
@@ -138,13 +142,38 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'],
                         diff_config=config['differentiable_hyperparameters'], device=device)
+
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
-    model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'],
-                           config_transformer=config['transformer'], config_mothernet=config['mothernet'],
-                           config_additive=config['additive'], config_perceiver=config['perceiver'],
-                           num_features=config['prior']['num_features'], max_num_classes=config['prior']['classification']['max_num_classes'])
+
+    if config['prior']['classification']['max_num_classes'] > 2:
+        n_out = config['prior']['classification']['max_num_classes']
+    else:
+        n_out = 1
+
+    model_type = config['general']['model_type']
+
+    if model_type == "mlp":
+        model = MotherNet(
+            encoder, n_out=n_out,
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']
+        )
+    elif model_type == 'perceiver':
+        model = TabPerceiver(
+            encoder_layer=encoder, n_out=n_out,
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['perceiver']
+        )
+    elif model_type == "additive":
+        model = MotherNetAdditive(
+            n_out=n_out, n_features=config['prior']['num_features'],
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive'])
+    elif model_type == "tabpfn":
+        model = TabPFN(
+            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
+        )
+    else:
+        raise ValueError(f"Unknown model type {model_type}.")
 
     if model_state is not None:
         if not load_model_strict:
