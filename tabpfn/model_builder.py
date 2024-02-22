@@ -69,9 +69,6 @@ def get_encoder(config):
         encoder = encoders.NanHandlingEncoder(config['prior']['num_features'], config['transformer']['emsize'])
     else:
         encoder = encoders.Linear(config['prior']['num_features'], config['transformer']['emsize'], replace_nan_by_zero=True)
-
-    if 'encoder' in config and config['encoder'] == 'featurewise_mlp':
-        encoder = encoders.FeaturewiseMLP
     return encoder
 
 

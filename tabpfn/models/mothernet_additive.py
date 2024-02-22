@@ -5,13 +5,13 @@ from tabpfn.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModel
 from tabpfn.models.encoders import BinEmbeddingEncoder, Linear
 from tabpfn.models.layer import TransformerEncoderLayer
 from tabpfn.models.transformer import TransformerEncoderDiffInit
-from tabpfn.utils import SeqBN, bool_mask_to_att_mask
+from tabpfn.utils import SeqBN
 
 
 class MotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
-                 activation='gelu', recompute_attn=False, full_attention=False,
+                 activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
@@ -38,7 +38,6 @@ class MotherNetAdditive(nn.Module):
 
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
-        self.full_attention = full_attention
         self.efficient_eval_masking = efficient_eval_masking
         self.n_bins = n_bins
         self.n_out = n_out
@@ -62,39 +61,6 @@ class MotherNetAdditive(nn.Module):
         super().__setstate__(state)
         # ?!?!? FIXME THIS SEEMS WRONG
         self.__dict__.setdefault('efficient_eval_masking', False)
-
-    @staticmethod
-    def generate_square_subsequent_mask(sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        return bool_mask_to_att_mask(mask)
-
-    @staticmethod
-    def generate_D_q_matrix(sz, query_size):
-        train_size = sz-query_size
-        mask = torch.zeros(sz, sz) == 0
-        mask[:, train_size:].zero_()
-        mask |= torch.eye(sz) == 1
-        return bool_mask_to_att_mask(mask)
-
-    @staticmethod
-    def generate_global_att_query_matrix(num_global_att_tokens, n_samples, num_query_tokens):
-        train_size = n_samples + num_global_att_tokens - num_query_tokens
-        sz = n_samples + num_global_att_tokens
-        mask = torch.zeros(num_query_tokens, sz) == 0
-        mask[:, train_size:].zero_()
-        mask[:, train_size:] |= torch.eye(num_query_tokens) == 1
-        return bool_mask_to_att_mask(mask)
-
-    @staticmethod
-    def generate_global_att_trainset_matrix(num_global_att_tokens, n_samples, num_query_tokens):
-        trainset_size = n_samples - num_query_tokens
-        mask = torch.zeros(trainset_size, num_global_att_tokens) == 0
-        return bool_mask_to_att_mask(mask)
-
-    @staticmethod
-    def generate_global_att_globaltokens_matrix(num_global_att_tokens, n_samples, num_query_tokens):
-        mask = torch.zeros(num_global_att_tokens, num_global_att_tokens+n_samples-num_query_tokens) == 0
-        return bool_mask_to_att_mask(mask)
 
     def init_weights(self):
         if self.init_method is not None:

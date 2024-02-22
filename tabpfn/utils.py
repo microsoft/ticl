@@ -154,10 +154,6 @@ def remove_outliers(X, n_sigma=4, normalize_positions=-1, categorical_features=N
     return X
 
 
-def bool_mask_to_att_mask(mask):
-    return mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-
-
 def print_on_master_only(is_master):
     import builtins as __builtin__
 
