@@ -13,7 +13,7 @@ def test_mlp_prior(batch_size, num_features, n_samples):
     config = get_base_config()
     prior = MLPPrior(config['prior']['mlp'])
 
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters={})
+    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
@@ -45,7 +45,7 @@ def test_mlp_prior_no_sampling(batch_size=4, num_features=11, n_samples=128):
     config['prior']['mlp'].update(hyperparameters)
     prior = MLPPrior(config['prior']['mlp'])
 
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters={})
+    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)

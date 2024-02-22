@@ -82,11 +82,8 @@ class ClassificationAdapter:
     # adds NaN and potentially categorical features
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
-    def __init__(self, base_prior, hyperparameters, config):
-        # hyperparameters are those passed via SamplingPrior.get_batch
-        # config are passed directly from the constructor.
-        united_again = {**hyperparameters, **config}
-        self.h = sample_distributions(united_again)
+    def __init__(self, base_prior, config):
+        self.h = sample_distributions(config)
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:
@@ -122,7 +119,7 @@ class ClassificationAdapter:
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
         args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'], 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-        x, y, y_ = self.base_prior.get_batch(hyperparameters=self.h, **args)
+        x, y, y_ = self.base_prior.get_batch(**args)
 
         assert x.shape[2] == self.h['num_features_used']
 
@@ -203,10 +200,10 @@ class ClassificationAdapterPrior:
         self.base_prior = base_prior
         self.config = config
 
-    def get_batch(self, batch_size, n_samples, num_features, device, hyperparameters=None, epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_ = ClassificationAdapter(self.base_prior, hyperparameters, self.config)(batch_size=batch_size, **args)
+            x, y, y_ = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
         return x, y, y_

@@ -34,7 +34,7 @@ class GPPrior:
         self.config = parse_distributions(config or {})
 
 
-    def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device,
                   equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
         hypers = sample_distributions(self.config)
         with torch.no_grad():

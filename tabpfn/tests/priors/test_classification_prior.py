@@ -36,7 +36,7 @@ def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n
     
     prior = ClassificationAdapterPrior(MLPPrior(config['prior']['mlp']), **config['prior']['classification'])
 
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters={})
+    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
@@ -56,7 +56,7 @@ def test_classification_adapter_with_sampling():
     # test the mlp prior
     L.seed_everything(42)
     config = get_base_config()
-    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), hyperparameters={}, config=config['prior']['classification'])
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=config['prior']['classification'])
     # assert adapter.h['num_layers'] == 6
     # assert adapter.h['num_features_used'] == 7
     # assert adapter.h['num_classes'] == 3

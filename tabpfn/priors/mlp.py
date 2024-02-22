@@ -25,7 +25,7 @@ def causes_sampler_f(num_causes):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, hyperparameters, device, num_features, num_outputs, n_samples, sampling, *, num_layers, prior_mlp_hidden_dim, prior_mlp_activations,
+    def __init__(self, device, num_features, num_outputs, n_samples, sampling, *, num_layers, prior_mlp_hidden_dim, prior_mlp_activations,
                  noise_std, y_is_effect, pre_sample_weights, prior_mlp_dropout_prob, pre_sample_causes, prior_mlp_scale_weights_sqrt, random_feature_rotation, add_uninformative_features,
                  is_causal, num_causes, block_wise_dropout, init_std, sort_features, in_clique):
         super(MLP, self).__init__()
@@ -34,7 +34,6 @@ class MLP(torch.nn.Module):
         self.num_outputs = num_outputs
         self.n_samples = n_samples
         self.sampling = sampling
-        self.hyperparameters = hyperparameters
         self.prior_mlp_scale_weights_sqrt = prior_mlp_scale_weights_sqrt
         self.random_feature_rotation = random_feature_rotation
         self.pre_sample_causes = pre_sample_causes
@@ -170,8 +169,6 @@ class MLP(torch.nn.Module):
 
         if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()) or bool(torch.any(torch.isnan(y)).detach().cpu().numpy()):
             print('Nan caught in MLP model x:', torch.isnan(x).sum(), ' y:', torch.isnan(y).sum())
-            print({k: self.hyperparameters[k] for k in ['is_causal', 'num_causes', 'prior_mlp_hidden_dim', 'num_layers',
-                    'noise_std', 'y_is_effect', 'pre_sample_weights', 'prior_mlp_dropout_prob', 'pre_sample_causes']})
 
             x[:] = 0.0
             y[:] = -100  # default ignore index for CE
@@ -196,9 +193,9 @@ class MLPPrior:
     def __init__(self, config=None):
         self.config = parse_distributions(config or {})
 
-    def get_batch(self, batch_size, n_samples, num_features, hyperparameters, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None, single_eval_pos=None):
         hypers = sample_distributions(self.config)
-        sample = [MLP(hyperparameters, device, num_features, num_outputs, n_samples, **hypers).to(device)() for _ in range(0, batch_size)]
+        sample = [MLP(device, num_features, num_outputs, n_samples, **hypers).to(device)() for _ in range(0, batch_size)]
         x, y = zip(*sample)
         
         y = torch.cat(y, 1).detach().squeeze(2)

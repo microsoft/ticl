@@ -65,7 +65,7 @@ class BooleanConjunctionPrior:
         x, y, sample_params, = self.sample(n_samples, num_features, device)
         return *self.normalize_and_pad(x, y, num_features, device), sample_params
 
-    def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, sampling='normal', epoch=None, **kwargs):
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None, **kwargs):
         assert num_outputs == 1
         sample = [self(n_samples=n_samples, num_features=num_features, device=device) for _ in range(0, batch_size)]
         x, y, _ = zip(*sample)

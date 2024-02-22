@@ -227,18 +227,14 @@ class SamplerPrior:
         self.heterogeneous_batches = heterogeneous_batches
         self.hyper_dists = {hp: parse_distribution(name=hp, **dist) for hp, dist in differentiable_hyperparameters.items()}
 
-    def get_batch(self, batch_size, n_samples, num_features, device=default_device,
-                  hyperparameters=None, epoch=None, single_eval_pos=None):
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device, epoch=None, single_eval_pos=None):
         args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         with torch.no_grad():
             if self.heterogeneous_batches:
                 args['batch_size'] = 1
                 xs, ys, ys_, sampled_hypers_ = [], [], [], []
                 for i in range(0, batch_size):
-                    sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
-                    sampled_hypers_.append(sampled_hypers)
-                    combined_hypers = {**hyperparameters, **sampled_hypers}
-                    x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
+                    x, y, y_ = self.base_prior.get_batch(**args)
                     xs.append(x)
                     ys.append(y)
                     ys_.append(y_)
@@ -246,7 +242,6 @@ class SamplerPrior:
                 sampled_hypers = sampled_hypers_
             else:
                 sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
-                combined_hypers = {**hyperparameters, **sampled_hypers}
-                x, y, y_ = self.base_prior.get_batch(hyperparameters=combined_hypers, **args)
+                x, y, y_ = self.base_prior.get_batch(**args)
         x, y, y_ = x.detach(), y.detach(), y_.detach()
         return x, y, y_, sampled_hypers
