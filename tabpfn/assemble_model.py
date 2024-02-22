@@ -3,7 +3,7 @@
 def assemble_model(encoder_layer, y_encoder_layer, model_type, config_transformer, config_mothernet, config_additive, config_perceiver, num_features, max_num_classes):
     from tabpfn.models.mothernet_additive import MotherNetAdditive
     from tabpfn.models.perceiver import TabPerceiver
-    from tabpfn.models.transformer import TabPFN
+    from tabpfn.models.tabpfn import TabPFN
     from tabpfn.models.mothernet import MotherNet
 
     if max_num_classes > 2:

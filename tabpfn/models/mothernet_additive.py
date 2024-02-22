@@ -4,7 +4,7 @@ import torch.nn as nn
 from tabpfn.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
 from tabpfn.models.encoders import BinEmbeddingEncoder, Linear
 from tabpfn.models.layer import TransformerEncoderLayer
-from tabpfn.models.transformer import TransformerEncoderDiffInit
+from tabpfn.models.tabpfn import TransformerEncoderDiffInit
 from tabpfn.utils import SeqBN
 
 

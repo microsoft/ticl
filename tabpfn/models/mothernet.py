@@ -4,7 +4,7 @@ from torch.nn import TransformerEncoder
 
 from tabpfn.models.decoders import LinearModelDecoder, MLPModelDecoder
 from tabpfn.models.layer import TransformerEncoderLayer
-from tabpfn.models.transformer import TransformerEncoderDiffInit
+from tabpfn.models.tabpfn import TransformerEncoderDiffInit
 from tabpfn.utils import SeqBN
 
 
