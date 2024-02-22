@@ -73,7 +73,7 @@ def load_model_workflow(e, add_name, base_path, device='cpu', eval_addition='', 
 class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
     models_in_memory = {}
-    
+
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
@@ -333,7 +333,7 @@ def transformer_predict(
     model.to(device)
     model.eval()
 
-    softmax_temperature = torch.log(torch.tensor([0.8]))
+    softmax_temperature = torch.log(torch.tensor([0.8], device=eval_xs.device))
     preprocess_transform_configurations = ['none', 'power_all'] if preprocess_transform == 'mix' else [preprocess_transform]
 
     if seed is not None:
