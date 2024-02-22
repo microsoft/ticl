@@ -62,7 +62,7 @@ class TabPFN(nn.Module):
         if src_mask is None:
             full_len = len(x_src)
             if self.efficient_eval_masking:
-                src_mask = single_eval_pos 
+                src_mask = single_eval_pos
             else:
                 src_mask = self.generate_D_q_matrix(full_len, len(x_src) - single_eval_pos).to(x_src.device)
 

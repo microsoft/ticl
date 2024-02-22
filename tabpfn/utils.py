@@ -1,5 +1,4 @@
 import datetime
-import itertools
 import os
 import random
 import shutil
