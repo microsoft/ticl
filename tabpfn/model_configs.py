@@ -29,6 +29,7 @@ def get_general_config(max_features, n_samples):
         "aggregate_k_gradients": 1,
         "learning_rate": 0.00003,
         "epochs": 4000,
+        "train_mixed_precision": True
 
     }
 
