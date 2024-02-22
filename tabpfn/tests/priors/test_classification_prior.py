@@ -33,6 +33,9 @@ def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n
         'sort_features': False,
         'in_clique': False,
     }
+    mlp_config = dict(prior_mlp_scale_weights_sqrt=hyperparameters['prior_mlp_scale_weights_sqrt'], random_feature_rotation=hyperparameters['random_feature_rotation'],
+                                                              pre_sample_causes=hyperparameters['pre_sample_causes'], add_uninformative_features=hyperparameters['add_uninformative_features'])
+    prior = ClassificationAdapterPrior(MLPPrior(mlp_config))
     x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu', hyperparameters=hyperparameters)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
