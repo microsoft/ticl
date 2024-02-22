@@ -52,7 +52,7 @@ def main(argv):
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
-    config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * 64 // config['dataloader']['batch_size'] // config['dataloader']['aggregate_k_gradients']
+    config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * 64 // config['dataloader']['batch_size'] // config['optimizer']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
         config['dataloader']['max_eval_pos'] = 16
