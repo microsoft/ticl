@@ -131,7 +131,6 @@ def get_base_config():
         'predicted_hidden_layers': 1,
         'decoder_two_hidden_layers': False,
         'decoder_hidden_size': None,
-        'no_double_embedding': True,
         'special_token': False}
 
     config['perceiver'] = {'num_latents': 512}

@@ -25,11 +25,8 @@ class MLPModelPredictor(nn.Module):
         output = self.inner_forward(train_x)
         (b1, w1), *layers = self.decoder(output)
 
-        if self.no_double_embedding:
-            x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-            h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
-        else:
-            h = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
+        x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
+        h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
 
         if self.decoder.weight_embedding_rank is not None:
             h = torch.matmul(h, self.decoder.shared_weights[0])
@@ -56,7 +53,7 @@ class MotherNet(MLPModelPredictor):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, num_global_att_tokens=0, full_attention=False,
                  all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None, decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, no_double_embedding=False, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
+                 decoder_two_hidden_layers=False, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None, low_rank_weights=False):
         super().__init__()
         nhid = emsize *  nhid_factor
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
@@ -76,13 +73,12 @@ class MotherNet(MLPModelPredictor):
         self.efficient_eval_masking = efficient_eval_masking
         self.n_out = n_out
         self.nhid = nhid
-        self.no_double_embedding = no_double_embedding
         self.output_attention = output_attention
         self.special_token = special_token
         decoder_hidden_size = decoder_hidden_size or nhid
         self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
         if special_token:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))

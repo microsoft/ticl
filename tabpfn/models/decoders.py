@@ -19,17 +19,16 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
+                 decoder_two_hidden_layers=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
         self.n_bins = n_bins
         self.embed_dim = embed_dim
-        self.no_double_embedding = no_double_embedding
         self.n_out = n_out
         self.hidden_size = hidden_size
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
-        self.in_size = 100 if no_double_embedding else emsize
+        self.in_size = 100
         out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
@@ -61,18 +60,17 @@ class AdditiveModelDecoder(nn.Module):
 
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, rank=16):
+                 decoder_two_hidden_layers=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, rank=16):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
         self.rank = rank
         self.n_bins = n_bins
         self.embed_dim = embed_dim
-        self.no_double_embedding = no_double_embedding
         self.n_out = n_out
         self.hidden_size = hidden_size
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
-        self.in_size = 100 if no_double_embedding else emsize
+        self.in_size = 100
         out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
@@ -111,17 +109,16 @@ class FactorizedAdditiveModelDecoder(nn.Module):
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_two_hidden_layers=False, no_double_embedding=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
+                 decoder_two_hidden_layers=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
-        self.no_double_embedding = no_double_embedding
         self.n_out = n_out
         self.hidden_size = hidden_size
         self.output_attention = output_attention
         self.special_token = special_token
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
-        self.in_size = 100 if no_double_embedding else emsize
+        self.in_size = 100
         out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank if low_rank_weights else None

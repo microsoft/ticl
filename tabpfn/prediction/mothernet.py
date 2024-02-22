@@ -87,15 +87,8 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         output = rearrange(x, 'b n d -> n b d')
     (b1, w1), *layers = model.decoder(output)
 
-    if model.no_double_embedding:
-        w1_data_space_prenorm = w1.squeeze()[:n_features, :]
-        b1_data_space = b1.squeeze()
-    else:
-        encoder_weight = model.encoder.get_parameter("weight")
-        encoder_bias = model.encoder.get_parameter("bias")
-
-        w1_data_space_prenorm = torch.matmul(encoder_weight[:, :n_features].T, w1)
-        b1_data_space = torch.matmul(encoder_bias, w1) + b1
+    w1_data_space_prenorm = w1.squeeze()[:n_features, :]
+    b1_data_space = b1.squeeze()
 
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
 

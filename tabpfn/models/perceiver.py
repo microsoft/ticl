@@ -266,7 +266,7 @@ class TabPerceiver(MLPModelPredictor):
         output_attention=True,
         decoder_embed_dim=512,
         special_token=False,
-        decoder_two_hidden_layers=False, no_double_embedding=False,
+        decoder_two_hidden_layers=False,
         y_encoder_layer=None,
         encoder_layer=None,
         predicted_hidden_layers=1,
@@ -315,7 +315,6 @@ class TabPerceiver(MLPModelPredictor):
         self.ff_dropout = dropout
         assert not special_token
         self.special_token = special_token
-        self.no_double_embedding = no_double_embedding
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
         self.layers = nn.ModuleList([])
@@ -337,7 +336,7 @@ class TabPerceiver(MLPModelPredictor):
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=output_attention,
                                        special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, no_double_embedding=no_double_embedding, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
+                                       decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
 
     def inner_forward(self, data):
@@ -364,28 +363,3 @@ class TabPerceiver(MLPModelPredictor):
 
         x = rearrange(x, 'b n d -> n b d')
         return x
-
-    # def forward(
-    #     self,
-    #     src,
-    #     single_eval_pos=None,
-    # ):
-    #     assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y)'
-    #     _, x_src_org, y_src = src
-    #     x_src = self.encoder(x_src_org)
-    #     y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-    #     data = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-
-    #     x = self.inner_forward(data)
-
-    #     b1, w1, *layers = self.decoder(x)
-    #     if self.no_double_embedding:
-    #         x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-    #         h1 = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
-    #     else:
-    #         h1 = (x_src[single_eval_pos:].unsqueeze(-1) * w1.unsqueeze(0)).sum(2) + b1
-    #     h1 = torch.relu(h1)
-    #     result = (h1.unsqueeze(-1) * w2.unsqueeze(0)).sum(2) + b2
-    #     if result.isnan().all():
-    #         import pdb; pdb.set_trace()
-    #     return result

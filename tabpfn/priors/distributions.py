@@ -3,6 +3,8 @@ import inspect
 
 import torch
 import numpy as np
+from scipy import stats
+
 
 def trunc_norm_sampler_f(mu, sigma):
     dist = stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma)
@@ -110,7 +112,6 @@ def make_choice(*, choice_values, choices):
     return choice_values[sample]
             
 
-
 class UniformHyperparameter(HyperParameter):
     def __init__(self, name, min, max):
         self.min = min
@@ -127,6 +128,7 @@ class LogUniformHyperparameter(HyperParameter):
         self.name = name
     def __call__(self):
         return log_uniform_sampler_f(self.min, self.max)()
+    
     
 class UniformIntHyperparameter(HyperParameter):
     def __init__(self, name, min, max):

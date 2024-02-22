@@ -86,15 +86,6 @@ def test_train_reload():
         assert results['config']['mothernet']['predicted_hidden_layers'] == 2
 
 
-def test_train_double_embedding():
-    L.seed_everything(42)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
-    assert results['loss'] == pytest.approx(0.7286844253540039)
-    assert count_parameters(results['model']) == 1775818
-    assert isinstance(results['model'], MotherNet)
-
-
 def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -289,7 +280,6 @@ def test_train_perceiver_defaults():
     model = results['model']
     assert isinstance(model, TabPerceiver)
     assert model.ff_dropout == 0
-    assert model.no_double_embedding
     assert model.input_dim == 128
     assert len(model.layers) == 4
     assert model.latents.shape == (512, 128)
