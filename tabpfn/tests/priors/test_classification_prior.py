@@ -5,7 +5,7 @@ import pytest
 
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
 from tabpfn.priors.flexible_categorical import ClassificationAdapter
-from tabpfn.priors.differentiable_prior import parse_distributions
+from tabpfn.priors.distributions import parse_distributions
 
 @pytest.mark.parametrize("num_features", [11, 51])
 @pytest.mark.parametrize("batch_size", [4, 8])

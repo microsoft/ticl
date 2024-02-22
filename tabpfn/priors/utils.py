@@ -1,58 +1,9 @@
 import random
 
-import numpy as np
-import scipy.stats as stats
 import torch
 from torch import nn
 
-
-def eval_simple_dist(dist_dict):
-    if not isinstance(dist_dict, dict):
-        return dist_dict
-    if dist_dict['distribution'] == "uniform":
-        return np.random.uniform(dist_dict['min'], dist_dict['max'])
-    raise ValueError("Distribution not supported")
-
-def trunc_norm_sampler_f(mu, sigma):
-    dist = stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma)
-    def sampler():
-        return dist.rvs(1)[0]
-    return sampler
- 
-class beta_sampler_f:
-    def __init__(self, a, b, scale=1):
-        self.a = a
-        self.b = b
-        self.scale = scale
-    def __call__(self):
-        return np.random.beta(self.a, self.b) * self.scale
-    def __repr__(self) -> str:
-        return f'beta_sampler_f({self.a},{self.b},{self.scale})'
-
-def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
-def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
-
-class uniform_int_sampler_f:
-    def __init__(self,a, b):
-        self.a = a
-        self.b = b
-    def __repr__(self):
-        return f'uniform_int_sampler_f({self.a},{self.b})'
-    def __call__(self):
-        return round(np.random.uniform(self.a, self.b))
-    def __eq__(self, o: object) -> bool:
-        return isinstance(o, uniform_int_sampler_f) and self.a == o.a and self.b == o.b
-
-def log_uniform_sampler_f(a, b): return lambda: np.exp(np.random.uniform(np.log(a), np.log(b)))
-
-def zipf_sampler_f(a, b, c):
-    x = np.arange(b, c)
-    weights = x ** (-a)
-    weights /= weights.sum()
-    return lambda: stats.rv_discrete(name='bounded_zipf', values=(x, weights)).rvs(1)
-
-
-def scaled_beta_sampler_f(a, b, scale, minimum): return lambda: minimum + round(beta_sampler_f(a, b)() * (scale - minimum))
+from tabpfn.priors.distributions import zipf_sampler_f
 
 
 def order_by_y(x, y):
@@ -72,7 +23,9 @@ def randomize_classes(x, num_classes):
 
 
 class CategoricalActivation(nn.Module):
-    def __init__(self, categorical_p=0.1, ordered_p=0.7, keep_activation_size=False, num_classes_sampler=zipf_sampler_f(0.8, 1, 10)):
+    def __init__(self, categorical_p=0.1, ordered_p=0.7, keep_activation_size=False, num_classes_sampler=None):
+        if num_classes_sampler is None:
+            num_classes_sampler = zipf_sampler_f(0.8, 1, 10)
         self.categorical_p = categorical_p
         self.ordered_p = ordered_p
         self.keep_activation_size = keep_activation_size
@@ -84,7 +37,6 @@ class CategoricalActivation(nn.Module):
         # x shape: T, B, H
 
         x = nn.Softsign()(x)
-
         num_classes = self.num_classes_sampler()
         hid_strength = torch.abs(x).mean(0).unsqueeze(0) if self.keep_activation_size else None
 

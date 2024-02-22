@@ -1,6 +1,6 @@
 import torch
 
-from tabpfn.priors.utils import uniform_int_sampler_f
+from tabpfn.priors.distributions import uniform_int_sampler_f
 from tabpfn.utils import merge_dicts
 
 def get_general_config(max_features, n_samples):

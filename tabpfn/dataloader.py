@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 import tabpfn.priors as priors
-from tabpfn.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, SamplerPrior
+from tabpfn.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior
 
 class PriorDataLoader(DataLoader):
     def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features):

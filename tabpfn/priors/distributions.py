@@ -2,12 +2,49 @@ import math
 import inspect
 
 import torch
+import numpy as np
+
+def trunc_norm_sampler_f(mu, sigma):
+    dist = stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma)
+    def sampler():
+        return dist.rvs(1)[0]
+    return sampler
+ 
+class beta_sampler_f:
+    def __init__(self, a, b, scale=1):
+        self.a = a
+        self.b = b
+        self.scale = scale
+    def __call__(self):
+        return np.random.beta(self.a, self.b) * self.scale
+    def __repr__(self) -> str:
+        return f'beta_sampler_f({self.a},{self.b},{self.scale})'
+
+def gamma_sampler_f(a, b): return lambda: np.random.gamma(a, b)
+def uniform_sampler_f(a, b): return lambda: np.random.uniform(a, b)
+
+class uniform_int_sampler_f:
+    def __init__(self,a, b):
+        self.a = a
+        self.b = b
+    def __repr__(self):
+        return f'uniform_int_sampler_f({self.a},{self.b})'
+    def __call__(self):
+        return round(np.random.uniform(self.a, self.b))
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, uniform_int_sampler_f) and self.a == o.a and self.b == o.b
+
+def log_uniform_sampler_f(a, b): return lambda: np.exp(np.random.uniform(np.log(a), np.log(b)))
+
+def zipf_sampler_f(a, b, c):
+    x = np.arange(b, c)
+    weights = x ** (-a)
+    weights /= weights.sum()
+    return lambda: stats.rv_discrete(name='bounded_zipf', values=(x, weights)).rvs(1)
 
 
-from tabpfn.utils import default_device
+def scaled_beta_sampler_f(a, b, scale, minimum): return lambda: minimum + round(beta_sampler_f(a, b)() * (scale - minimum))
 
-from .utils import (beta_sampler_f, gamma_sampler_f, uniform_int_sampler_f,
-                    trunc_norm_sampler_f, uniform_sampler_f, log_uniform_sampler_f)
 
 class HyperParameter:
     def __repr__(self):
@@ -220,28 +257,3 @@ def sample_distributions(hyperparameters):
             dist = dist()
         new_hypers[name] = dist
     return new_hypers
-
-class SamplerPrior:
-    def __init__(self, base_prior, differentiable_hyperparameters, heterogeneous_batches=False):
-        self.base_prior = base_prior
-        self.heterogeneous_batches = heterogeneous_batches
-        self.hyper_dists = {hp: parse_distribution(name=hp, **dist) for hp, dist in differentiable_hyperparameters.items()}
-
-    def get_batch(self, batch_size, n_samples, num_features, device=default_device, epoch=None, single_eval_pos=None):
-        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-        with torch.no_grad():
-            if self.heterogeneous_batches:
-                args['batch_size'] = 1
-                xs, ys, ys_, sampled_hypers_ = [], [], [], []
-                for i in range(0, batch_size):
-                    x, y, y_ = self.base_prior.get_batch(**args)
-                    xs.append(x)
-                    ys.append(y)
-                    ys_.append(y_)
-                    x, y, y_ = torch.cat(xs, 1), torch.cat(ys, 1), torch.cat(ys_, 1)
-                sampled_hypers = sampled_hypers_
-            else:
-                sampled_hypers = {hp: dist() for hp, dist in sorted(self.hyper_dists.items(), key=lambda x: x[0])}
-                x, y, y_ = self.base_prior.get_batch(**args)
-        x, y, y_ = x.detach(), y.detach(), y_.detach()
-        return x, y, y_, sampled_hypers

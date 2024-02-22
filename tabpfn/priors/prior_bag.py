@@ -1,7 +1,5 @@
 import torch
 
-from tabpfn.priors.utils import eval_simple_dist
-
 class BagPrior:
     def __init__(self, base_priors, prior_weights, verbose=False):
         self.base_priors = base_priors

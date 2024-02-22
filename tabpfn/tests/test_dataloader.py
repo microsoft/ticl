@@ -1,7 +1,7 @@
 from tabpfn.dataloader import get_dataloader
 from tabpfn.model_configs import get_base_config
-from tabpfn.priors import SamplerPrior, BagPrior, ClassificationAdapterPrior
-from tabpfn.priors.differentiable_prior import LogUniformHyperparameter
+from tabpfn.priors import BagPrior, ClassificationAdapterPrior
+from tabpfn.priors.distributions import LogUniformHyperparameter
 
 import lightning as L
 

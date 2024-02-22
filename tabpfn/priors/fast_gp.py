@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from tabpfn.utils import default_device
-from tabpfn.priors.differentiable_prior import parse_distributions, sample_distributions
+from tabpfn.priors.distributions import parse_distributions, sample_distributions
 
 # We will use the simplest form of GP model, exact inference
 class ExactGPModel(gpytorch.models.ExactGP):

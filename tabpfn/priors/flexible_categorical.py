@@ -9,8 +9,9 @@ from tabpfn.utils import (nan_handling_missing_for_a_reason_value, nan_handling_
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers)
 
-from tabpfn.priors.differentiable_prior import sample_distributions
-from .utils import CategoricalActivation, randomize_classes, uniform_int_sampler_f
+from tabpfn.priors.distributions import sample_distributions, uniform_int_sampler_f
+from .utils import CategoricalActivation, randomize_classes
+
 
 
 class BalancedBinarize:

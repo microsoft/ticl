@@ -1,4 +1,4 @@
-from tabpfn.priors.differentiable_prior import parse_distribution as DifferentiableHyperparameter
+from tabpfn.priors.distributions import parse_distribution as DifferentiableHyperparameter
 import lightning as L
 
 
