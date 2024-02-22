@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from tabpfn.utils import default_device
-
+from tabpfn.priors.differentiable_prior import parse_distributions, sample_distributions
 
 # We will use the simplest form of GP model, exact inference
 class ExactGPModel(gpytorch.models.ExactGP):
@@ -31,14 +31,16 @@ def get_model(x, y, hyperparameters):
 
 class GPPrior:
     def __init__(self, config=None):
-        self.config = config or {}
+        self.config = parse_distributions(config or {})
+
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, hyperparameters=None,
                   equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
+        hypers = sample_distributions(self.config)
         with torch.no_grad():
             assert not (equidistant_x and (fix_x is not None))
 
-            with gpytorch.settings.fast_computations(*self.config.get('fast_computations', (True, True, True))):
+            with gpytorch.settings.fast_computations(*hypers.get('fast_computations', (True, True, True))):
                 if equidistant_x:
                     assert num_features == 1
                     x = torch.linspace(0, 1., n_samples).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
@@ -46,18 +48,18 @@ class GPPrior:
                     assert fix_x.shape == (n_samples, num_features)
                     x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
                 else:
-                    if self.config['sampling'] == 'uniform':
+                    if hypers['sampling'] == 'uniform':
                         x = torch.rand(batch_size, n_samples, num_features, device=device)
                     else:
                         x = torch.randn(batch_size, n_samples, num_features, device=device)
-                model, likelihood = get_model(x, torch.Tensor(), self.config)
+                model, likelihood = get_model(x, torch.Tensor(), hypers)
                 model.to(device)
 
                 is_fitted = False
                 while not is_fitted:
                     try:
                         with gpytorch.settings.prior_mode(True):
-                            model, likelihood = get_model(x, torch.Tensor(), self.config)
+                            model, likelihood = get_model(x, torch.Tensor(), hypers)
                             model.to(device)
 
                             d = model(x)
@@ -70,8 +72,8 @@ class GPPrior:
                         print(self.config)
 
             if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
-                print({"noise": self.config['noise'], "outputscale": self.config['outputscale'],
-                        "lengthscale": self.config['lengthscale'], 'batch_size': batch_size})
+                print({"noise": hypers['noise'], "outputscale": hypers['outputscale'],
+                        "lengthscale": hypers['lengthscale'], 'batch_size': batch_size})
 
             # TODO: Multi output
             res =  x.transpose(0, 1), sample, sample  # x.shape = (T,B,H)

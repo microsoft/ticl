@@ -24,7 +24,7 @@ TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N
 TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                           'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False']
 
-DEFAULT_LOSS = pytest.approx(1.120428204536438)
+DEFAULT_LOSS = pytest.approx(1.629129409790039)
 
 def test_train_defaults():
     L.seed_everything(42)
@@ -55,7 +55,7 @@ def test_train_reload():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--save-every', '1'])
         prev_file_name = f'{results["base_path"]}/models_diff/{results["model_string"]}_epoch_2.cpkt'
         assert results['epoch'] == 2
-        assert results['loss'] == pytest.approx(0.7085821032524109)
+        assert results['loss'] == pytest.approx(0.7180840373039246)
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
         results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
@@ -90,7 +90,7 @@ def test_train_double_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D'])
-    assert results['loss'] == pytest.approx(1.7732799053192139)
+    assert results['loss'] == pytest.approx(0.8049592971801758)
     assert count_parameters(results['model']) == 1775818
     assert isinstance(results['model'], MotherNet)
 
@@ -99,7 +99,7 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
-    assert results['loss'] == pytest.approx(1.1325116157531738)
+    assert results['loss'] == pytest.approx(1.6888788938522339)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert results['model'].special_token
@@ -120,7 +120,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == pytest.approx(0.6865168809890747)
+    assert results['loss'] == pytest.approx(0.6947824358940125)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], MotherNet)
 
@@ -145,7 +145,7 @@ def test_train_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
     # suspiciously low tolerance here
-    assert results['loss'] == pytest.approx(0.6008968949317932, rel=1e-4)
+    assert results['loss'] == pytest.approx(0.7021620273590088, rel=1e-4)
     assert isinstance(results['model'], MotherNet)
 
 
@@ -153,7 +153,7 @@ def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
-    assert results['loss'] == pytest.approx(0.6890870928764343, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6986182332038879, rel=1e-5)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -162,7 +162,7 @@ def test_train_tabpfn_stepped_multiclass():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
-    assert results['loss'] == pytest.approx(1.1040089130401611)
+    assert results['loss'] == pytest.approx(0.7125848531723022)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -200,7 +200,7 @@ def test_train_tabpfn_boolean_mixed_prior():
         results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
                        'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
-    assert results['loss'] == pytest.approx(1.394465446472168)
+    assert results['loss'] == pytest.approx(0.6899799704551697)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -209,7 +209,7 @@ def test_train_tabpfn_uninformative_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--add-uninformative-features', 'True'])
-    assert results['loss'] == pytest.approx(1.6212761402130127)
+    assert results['loss'] == pytest.approx(0.6996276378631592)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -221,23 +221,14 @@ def test_train_tabpfn_heterogeneous_batches():
     assert results['dataloader'].prior.heterogeneous_batches
     assert isinstance(results['model'], TabPFN)
     assert count_parameters(results['model']) == 579850
-    assert results['loss'] == pytest.approx(1.8119933605194092)
-
-def test_train_tabpfn_refactored():
-    pytest.skip("This is not working yet")
-    L.seed_everything(42)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        results = tabpfn_main(TESTING_DEFAULTS + ['-B', tmpdir])
-    assert results['loss'] == 2.3345985412597656
-    assert count_parameters(results['model']) == 579850
-    assert isinstance(results['model'], TabPFN)
+    assert results['loss'] == pytest.approx(1.9642558097839355)
 
 
 def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
-    assert results['loss'] == pytest.approx(1.2122505903244019, rel=1e-5)
+    assert results['loss'] == pytest.approx( 0.7999935746192932, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
 
@@ -249,7 +240,7 @@ def test_train_additive_input_bin_embedding():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(0.8274667263031006, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.820658802986145, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding_rank():
@@ -258,7 +249,8 @@ def test_train_additive_input_bin_embedding_rank():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True', '--bin-embedding-rank', '8'])
     assert results['model'].encoder.embedding.shape == (64, 8)
     assert count_parameters(results['model']) == 8975018
-    assert results['loss'] == pytest.approx(0.7506317496299744, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7500977516174316, rel=1e-5)
+
 
 def test_train_additive_input_bin_embedding_linear():
     L.seed_everything(42)
@@ -266,7 +258,8 @@ def test_train_additive_input_bin_embedding_linear():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'linear'])
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(0.7457215785980225, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7332181334495544, rel=1e-5)
+
 
 def test_train_additive_factorized_output():
     L.seed_everything(42)
@@ -275,7 +268,7 @@ def test_train_additive_factorized_output():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1649994
-    assert results['loss'] == pytest.approx(1.528286337852478, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.0516083240509033, rel=1e-5)
 
 
 def test_train_additive_factorized_output_rank():
@@ -285,7 +278,7 @@ def test_train_additive_factorized_output_rank():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64, 10)
     assert count_parameters(results['model']) == 1487514
-    assert results['loss'] == pytest.approx(1.2191561460494995, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7871569991111755, rel=1e-5)
 
 
 def test_train_additive_factorized_in_and_out():
@@ -296,7 +289,7 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
-    assert results['loss'] == pytest.approx(1.6121066808700562, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.5622297525405884, rel=1e-5)
 
 
 def test_train_perceiver_defaults():
@@ -316,7 +309,8 @@ def test_train_perceiver_defaults():
     assert count_parameters(model.encoder) == 12928
     assert count_parameters(model.layers) == 664576
     assert count_parameters(model) == 1744842
-    assert results['loss'] == pytest.approx(2.238201379776001)
+    assert results['loss'] == pytest.approx(0.7330801486968994)
+
 
 def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
@@ -324,7 +318,7 @@ def test_train_perceiver_two_hidden_layers():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
-    assert results['loss'] == pytest.approx(1.7139562368392944)
+    assert results['loss'] == pytest.approx(0.7060166597366333)
 
 
 def test_train_perceiver_low_rank():
@@ -335,4 +329,4 @@ def test_train_perceiver_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
     assert count_parameters(results['model']) == 1126666
-    assert results['loss'] == pytest.approx(0.5219252705574036, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.0718088150024414, rel=1e-5)
