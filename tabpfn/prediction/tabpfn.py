@@ -13,7 +13,7 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from torch.utils.checkpoint import checkpoint
 
 from tabpfn.model_builder import load_model
-from tabpfn.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers, to_ranking_low_mem
+from tabpfn.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers
 
 
 def _get_file(e, base_path, add_name, eval_addition):
@@ -187,7 +187,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
             raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable."
-                             "We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN)."
+                             "We advise not to run datasets > 10k samples, which might lead to your machine crashing "
+                             "(due to quadratic memory scaling of TabPFN)."
                              "Please confirm you want to run by passing overwrite_warning=True to the fit function.")
 
         # Return the classifier

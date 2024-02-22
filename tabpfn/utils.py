@@ -452,7 +452,8 @@ def get_model_string(args, parser, num_gpus, device):
         for arg in parser._actions:
             if arg.option_strings:
                 k = arg.dest
-                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler', 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type'] or k not in args_dict:
+                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
+                         'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type'] or k not in args_dict:
                     continue
                 v = args_dict[k]
                 short_name = arg.option_strings[0].replace('-', '')
@@ -462,7 +463,8 @@ def get_model_string(args, parser, num_gpus, device):
                     else:
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
-        model_string = f"{model_type_string}{config_string}{gpu_string}{'_continue' if args.orchestration.continue_run else '_warm' if args.orchestration.warm_start_from else ''}"
+        model_string = (f"{model_type_string}{config_string}{gpu_string}"
+                        f"{'_continue' if args.orchestration.continue_run else '_warm' if args.orchestration.warm_start_from else ''}")
         model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
         if args.orchestration.st_checkpoint_dir is not None:
             with open(f"{args.orchestration.st_checkpoint_dir}/model_string.txt", 'w') as f:

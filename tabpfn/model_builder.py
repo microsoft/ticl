@@ -1,7 +1,5 @@
-import math
 import os
 import subprocess as sp
-from functools import partial
 
 import torch
 
@@ -96,10 +94,10 @@ def old_config_to_new(old_config, new_config):
         old_config['model_type'] = old_config.pop('model_maker')
     if "model_type" not in old_config:
         old_config['model_type'] = 'tabpfn'
-    ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a', 'differentiable',
-                       'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample', 'normalize_ignore_label_too',
-                       'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder', 'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training',
-                       'mix_activations']
+    ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a',
+                       'differentiable', 'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample',
+                       'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
+                       'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training', 'mix_activations']
     for k in ignored_configs:
         old_config.pop(k)
     for k, v in new_config.items():
@@ -117,7 +115,8 @@ def old_config_to_new(old_config, new_config):
     return new_config
 
 
-def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None, scheduler=None, epoch_callback=None, load_model_strict=True):
+def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None,
+              scheduler=None, epoch_callback=None, load_model_strict=True):
     # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
     config = get_base_config()
@@ -145,8 +144,9 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     y_encoder = get_y_encoder(config)
 
     encoder = get_encoder(config)
-    model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'], config_transformer=config['transformer'],
-                           config_mothernet=config['mothernet'], config_additive=config['additive'], config_perceiver=config['perceiver'],
+    model = assemble_model(encoder_layer=encoder, y_encoder_layer=y_encoder, model_type=config['general']['model_type'],
+                           config_transformer=config['transformer'], config_mothernet=config['mothernet'],
+                           config_additive=config['additive'], config_perceiver=config['perceiver'],
                            num_features=config['prior']['num_features'], max_num_classes=config['prior']['classification']['max_num_classes'])
 
     if model_state is not None:

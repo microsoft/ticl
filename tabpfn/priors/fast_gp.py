@@ -1,8 +1,5 @@
-import time
-
 import gpytorch
 import torch
-from torch import nn
 
 from tabpfn.utils import default_device
 from tabpfn.priors.distributions import parse_distributions, sample_distributions

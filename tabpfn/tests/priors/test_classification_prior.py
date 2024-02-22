@@ -5,7 +5,6 @@ import pytest
 
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
 from tabpfn.priors.classifiation_adapter import ClassificationAdapter
-from tabpfn.priors.distributions import parse_distributions
 
 
 @pytest.mark.parametrize("num_features", [11, 51])
@@ -53,7 +52,6 @@ def test_classification_adapter_with_sampling():
     batch_size = 16
     num_features = 100
     n_samples = 900
-    n_classes = 8
     # test the mlp prior
     L.seed_everything(42)
     config = get_base_config()

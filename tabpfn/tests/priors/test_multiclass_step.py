@@ -17,7 +17,6 @@ def test_multiclass_step(max_classes, max_steps, device):
 
     steps = MulticlassSteps(max_classes, max_steps=max_steps)
     num_classes = steps.num_classes
-    num_steps = steps.num_steps
     classes = steps(x)
     assert classes.shape == (1152, batchsize)
     assert (classes.unique().cpu() == torch.arange(0, num_classes)).all()
