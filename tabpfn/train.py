@@ -43,13 +43,9 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
         else:
             cm = nullcontext()
         with cm:
-            time_to_get_batch = time.time() - before_get_batch
-            before_forward = time.time()
             with autocast(dtype=torch.bfloat16) if scaler is not None else nullcontext():
                 output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
                                if isinstance(data, tuple) else data.to(device), single_eval_pos=single_eval_pos)
-
-                forward_time = time.time() - before_forward
 
                 if single_eval_pos is not None:
                     targets = targets[single_eval_pos:]
@@ -61,10 +57,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
             if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1., foreach=True)
                 optimizer.step()
-
                 optimizer.zero_grad()
-
-            step_time = time.time() - before_forward
 
             if torch.isnan(loss):
                 print("NAN loss encountered")
@@ -73,9 +66,8 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
             nan_steps += nan_share
             ignore_steps += (targets == -100).float().mean()
 
-        before_get_batch = time.time()
     return (total_loss / steps_per_epoch * aggregate_k_gradients,
-            time_to_get_batch, forward_time, step_time, nan_steps.cpu().item() / steps_per_epoch,
+            nan_steps.cpu().item() / steps_per_epoch,
             ignore_steps.cpu().item()/steps_per_epoch)
 
 
@@ -138,7 +130,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         start_epoch = scheduler.last_epoch + 1
 
     if reduce_lr_on_spike:
-        # we're not properly restarting the scheduler when we load a checkpoint, sad
+        # In this case we're not properly restarting the scheduler when we load a checkpoint, sad
         spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=min_lr, tolerance=spike_tolerance, verbose=True)
     scaler = GradScaler() if train_mixed_precision else None
 
@@ -157,8 +149,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
-            new_loss, time_to_get_batch, forward_time, step_time, nan_share, ignore_share =\
-                train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
+            new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
 
             total_loss = new_loss
             if hasattr(dl, 'validate') and epoch % validation_period == 0:
@@ -177,8 +168,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.4f} | ')
 
                 print(
-                    f' lr {last_lr} data time {time_to_get_batch:5.2f} step time {step_time:5.2f}'
-                    f' forward time {forward_time:5.2f}'
+                    f' lr {last_lr}'
                     f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
                     + (f'val score {val_score}' if val_score is not None else ''))
                 print('-' * 89)
