@@ -4,7 +4,7 @@ import torch
 import pytest
 
 from tabpfn.priors import ClassificationAdapterPrior, MLPPrior
-from tabpfn.priors.flexible_categorical import ClassificationAdapter
+from tabpfn.priors.classifiation_adapter import ClassificationAdapter
 from tabpfn.priors.distributions import parse_distributions
 
 @pytest.mark.parametrize("num_features", [11, 51])

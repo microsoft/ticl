@@ -1,4 +1,4 @@
-from tabpfn.priors.flexible_categorical import MulticlassSteps
+from tabpfn.priors.classifiation_adapter import MulticlassSteps
 import torch
 import pytest
 import lightning as L
