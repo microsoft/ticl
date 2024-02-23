@@ -3,17 +3,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tabpfn"
-version = "0.1.9"
+name = "mothernet"
+version = "0.1.0"
 authors = [
+{name="Andras Mueller", email="amueller@microsoft.com"},
 {name="Noah Hollmann"},
 {name="Samuel Muller", email="muellesa@tf.uni-freiburg.de"},
 {name="Katharina Eggensperger"},
 {name="Frank Hutter"},
 ]
-description = "Interface for using TabPFN and library to train TabPFN'"
+description = "Implementation of the MotherNet algorighm"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies=[
         'torch>=1.9.0',
         'scikit-learn>=0.24.2',
@@ -23,7 +24,6 @@ dependencies=[
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
@@ -47,4 +47,4 @@ full = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/automl/TabPFN'"
+"Homepage" = "https://github.com/Microsoft/mothernet"

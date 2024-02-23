@@ -1,21 +1,17 @@
-# TabPFN
+# MotherNet
 
-The TabPFN is a neural network that learned to do tabular data prediction.
-This is the original CUDA-supporting pytorch impelementation.
+The MotherNet is a hypernetwork foundational model (or conditional neural process) for tabular data classification.
+Both the architecture and the code is based on the [TabPFN](https://github.com/automl/TabPFN) by the [Freiburg AutoML group](https://www.automl.org/).
 
-We created a [Colab](https://colab.research.google.com/drive/194mCs6SEPEW6C0rcP7xWzcEtt1RBc8jJ), that lets you play with our scikit-learn interface.
+This is a research prototype, shared for research use, and not meant for real-world applications.
 
 ## Installation
 
-```bash
-pip install tabpfn
-```
+It's recommended to use conda to create an environment using the provided environment file:
 
-If you want to train and evaluate our method like we did in the paper (including baselines) please install with
-```bash
-pip install tabpfn[full]
 ```
-To run the autogluon and autosklearn baseline please create a separate environment and install autosklearn==0.14.5 / autogluon==0.4.0, installation in the same environment as our other baselines is not possible.
+conda create -f environment.yml
+```
 
 ## Getting started
 
@@ -41,7 +37,7 @@ y_eval, p_eval = classifier.predict(X_test, return_winning_probability=True)
 print('Accuracy', accuracy_score(y_test, y_eval))
 ```
 
-### TabPFN Usage
+### MotherNet Usage
 
 TabPFN is different from other methods you might know for tabular classification.
 Here, we list some tips and tricks that might help you understand how to use it best.
@@ -52,22 +48,21 @@ Here, we list some tips and tricks that might help you understand how to use it 
 - TabPFN does not use any statistics from the test set. That means predicting each test example one-by-one will yield the same result as feeding the whole test set together.
 - TabPFN is differentiable in principle, only the pre-processing is not and relies on numpy.
 
-## Our Paper
-Read our [paper](https://arxiv.org/abs/2207.01848) for more information about the setup (or contact us ☺️).
-If you use our method, please cite us using
-```
-@inproceedings{
-  hollmann2023tabpfn,
-  title={Tab{PFN}: A Transformer That Solves Small Tabular Classification Problems in a Second},
-  author={Noah Hollmann and Samuel M{\"u}ller and Katharina Eggensperger and Frank Hutter},
-  booktitle={The Eleventh International Conference on Learning Representations},
-  year={2023},
-  url={https://openreview.net/forum?id=cp5PvcI6w8_}
-}
-```
+### Model Training
+Full model training code is provided. Training ``MotherNet`` is possible with ``python fit_model.py``. A GPU ID can be specified with ``-g GPU_ID``. See the help for more options.
+The results in the paper correspond to ``python fit_model.py -L 2``, though default values might change and no longer reflect the values in the paper.
+Data-parallel Multi-GPU training is in principal supported using ``torchrun``.
+By default, experiments are tracked using MLFlow if the ``MLFLOW_HOSTNAME`` environment variable is set. Using MLFlow for a particular run can be disabled with the ``--no-mlflow`` argument.
+
+## Papers
+This work is described in [MotherNet: A Foundational Hypernetwork for Tabular Classification](https://arxiv.org/pdf/2312.08598).
+Please cite that work when using this code. As this work rests on the TabPFN work, I would suggest you also cite their [paper](https://arxiv.org/abs/2207.01848),
+which also provides more background on the methodology.
 
 ## License
 Copyright 2022 Noah Hollmann, Samuel Müller, Katharina Eggensperger, Frank Hutter
+
+Additions by Andreas Mueller, 2024
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
