@@ -3,7 +3,8 @@
 The MotherNet is a hypernetwork foundational model (or conditional neural process) for tabular data classification.
 Both the architecture and the code is based on the [TabPFN](https://github.com/automl/TabPFN) by the [Freiburg AutoML group](https://www.automl.org/).
 
-This is a research prototype, shared for research use, and not meant for real-world applications.
+This is a research prototype, shared for research use, and not meant for real-world applications. Responsibility for using the models contained in this repository,
+as well monitoring and assessing potential impact of the models relies with the user of the code.
 
 ## Installation
 
@@ -21,20 +22,23 @@ from sklearn.metrics import accuracy_score
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 
-from tabpfn import TabPFNClassifier
+from mothernet.prediction import MotherNetClassifier, EnsembleMeta
 
 X, y = load_breast_cancer(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-# N_ensemble_configurations controls the number of model predictions that are ensembled with feature and class rotations (See our work for details).
-# When N_ensemble_configurations > #features * #classes, no further averaging is applied.
+# MotherNetClassifier encapsulates a single instantiation of the model.
 
-classifier = TabPFNClassifier(device='cpu', N_ensemble_configurations=32)
+classifier = MotherNetClassifier(device='cpu', model_path="path/to/model.pkl")
 
 classifier.fit(X_train, y_train)
 y_eval, p_eval = classifier.predict(X_test, return_winning_probability=True)
 
 print('Accuracy', accuracy_score(y_test, y_eval))
+
+# Ensembling as described in the TabPFN paper an be performed using the EnsembleMeta wrapper
+ensemble_classifier = EnsembleMeta(classifier)
+# ...
 ```
 
 ### MotherNet Usage
