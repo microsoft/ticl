@@ -8,7 +8,6 @@ import os
 
 from git import Repo
 
-from mothernet.mlflow_utils import MLFLOW_HOSTNAME
 from mothernet.model_builder import get_model
 from mothernet.model_configs import get_base_config
 from mothernet.utils import compare_dicts, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback, flatten_dict
@@ -88,8 +87,15 @@ def main(argv):
     model_string = get_model_string(args, parser, num_gpus, device)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow, orchestration.st_checkpoint_dir)
 
-    if not orchestration.no_mlflow:
-        mlflow.set_tracking_uri(f"http://{MLFLOW_HOSTNAME}:5000")
+    mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
+    if orchestration.no_mlflow or mlflow_hostname is None:
+        print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment variable enable mlflow.")
+        total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
+                                                 optimizer_state=optimizer_state, scheduler=scheduler,
+                                                 load_model_strict=orchestration.continue_run or orchestration.load_strict)
+    else:
+        print(f"Logging run with mlflow at host {mlflow_hostname}")
+        mlflow.set_tracking_uri(f"http://{mlflow_hostname}:5000")
 
         tries = 0
         while tries < 5:
@@ -121,11 +127,6 @@ def main(argv):
             total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=orchestration.continue_run or orchestration.load_strict)
-
-    else:
-        total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
-                                                 optimizer_state=optimizer_state, scheduler=scheduler,
-                                                 load_model_strict=orchestration.continue_run or orchestration.load_strict)
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")
