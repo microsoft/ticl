@@ -11,7 +11,7 @@ from git import Repo
 from mothernet.mlflow_utils import MLFLOW_HOSTNAME
 from mothernet.model_builder import get_model
 from mothernet.model_configs import get_base_config
-from mothernet.utils import compare_dicts, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
+from mothernet.utils import compare_dicts, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback, flatten_dict
 from mothernet.cli_parsing import argparser_from_config
 from argparse import Namespace
 
@@ -48,8 +48,10 @@ def main(argv):
         import lightning as L
         L.seed_everything(42)
 
-    config['general']['num_gpus'] = 1
-    config['general']['device'] = device
+    # promote general group to top level
+    config.update(config.pop('general'))
+    config['num_gpus'] = 1
+    config['device'] = device
 
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
@@ -73,7 +75,7 @@ def main(argv):
         if args.orchestration.continue_run:
             config = old_config
             # we want to overwrite specific parts of the old config with current values
-            config['general']['device'] = device
+            config['device'] = device
             config['orchestration']['warm_start_from'] = warm_start_weights
             optimizer_state = old_optimizer_state
             config['orchestration']['stop_after_epochs'] = args.orchestration.stop_after_epochs
@@ -115,7 +117,7 @@ def main(argv):
 
         with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
-            mlflow.log_params({k: v for k, v in config.items() if isinstance(v, (int, float, str)) and k != 'epoch_in_training'})
+            mlflow.log_params(flatten_dict(config))
             total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=orchestration.continue_run or orchestration.load_strict)

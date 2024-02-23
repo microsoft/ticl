@@ -152,7 +152,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     else:
         n_out = 1
 
-    model_type = config['general']['model_type']
+    model_type = config['model_type']
 
     if model_type == "mlp":
         model = MotherNet(

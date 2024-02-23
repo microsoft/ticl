@@ -119,7 +119,7 @@ def get_base_config():
             'p_uninformative': 0.5},
     })
 
-    config['general'] = {'model_type': 'mothernet'}
+    config['model_type'] = 'mothernet'
 
     config['mothernet'] = {
         'weight_embedding_rank': None,

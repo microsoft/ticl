@@ -12,6 +12,7 @@ from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
+from collections.abc import MutableMapping
 
 
 def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
@@ -205,6 +206,17 @@ def check_compatibility(dl):
 
 def normalize_by_used_features_f(x, num_features_used, num_features):
     return x / (num_features_used / num_features)
+
+
+def flatten_dict(dictionary, parent_key='', separator='_'):
+    items = []
+    for key, value in dictionary.items():
+        new_key = parent_key + separator + key if parent_key else key
+        if isinstance(value, MutableMapping):
+            items.extend(flatten_dict(value, new_key, separator=separator).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
 
 
 def compare_dicts(left, right, prefix=None, skip=None, return_bool=False):
