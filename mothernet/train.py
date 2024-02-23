@@ -130,7 +130,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     if reduce_lr_on_spike:
         # In this case we're not properly restarting the scheduler when we load a checkpoint, sad
         spike_scheduler = ReduceLROnSpike(optimizer, smoothing=10, factor=0.5, min_lr=min_lr, tolerance=spike_tolerance, verbose=True)
-    scaler = GradScaler() if train_mixed_precision else None
+    scaler = GradScaler() if train_mixed_precision and device != "cpu" else None
 
     # check that everything uses up-to-date APIs
     utils.check_compatibility(dl)
