@@ -367,7 +367,7 @@ def get_model_string(config, num_gpus, device, parser):
     default_config_flat = flatten_dict(get_base_config(), only_last=True)
     config_flat = flatten_dict(config, only_last=True)
     config_string = ""
-    for k in config_flat:
+    for k in sorted(config_flat.keys()):
         if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
                  'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type', 'extra_fast_test',
                  'seed_everything', 'no_mlflow', 'num_gpus', 'device', 'nhead']:
@@ -377,10 +377,11 @@ def get_model_string(config, num_gpus, device, parser):
             print(f"Warning: {k} not in default config")
             continue
         if v != default_config_flat[k]:
+            shortname = config_shorthands.get(k, k)
             if isinstance(v, float):
-                config_string += f"_{config_shorthands[k]}{v:.4g}"
+                config_string += f"_{shortname}{v:.4g}"
             else:
-                config_string += f"_{config_shorthands[k]}{v}"
+                config_string += f"_{shortname}{v}"
     gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
     if gpu_string == "_1_gpu":
         gpu_string = ""

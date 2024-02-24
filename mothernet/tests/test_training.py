@@ -32,8 +32,7 @@ def test_train_defaults():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert results['loss'] == DEFAULT_LOSS
-    import pdb; pdb.set_trace()
-    assert results['model_string'].startswith("mn_cpu_")
+    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_N4_n1_P64_tFalse_W32_cpu_")
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
