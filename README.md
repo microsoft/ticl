@@ -4,7 +4,7 @@ The MotherNet is a hypernetwork foundational model (or conditional neural proces
 Both the architecture and the code is based on the [TabPFN](https://github.com/automl/TabPFN) by the [Freiburg AutoML group](https://www.automl.org/).
 
 This is a research prototype, shared for research use, and not meant for real-world applications. Responsibility for using the models contained in this repository,
-as well monitoring and assessing potential impact of the models relies with the user of the code.
+as well monitoring and assessing potential impact of the models lies with the user of the code.
 
 ## Installation
 
