@@ -10,7 +10,7 @@ from mothernet.models.mothernet_additive import MotherNetAdditive
 from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
 from mothernet.models.mothernet import MotherNet
-from mothernet.utils import compare_dicts
+from mothernet.config_utils import compare_dicts
 
 
 def count_parameters(model):
@@ -32,6 +32,8 @@ def test_train_defaults():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert results['loss'] == DEFAULT_LOSS
+    import pdb; pdb.set_trace()
+    assert results['model_string'].startswith("mn_cpu_")
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
@@ -64,8 +66,10 @@ def test_train_reload():
         assert results_new['epoch'] == 3
         assert results_new['loss'] == np.inf
         assert results_new['base_path'] == results['base_path']
-        assert results_new['model_string'].startswith(results['model_string'])
+        assert results_new['model_string'].startswith(results['model_string'][:-20])
         ignored_configs = ['warm_start_from', 'continue_run']
+        assert results_new['config']['orchestration']['warm_start_from'].split("/")[-1].startswith(results['model_string'])
+        assert results_new['config']['orchestration']['continue_run']
         for k, v in results['config'].items():
             if k not in ignored_configs:
                 if isinstance(v, dict):

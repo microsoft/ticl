@@ -6,7 +6,7 @@ from mothernet.utils import (nan_handling_missing_for_a_reason_value, nan_handli
                           nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                           remove_outliers)
 
-from mothernet.priors.distributions import sample_distributions, uniform_int_sampler_f
+from mothernet.distributions import sample_distributions, uniform_int_sampler_f
 from .utils import CategoricalActivation, randomize_classes
 
 

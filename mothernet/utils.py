@@ -12,7 +12,8 @@ from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
-from collections.abc import MutableMapping
+from mothernet.model_configs import get_base_config
+from mothernet.config_utils import flatten_dict
 
 
 def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
@@ -208,61 +209,6 @@ def normalize_by_used_features_f(x, num_features_used, num_features):
     return x / (num_features_used / num_features)
 
 
-def flatten_dict(dictionary, parent_key='', separator='_'):
-    items = []
-    for key, value in dictionary.items():
-        new_key = parent_key + separator + key if parent_key else key
-        if isinstance(value, MutableMapping):
-            items.extend(flatten_dict(value, new_key, separator=separator).items())
-        else:
-            items.append((new_key, value))
-    return dict(items)
-
-
-def compare_dicts(left, right, prefix=None, skip=None, return_bool=False):
-    skip = skip or {}
-
-    prefix = prefix or ""
-    for k in set(left).union(set(right)):
-        if k in skip:
-            continue
-        if k not in left:
-            if return_bool:
-                return False
-            print(f"{prefix}{k} missing in left")
-            continue
-        if k not in right:
-            if return_bool:
-                return False
-            print(f"{prefix}{k} missing in right")
-            continue
-        if isinstance(left[k], dict):
-            res = compare_dicts(left[k], right[k], prefix=f"{prefix}{k}->", skip=skip, return_bool=return_bool)
-            if return_bool and not res:
-                return False
-        else:
-            if (torch.is_tensor(left[k]) and (left[k] != right[k]).all()) or (not torch.is_tensor(left[k]) and left[k] != right[k]):
-                if return_bool:
-                    return False
-                print(f"{prefix}{k}: left: {left[k]}, right: {right[k]}")
-    if return_bool:
-        return True
-
-
-def merge_dicts(*dicts):
-    keys = set([k for d in dicts for k in d])
-    merged = {}
-    for k in keys:
-        values = [d[k] for d in dicts if k in d]
-        if len(values) == 1:
-            merged[k] = values[0]
-        elif all([isinstance(v, dict) for v in values]):
-            merged[k] = merge_dicts(*values)
-        else:
-            raise ValueError(f"Can't merge {values} for key {k}")
-    return merged
-
-
 class ExponentialLR(LRScheduler):
     """Decays the learning rate of each parameter group by gamma every epoch.
     When last_epoch=-1, sets initial lr as lr.
@@ -414,44 +360,36 @@ def init_device(gpu_id, use_cpu):
     return device, rank, num_gpus
 
 
-def get_model_string(args, parser, num_gpus, device):
-    if args.orchestration.continue_run:
-        if args.orchestration.st_checkpoint_dir is None:
-            model_string = args.orchestration.warm_start_from.split("/")[-1].split("_epoch_")[0]
-            if args.orchestration.create_new_run:
-                model_string = model_string + '_continue_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-        else:
-            with open(f"{args.orchestration.st_checkpoint_dir }/model_string.txt", 'r') as f:
-                model_string = f.read()
-    else:
-        mm = args.general.model_type
-        model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
-
-        default_args_dict = vars(parser.parse_args([]))
-        args_dict = vars(args)
-        config_string = ""
-        for arg in parser._actions:
-            if arg.option_strings:
-                k = arg.dest
-                if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
-                         'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type'] or k not in args_dict:
-                    continue
-                v = args_dict[k]
-                short_name = arg.option_strings[0].replace('-', '')
-                if v != default_args_dict[k]:
-                    if isinstance(v, float):
-                        config_string += f"_{short_name}{v:.4g}"
-                    else:
-                        config_string += f"_{short_name}{v}"
-        gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
-        if gpu_string == "_1_gpu":
-            gpu_string = ""
-        model_string = (f"{model_type_string}{config_string}{gpu_string}"
-                        f"{'_continue' if args.orchestration.continue_run else '_warm' if args.orchestration.warm_start_from else ''}")
-        model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
-        if args.orchestration.st_checkpoint_dir is not None:
-            with open(f"{args.orchestration.st_checkpoint_dir}/model_string.txt", 'w') as f:
-                f.write(model_string)
+def get_model_string(config, num_gpus, device, parser):
+    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
+    mm = config['model_type']
+    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
+    default_config_flat = flatten_dict(get_base_config(), only_last=True)
+    config_flat = flatten_dict(config, only_last=True)
+    config_string = ""
+    for k in config_flat:
+        if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
+                 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type', 'extra_fast_test',
+                 'seed_everything', 'no_mlflow', 'num_gpus', 'device', 'nhead']:
+            continue
+        v = config_flat[k]
+        if k not in default_config_flat:
+            print(f"Warning: {k} not in default config")
+            continue
+        if v != default_config_flat[k]:
+            if isinstance(v, float):
+                config_string += f"_{config_shorthands[k]}{v:.4g}"
+            else:
+                config_string += f"_{config_shorthands[k]}{v}"
+    gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
+    if gpu_string == "_1_gpu":
+        gpu_string = ""
+    model_string = (f"{model_type_string}{config_string}{gpu_string}"
+                    f"{'_continue' if config['orchestration']['continue_run'] else '_warm' if config['orchestration']['warm_start_from'] else ''}")
+    model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+    if config['orchestration']['st_checkpoint_dir'] is not None:
+        with open(f"{config['orchestration']['st_checkpoint_dir']}/model_string.txt", 'w') as f:
+            f.write(model_string)
     return model_string
 
 

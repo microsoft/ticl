@@ -2,7 +2,7 @@ import gpytorch
 import torch
 
 from mothernet.utils import default_device
-from mothernet.priors.distributions import parse_distributions, sample_distributions
+from mothernet.distributions import parse_distributions, sample_distributions
 
 # We will use the simplest form of GP model, exact inference
 

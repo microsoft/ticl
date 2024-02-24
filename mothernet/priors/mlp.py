@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 from mothernet.utils import default_device
-from mothernet.priors.distributions import parse_distributions, sample_distributions
+from mothernet.distributions import parse_distributions, sample_distributions
 
 
 class GaussianNoise(nn.Module):

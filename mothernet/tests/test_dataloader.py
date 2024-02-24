@@ -1,7 +1,7 @@
 from mothernet.dataloader import get_dataloader
 from mothernet.model_configs import get_base_config
 from mothernet.priors import BagPrior, ClassificationAdapterPrior
-from mothernet.priors.distributions import LogUniformHyperparameter
+from mothernet.distributions import LogUniformHyperparameter
 
 import lightning as L
 

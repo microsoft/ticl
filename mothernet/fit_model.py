@@ -10,7 +10,8 @@ from git import Repo
 
 from mothernet.model_builder import get_model
 from mothernet.model_configs import get_base_config
-from mothernet.utils import compare_dicts, init_device, get_model_string, synetune_handle_checkpoint, make_training_callback, flatten_dict
+from mothernet.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
+from mothernet.config_utils import compare_dicts, flatten_dict
 from mothernet.cli_parsing import argparser_from_config
 from argparse import Namespace
 
@@ -76,6 +77,7 @@ def main(argv):
             # we want to overwrite specific parts of the old config with current values
             config['device'] = device
             config['orchestration']['warm_start_from'] = warm_start_weights
+            config['orchestration']['continue_run'] = True
             optimizer_state = old_optimizer_state
             config['orchestration']['stop_after_epochs'] = args.orchestration.stop_after_epochs
             if not args.orchestration.restart_scheduler:
@@ -84,7 +86,7 @@ def main(argv):
             print("WARNING warm starting with new settings")
             compare_dicts(config, old_config)
 
-    model_string = get_model_string(args, parser, num_gpus, device)
+    model_string = get_model_string(config, num_gpus, device, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow, orchestration.st_checkpoint_dir)
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)

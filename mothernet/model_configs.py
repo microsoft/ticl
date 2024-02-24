@@ -1,7 +1,7 @@
 import torch
 
-from mothernet.priors.distributions import uniform_int_sampler_f
-from mothernet.utils import merge_dicts
+from mothernet.distributions import uniform_int_sampler_f
+from mothernet.config_utils import merge_dicts
 
 
 def get_general_config(max_features, n_samples):
@@ -135,9 +135,9 @@ def get_base_config():
     config['perceiver'] = {'num_latents': 512}
 
     config['additive'] = {
-        'input_bin_embedding': False,
+        'input_bin_embedding': 'none',
         'factorized_output': False,
-        'output_rank': None,
+        'output_rank': 16,
         'bin_embedding_rank': 16}
 
     config['transformer'].update({
@@ -153,7 +153,7 @@ def get_base_config():
         'reduce_lr_on_spike': False,
         'warmup_epochs': 20,
         'learning_rate_schedule': 'cosine',
-        'min_lr': None,
+        'min_lr': 1e-8,
         'adam_beta1': 0.9,
         'spike_tolerance': 4,
         'weight_decay': 0.0,
