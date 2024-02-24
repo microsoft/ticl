@@ -123,13 +123,13 @@ def get_base_config():
 
     config['mothernet'] = {
         'weight_embedding_rank': None,
-        'low_rank_weights': False,
+        'low_rank_weights': True,
         'predicted_hidden_layer_size': 128,
         'output_attention': True,
-        'decoder_embed_dim': 2048,
+        'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 1,
         'decoder_two_hidden_layers': False,
-        'decoder_hidden_size': None,
+        'decoder_hidden_size': 2048,
         'special_token': False}
 
     config['perceiver'] = {'num_latents': 512}
