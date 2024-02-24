@@ -1,4 +1,5 @@
 from itertools import cycle
+import os
 
 import mlflow
 import numpy as np
@@ -8,8 +9,6 @@ from mlflow.entities import ViewType
 from mlflow.exceptions import MlflowException
 from scipy.optimize import minimize
 from sklearn.base import BaseEstimator, RegressorMixin
-
-from mothernet.mlflow_utils import MLFLOW_HOSTNAME
 
 
 def exp_curve(x, params):
@@ -115,10 +114,12 @@ def get_runs(filter_string, experiment_id):
         run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
 
-def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1, filter_runs=("running", "reference"), mlflow_host=None,
-                    legend=False):
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1,
+                    filter_runs=("running", "reference"), mlflow_host=None, legend=False, inactive_legend=False):
     if mlflow_host is None:
-        mlflow_host = MLFLOW_HOSTNAME
+        mlflow_host = os.environ.get("MLFLOW_HOSTNAME", None)
+    if mlflow_host is None:
+        raise ValueError("Please specify mlflow_host or set MLFLOW_HOSTNAME environment variable.")
     mlflow.set_tracking_uri(f"http://{mlflow_host}:5000")
     if experiment_name is not None and experiment_id is not None:
         raise ValueError("Please specify either experiment_name or experiment_id, not both.")
@@ -160,7 +161,7 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
                 print(e)
     losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'step': 'epoch'})
     losses_all_df['timestamp'] -= losses_all_df.timestamp.min()
-    fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing)
+    fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing, inactive_legend=inactive_legend)
     if legend:
         fig.update_layout(legend=dict(
             yanchor="top",
