@@ -52,7 +52,7 @@ def get_general_config(max_features, n_samples):
 
     dataloader = {
         "batch_size": 8,
-        "num_steps": None,
+        "num_steps": 8192,
         'min_eval_pos': 2,
         'max_eval_pos': 1000}
 
