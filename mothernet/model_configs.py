@@ -122,7 +122,7 @@ def get_base_config():
     config['model_type'] = 'mothernet'
 
     config['mothernet'] = {
-        'weight_embedding_rank': None,
+        'weight_embedding_rank': 32,
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 128,
         'output_attention': True,
