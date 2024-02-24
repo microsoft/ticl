@@ -444,6 +444,8 @@ def get_model_string(args, parser, num_gpus, device):
                     else:
                         config_string += f"_{short_name}{v}"
         gpu_string = f"_{num_gpus}_gpu{'s' if num_gpus > 1 else ''}" if device != 'cpu' else '_cpu'
+        if gpu_string == "_1_gpu":
+            gpu_string = ""
         model_string = (f"{model_type_string}{config_string}{gpu_string}"
                         f"{'_continue' if args.orchestration.continue_run else '_warm' if args.orchestration.warm_start_from else ''}")
         model_string = model_string + '_'+datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
