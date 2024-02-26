@@ -107,15 +107,14 @@ class FactorizedAdditiveModelDecoder(nn.Module):
 
 
 class MLPModelDecoder(nn.Module):
-    def __init__(self, emsize=512, n_out=10, hidden_size=1024, output_attention=False, special_token=False, predicted_hidden_layer_size=None, embed_dim=2048,
+    def __init__(self, emsize=512, n_out=10, hidden_size=1024, decoder_type='output_attention', predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_two_hidden_layers=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
         self.n_out = n_out
         self.hidden_size = hidden_size
-        self.output_attention = output_attention
-        self.special_token = special_token
+        self.decoder_type = decoder_type
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
         self.in_size = 100
         out_size = emsize
@@ -124,15 +123,18 @@ class MLPModelDecoder(nn.Module):
 
         self.predicted_hidden_layers = predicted_hidden_layers
 
-        if output_attention:
-            if special_token:
-                out_size = emsize
-                self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=self.nhead)
+        if decoder_type == "output_attention":
+            self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
+            out_size = embed_dim
+            self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
+        elif decoder_type == "special_token":
+            out_size = emsize
+            self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=self.nhead)
+        elif decoder_type == "average":
+            pass
+        else:
+            raise ValueError(f"Unknown decoder_type {decoder_type}")
 
-            else:
-                self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
-                out_size = embed_dim
-                self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
 
         if self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + (self.in_size + 1) * self.predicted_hidden_layer_size
@@ -163,13 +165,14 @@ class MLPModelDecoder(nn.Module):
     def forward(self, x):
         hidden_size = self.predicted_hidden_layer_size
         if x.shape[0] != 0:
-            if self.output_attention:
-                if not self.special_token:
-                    res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
-                else:
-                    res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze(0)
-            else:
+            if self.decoder_type == "output_attention":
+                res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
+            elif self.decoder_type == "special_token":
+                res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze(0)
+            elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
+            else:
+                raise ValueError(f"Unknown decoder_type: {decoder_type}")
         else:
             raise ValueError("Empty input")
 

@@ -263,9 +263,8 @@ class TabPerceiver(MLPModelPredictor):
         self_per_cross_attn=1,
         decoder_hidden_size=512,
         predicted_hidden_layer_size=128,
-        output_attention=True,
+        decoder_type="output_attention",
         decoder_embed_dim=512,
-        special_token=False,
         decoder_two_hidden_layers=False,
         y_encoder_layer=None,
         encoder_layer=None,
@@ -313,8 +312,7 @@ class TabPerceiver(MLPModelPredictor):
         latent_heads = nhead
         self.n_out = n_out
         self.ff_dropout = dropout
-        assert not special_token
-        self.special_token = special_token
+        assert decoder_type == "output_attention"
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
         self.layers = nn.ModuleList([])
@@ -334,8 +332,8 @@ class TabPerceiver(MLPModelPredictor):
             cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
-        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=output_attention,
-                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
+        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, ecoder_type=decoder_type,
+                                       predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
 

@@ -19,7 +19,7 @@ class MLPModelPredictor(nn.Module):
         x_src = self.encoder(x_src_org)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-        if self.special_token:
+        if self.decoder_type == "special_token":
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
 
         output = self.inner_forward(train_x)
@@ -52,7 +52,7 @@ class MotherNet(MLPModelPredictor):
     def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, output_attention=False, special_token=False, predicted_hidden_layer_size=None,
+                 all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
                  decoder_embed_dim=2048,
                  decoder_two_hidden_layers=False, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
                  low_rank_weights=False):
@@ -71,14 +71,13 @@ class MotherNet(MLPModelPredictor):
         self.efficient_eval_masking = efficient_eval_masking
         self.n_out = n_out
         self.nhid = nhid
-        self.output_attention = output_attention
-        self.special_token = special_token
+        self.decoder_type = decoder_type
         decoder_hidden_size = decoder_hidden_size or nhid
-        self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, output_attention=self.output_attention,
-                                       special_token=special_token, predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
+        self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=self.decoder_type,
+                                       predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
-        if special_token:
+        if decoder_type == "special_token":
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
 
         self.init_weights()

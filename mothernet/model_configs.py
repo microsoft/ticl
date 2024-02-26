@@ -125,12 +125,11 @@ def get_base_config():
         'weight_embedding_rank': 32,
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 128,
-        'output_attention': True,
+        'decoder_type': "output_attention",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 1,
         'decoder_two_hidden_layers': False,
-        'decoder_hidden_size': 2048,
-        'special_token': False}
+        'decoder_hidden_size': 2048}
 
     config['perceiver'] = {'num_latents': 512}
 

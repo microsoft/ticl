@@ -62,9 +62,8 @@ def argparser_from_config(description="Train Mothernet"):
     mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
     mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
 
-    mothernet.add_argument('-S', '--special-token',
-                           help='whether add a special output token in the first layer as opposed to having one in the last attention layer.'
-                           ' If True, decoder-em-size is ignored.', default=False, type=str2bool)
+    mothernet.add_argument('-D', '--decoder-type',
+                           help="Decoder Type. 'output_attention', 'special_token' or 'average'.", default=False, type=str2bool)
     mothernet.add_argument('-T', '--decoder-two-hidden-layers', help='whether to use two hidden layers for the decoder', default=False, type=str2bool)
     mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=128)
     mothernet.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=1, dest='predicted_hidden_layers')

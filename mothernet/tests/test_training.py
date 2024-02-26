@@ -93,11 +93,11 @@ def test_train_reload():
 def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-S', 'True'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token'])
     assert results['loss'] == pytest.approx(1.1190301179885864)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
-    assert results['model'].special_token
+    assert results['model'].decoder_type == "special_token"
     assert count_parameters(results['model'].decoder) == 1000266
     assert results['model'].token_embedding.shape == (1, 1, 128)
 
@@ -133,7 +133,7 @@ def test_train_low_rank_ignored():
 def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128',
+        results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
     assert count_parameters(results['model']) == 926474
@@ -192,7 +192,7 @@ def test_train_tabpfn_boolean_prior_max_uninformative():
 def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-S', 'False', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+        results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
                         'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
     assert results['loss'] == pytest.approx(0.6881492137908936)
