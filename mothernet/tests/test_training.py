@@ -102,6 +102,18 @@ def test_train_special_token():
     assert results['model'].token_embedding.shape == (1, 1, 128)
 
 
+def test_train_class_tokens():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_tokens'])
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "class_tokens"
+    assert count_parameters(results['model']) == 1478602
+    assert count_parameters(results['model'].decoder) == 934218
+    import pdb; pdb.set_trace()
+    assert results['loss'] == pytest.approx(3.848506450653076)
+
+
 def test_train_simple_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

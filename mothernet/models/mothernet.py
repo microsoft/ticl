@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder
 
+from mothernet.models.encoders import OneHotAndLinear
 from mothernet.models.decoders import LinearModelDecoder, MLPModelDecoder
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
@@ -21,6 +22,11 @@ class MLPModelPredictor(nn.Module):
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         if self.decoder_type in ["special_token", "special_token_simple"]:
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
+        elif self.decoder_type == "class_tokens":
+            if not isinstance(self.y_encoder, OneHotAndLinear):
+                raise ValueError("class_tokens decoder type is only supported with OneHotAndLinear y_encoder")
+            repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, train_x.shape[1], 1)
+            train_x = torch.cat([repeated_class_tokens, train_x], 0)
 
         output = self.inner_forward(train_x)
         (b1, w1), *layers = self.decoder(output)

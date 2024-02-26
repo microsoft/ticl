@@ -132,6 +132,8 @@ class MLPModelDecoder(nn.Module):
             self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=self.nhead)
         elif decoder_type == "special_token_simple":
             out_size = emsize
+        elif decoder_type == "class_tokens":
+            out_size = emsize * n_out
         elif decoder_type == "average":
             pass
         else:
@@ -170,9 +172,12 @@ class MLPModelDecoder(nn.Module):
             if self.decoder_type == "output_attention":
                 res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
             elif self.decoder_type == "special_token":
-                res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze(0)
+                res = self.mlp(self.output_layer(x[[0]], x[1:], x[1:], need_weights=False)[0]).squeeze(0)
             elif self.decoder_type == "special_token_simple":
-                res = self.mlp(x[-1])
+                res = self.mlp(x[0])
+            elif self.decoder_type == "class_tokens":
+                import pdb; pdb.set_trace()
+                res = self.mlp(x[:n_out])
             elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
             else:
