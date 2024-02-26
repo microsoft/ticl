@@ -1,6 +1,6 @@
 trigger:
 - main
-- rename_package
+- develop
 
 pool:
   vmImage: ubuntu-latest
