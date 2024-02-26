@@ -130,6 +130,8 @@ class MLPModelDecoder(nn.Module):
         elif decoder_type == "special_token":
             out_size = emsize
             self.output_layer = nn.MultiheadAttention(embed_dim=emsize, num_heads=self.nhead)
+        elif decoder_type == "special_token_simple":
+            out_size = emsize
         elif decoder_type == "average":
             pass
         else:
@@ -169,6 +171,8 @@ class MLPModelDecoder(nn.Module):
                 res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
             elif self.decoder_type == "special_token":
                 res = self.mlp(self.output_layer(x[[-1]], x[:-1], x[:-1], need_weights=False)[0]).squeeze(0)
+            elif self.decoder_type == "special_token_simple":
+                res = self.mlp(x[-1])
             elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
             else:

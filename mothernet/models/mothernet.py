@@ -19,7 +19,7 @@ class MLPModelPredictor(nn.Module):
         x_src = self.encoder(x_src_org)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
-        if self.decoder_type == "special_token":
+        if self.decoder_type in ["special_token", "special_token_simple"]:
             train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
 
         output = self.inner_forward(train_x)
@@ -77,7 +77,7 @@ class MotherNet(MLPModelPredictor):
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
-        if decoder_type == "special_token":
+        if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
 
         self.init_weights()

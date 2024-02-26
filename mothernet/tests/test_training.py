@@ -102,6 +102,30 @@ def test_train_special_token():
     assert results['model'].token_embedding.shape == (1, 1, 128)
 
 
+def test_train_simple_special_token():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token_simple'])
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "special_token_simple"
+    assert count_parameters(results['model']) == 1478602
+    assert count_parameters(results['model'].decoder) == 934218
+    assert results['model'].token_embedding.shape == (1, 1, 128)
+    assert results['loss'] == pytest.approx(3.848506450653076)
+
+
+
+def test_train_average_decoder():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'average'])
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "average"
+    assert count_parameters(results['model']) == 1478474
+    assert count_parameters(results['model'].decoder) == 934218
+    assert results['loss'] == pytest.approx(1.2824537754058838)
+
+
 def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
