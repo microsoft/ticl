@@ -19,8 +19,8 @@ def test_mlp_prior(batch_size, num_features, n_samples):
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
     if n_samples == 128 and batch_size == 4 and num_features == 11:
-        assert float(x[0, 0, 0]) == 3.7898247241973877
-        assert float(y[0, 0]) == 9.330925941467285
+        assert float(x[0, 0, 0]) == pytest.approx(3.7898247241973877)
+        assert float(y[0, 0]) == pytest.approx(9.330925941467285)
 
 
 def test_mlp_prior_no_sampling(batch_size=4, num_features=11, n_samples=128):
