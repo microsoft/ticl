@@ -308,6 +308,7 @@ class TabPerceiver(MLPModelPredictor):
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = emsize
         latent_dim = emsize
+        self.decoder_type = decoder_type
         # FIXME cross heads one is too little!
         latent_heads = nhead
         self.n_out = n_out
@@ -332,7 +333,7 @@ class TabPerceiver(MLPModelPredictor):
             cross_attn_layer.add_module('cross_ff', PreNorm(latent_dim, FeedForward(latent_dim, dropout=self.ff_dropout, mult=1)))
             cross_attn_layer.add_module('latents', self_attns)
             self.layers.append(cross_attn_layer)
-        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, ecoder_type=decoder_type,
+        self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
