@@ -38,7 +38,8 @@ def _check_file(e, base_path, add_name, eval_addition, verbose):
             url = 'https://github.com/automl/TabPFN/raw/main/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_42.cpkt'
             r = requests.get(url, allow_redirects=True)
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            open(model_path, 'wb').write(r.content)
+            with open(model_path, 'wb') as f:
+                f.write(r.content)
         else:
             model_path = None
     else:
