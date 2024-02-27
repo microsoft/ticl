@@ -34,6 +34,7 @@ def get_mn_model(file_name):
             urllib.request.urlretrieve(url, filename=model_path, reporthook=t.update_to)
     return model_path
 
+
 def get_module_path():
     return Path(__file__).parent.resolve()
 

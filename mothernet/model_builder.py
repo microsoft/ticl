@@ -106,6 +106,8 @@ def old_config_to_new(old_config, new_config):
         old_config['model_type'] = 'tabpfn'
     if old_config.pop("special_token", False):
         old_config['decoder_type'] = 'special_token'
+    if old_config.pop("prenorm", False):
+        print("prenorm is not supported anymore")
     if not old_config.pop("output_attention", True):
         raise NotImplementedError("output_attention=False is not supported anymore")
     if old_config.pop("decoder_two_hidden_layers", False):
