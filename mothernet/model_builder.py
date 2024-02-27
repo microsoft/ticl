@@ -113,6 +113,10 @@ def old_config_to_new(old_config, new_config):
         old_config['model_type'] = 'tabpfn'
     if "num_predicted_hidden_layers" in old_config:
         old_config['predicted_hidden_layers'] = old_config.pop('num_predicted_hidden_layers')
+    if "boolena_p_uninformative" in old_config:
+        old_config['p_uninformative'] = old_config.pop('boolena_p_uninformative')
+    if "boolean_max_fraction_uninformative" in old_config:
+        old_config['max_fraction_uninformative'] = old_config.pop('boolean_max_fraction_uninformative')
     if old_config.pop("special_token", False):
         old_config['decoder_type'] = 'special_token'
         
@@ -129,7 +133,7 @@ def old_config_to_new(old_config, new_config):
                        'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates', 'experiment', 'base_path',
                        'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config', 'use_cpu', 'st_checkpoint_dir',
                        'no_mlflow', 'load_file', 'continue_run', 'load_strict', 'restart_scheduler', 'extra_fast_test', 'stop_after_epochs', 'shared_embedding',
-                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients']
+                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior']
     for k in ignored_configs:
         old_config.pop(k, None)
 
