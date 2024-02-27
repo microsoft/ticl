@@ -101,7 +101,7 @@ def old_config_to_new(old_config, new_config):
                        'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
                        'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training', 'mix_activations']
     for k in ignored_configs:
-        old_config.pop(k)
+        old_config.pop(k, None)
     for k, v in new_config.items():
         if k in old_config:
             new_config[k] = old_config.pop(k)
