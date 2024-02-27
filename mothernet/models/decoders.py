@@ -38,19 +38,7 @@ class AdditiveModelDecoder(nn.Module):
         out_size = embed_dim
         self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
         self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
-
-        if decoder_two_hidden_layers:
-            self.mlp = nn.Sequential(
-                nn.Linear(out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
-        else:
-            self.mlp = nn.Sequential(
-                nn.Linear(out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
+        self.mlp = make_decoder_mlp(out_size, hidden_size, self.num_output_layer_weights, n_layers=2 if decoder_two_hidden_layers else 1)
 
     def forward(self, x):
         res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
@@ -81,19 +69,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
         self.num_output_layer_weights = rank * n_features
 
-        if decoder_two_hidden_layers:
-            self.mlp = nn.Sequential(
-                nn.Linear(out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
-        else:
-            self.mlp = nn.Sequential(
-                nn.Linear(out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
-
+        self.mlp = make_decoder_mlp(out_size, hidden_size, self.num_output_layer_weights, n_layers=2 if decoder_two_hidden_layers else 1)
         # these serve as shared prototypes across features
         self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
         self.output_biases = nn.Parameter(torch.randn(n_out))
@@ -170,6 +146,14 @@ class SummaryLayer(nn.Module):
         return res
 
 
+def make_decoder_mlp(in_size, hidden_size, out_size, n_layers=1):
+    return nn.Sequential(
+        nn.Linear(in_size,  hidden_size),
+        nn.ReLU(),
+        *sum([[nn.Linear(hidden_size, hidden_size), nn.ReLU()] for _ in range(n_layers - 1)], []),
+        nn.Linear(hidden_size, out_size))
+
+
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, decoder_type='output_attention', predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_two_hidden_layers=False, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
@@ -199,19 +183,7 @@ class MLPModelDecoder(nn.Module):
                                                                                        self.weight_embedding_rank + self.predicted_hidden_layer_size)
             self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(
                 self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
-
-        if decoder_two_hidden_layers:
-            self.mlp = nn.Sequential(
-                nn.Linear(self.summary_layer.out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
-        else:
-            self.mlp = nn.Sequential(
-                nn.Linear(self.summary_layer.out_size,  hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, self.num_output_layer_weights))
+        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=2 if decoder_two_hidden_layers else 1)
 
     def forward(self, x, y_src):
         # x is samples x batch x emsize
