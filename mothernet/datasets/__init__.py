@@ -5,11 +5,9 @@ import torch
 
 
 def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
-    dataset = openml.datasets.get_dataset(did)
-    X, y, categorical_indicator, attribute_names = dataset.get_data(
-        dataset_format="array", target=dataset.default_target_attribute
-    )
-
+    dataset = openml.datasets.get_dataset(did, download_data=False, download_qualities=False, download_features_meta_data=False)
+    X, y, categorical_indicator, attribute_names = dataset.get_data(target=dataset.default_target_attribute)
+    X = X.toarray() if hasattr(X, 'toarray') else X
     if not multiclass:
         X = X[y < 2]
         y = y[y < 2]
