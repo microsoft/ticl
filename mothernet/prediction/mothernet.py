@@ -194,7 +194,7 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
 
 class MotherNetClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu"):
-        self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
+        self.path = path
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device

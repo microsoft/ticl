@@ -2,7 +2,7 @@ import pickle
 
 import numpy as np
 
-from mothernet import TabPFNClassifier
+from mothernet.prediction import TabPFNClassifier, MotherNetClassifier
 from mothernet.utils import get_mn_model
 
 
@@ -42,3 +42,23 @@ def test_our_tabpfn():
     classifier = pickle.loads(pickle_dump)
     pred2 = classifier.predict_proba(test_xs)
     assert (pred1 == pred2).all()
+
+
+def test_mothernet_paper():
+    xs = np.random.rand(100, 99)
+    ys = np.random.randint(0, 3, 100)
+
+    eval_position = xs.shape[0] // 2
+    train_xs, train_ys = xs[0:eval_position], ys[0:eval_position]
+    test_xs, _ = xs[eval_position:], ys[eval_position:]
+    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+    model_path = get_mn_model(model_string)
+    classifier = MotherNetClassifier(device='cpu', path=model_path)
+    classifier.fit(train_xs, train_ys)
+    print(classifier)  # this might fail in some scenarios
+    pred1 = classifier.predict_proba(test_xs)
+    pickle_dump = pickle.dumps(classifier)
+    classifier = pickle.loads(pickle_dump)
+    pred2 = classifier.predict_proba(test_xs)
+    assert (pred1 == pred2).all()
+    

@@ -3,8 +3,8 @@ import os
 import random
 import shutil
 import warnings
-import requests
-
+import urllib.request
+from tqdm import tqdm
 import mlflow
 import numpy as np
 import torch
@@ -17,15 +17,22 @@ from mothernet.model_configs import get_base_config
 from mothernet.config_utils import flatten_dict
 
 
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
 def get_mn_model(file_name):
     model_path = Path(get_module_path()) / 'models_diff' / file_name
     if not model_path.exists():
         url = f'https://amuellermothernet.blob.core.windows.net/models/{file_name}'
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         print(f"Downloading model from {url} to {model_path}. This can take a bit.")
-        r = requests.get(url, allow_redirects=True)
-        open(model_path, 'wb').write(r.content)
-
+        with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
+            urllib.request.urlretrieve(url, filename=model_path, reporthook=t.update_to)
+    return model_path
 
 def get_module_path():
     return Path(__file__).parent.resolve()
