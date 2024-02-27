@@ -32,7 +32,7 @@ def get_mn_model(file_name):
         print(f"Downloading model from {url} to {model_path}. This can take a bit.")
         with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
             urllib.request.urlretrieve(url, filename=model_path, reporthook=t.update_to)
-    return model_path
+    return model_path.resolve()
 
 
 def get_module_path():

@@ -62,7 +62,7 @@ def load_model(path, device, verbose=False):
     decoder_summary_weights = ["query", "output_layer.q_proj_weight", "output_layer.k_proj_weight", "output_layer.v_proj_weight",
                                "output_layer.in_proj_bias", "output_layer.out_proj.weight", "output_layer.out_proj.bias"]
     for weights in decoder_summary_weights:
-        full_name = "decoder.summary_layer." + weights
+        full_name = "decoder." + weights
         if full_name in model_state:
             model_state['decoder.summary_layer.' + weights] = model_state.pop(full_name)
 

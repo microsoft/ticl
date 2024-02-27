@@ -48,5 +48,5 @@ def test_mothernet_paper():
     classifier.fit(X_train, y_train)
     print(classifier)
     prob = classifier.predict_proba(X_test)
-    assert prob.argmax(axis=1) == classifier.predict(X_test)
+    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9

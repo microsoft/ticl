@@ -84,7 +84,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
                 x = self_ff(x) + x
 
         output = rearrange(x, 'b n d -> n b d')
-    (b1, w1), *layers = model.decoder(output)
+    (b1, w1), *layers = model.decoder(output, ys)
 
     w1_data_space_prenorm = w1.squeeze()[:n_features, :]
     b1_data_space = b1.squeeze()
