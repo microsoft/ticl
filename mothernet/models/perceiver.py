@@ -265,7 +265,7 @@ class TabPerceiver(MLPModelPredictor):
         predicted_hidden_layer_size=128,
         decoder_type="output_attention",
         decoder_embed_dim=512,
-        decoder_two_hidden_layers=False,
+        decoder_hidden_layers=1,
         y_encoder_layer=None,
         encoder_layer=None,
         predicted_hidden_layers=1,
@@ -335,7 +335,7 @@ class TabPerceiver(MLPModelPredictor):
             self.layers.append(cross_attn_layer)
         self.decoder = MLPModelDecoder(emsize=latent_dim, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
+                                       decoder_hidden_layers=decoder_hidden_layers, nhead=latent_heads, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
 
     def inner_forward(self, data):

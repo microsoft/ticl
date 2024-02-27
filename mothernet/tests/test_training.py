@@ -167,6 +167,15 @@ def test_train_two_hidden_layers():
     assert isinstance(results['model'], MotherNet)
 
 
+def test_train_two_decoder_layers():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-T', '2'])
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model']) == 1561162
+    assert results['loss'] == pytest.approx(0.6795329451560974)
+
+
 def test_train_low_rank_ignored():
     # it boolean flag is not set, -W is ignored for easier hyperparameter search
     L.seed_everything(42)

@@ -13,7 +13,7 @@ class MotherNetAdditive(nn.Module):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
+                 decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None):
@@ -50,11 +50,11 @@ class MotherNetAdditive(nn.Module):
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim,
-                                                          decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, rank=output_rank)
+                                                          decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim,
-                                                decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead)
+                                                decoder_hidden_layers=decoder_hidden_layers, nhead=nhead)
 
         self.init_weights()
 

@@ -128,7 +128,7 @@ def get_base_config():
         'decoder_type': "output_attention",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 1,
-        'decoder_two_hidden_layers': False,
+        'decoder_hidden_layers': 1,
         'decoder_hidden_size': 2048}
 
     config['perceiver'] = {'num_latents': 512}

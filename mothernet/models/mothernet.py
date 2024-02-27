@@ -60,7 +60,7 @@ class MotherNet(MLPModelPredictor):
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
                  decoder_embed_dim=2048,
-                 decoder_two_hidden_layers=False, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
+                 decoder_hidden_layers=1, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
                  low_rank_weights=False):
         super().__init__()
         nhid = emsize * nhid_factor
@@ -81,7 +81,7 @@ class MotherNet(MLPModelPredictor):
         decoder_hidden_size = decoder_hidden_size or nhid
         self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=self.decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
-                                       decoder_two_hidden_layers=decoder_two_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
+                                       decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
                                        weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
