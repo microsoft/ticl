@@ -176,8 +176,7 @@ class MLPModelDecoder(nn.Module):
             elif self.decoder_type == "special_token_simple":
                 res = self.mlp(x[0])
             elif self.decoder_type == "class_tokens":
-                import pdb; pdb.set_trace()
-                res = self.mlp(x[:n_out])
+                res = self.mlp(x[:10].transpose(0, 1).reshape(x.shape[1], -1))
             elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
             else:

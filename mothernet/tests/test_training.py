@@ -108,10 +108,10 @@ def test_train_class_tokens():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_tokens'])
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "class_tokens"
-    assert count_parameters(results['model']) == 1478602
-    assert count_parameters(results['model'].decoder) == 934218
-    import pdb; pdb.set_trace()
-    assert results['loss'] == pytest.approx(3.848506450653076)
+    assert count_parameters(results['model']) == 1625930
+    assert count_parameters(results['model'].decoder) == 1081674
+    assert results['model'].decoder.mlp[0].in_features == 1280
+    assert results['loss'] == pytest.approx(2.160637378692627)
 
 
 def test_train_simple_special_token():
