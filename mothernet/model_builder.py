@@ -59,6 +59,12 @@ def load_model(path, device, verbose=False):
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model_state.pop("criterion.weight", None)
 
+    decoder_summary_weights = ["query", "output_layer.q_proj_weight", "output_layer.k_proj_weight", "output_layer.v_proj_weight",
+                               "output_layer.in_proj_bias", "output_layer.out_proj.weight", "output_layer.out_proj.bias"]
+    for weights in decoder_summary_weights:
+        if "decoder." + weights in model_state:
+            model_state['decoder.summary_layer.' + weights] = model_state.pop(weights)
+
     model.load_state_dict(model_state)
     model.to(device)
     model.eval()
