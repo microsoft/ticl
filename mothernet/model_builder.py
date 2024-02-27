@@ -113,8 +113,8 @@ def old_config_to_new(old_config, new_config):
         old_config['model_type'] = 'tabpfn'
     if "num_predicted_hidden_layers" in old_config:
         old_config['predicted_hidden_layers'] = old_config.pop('num_predicted_hidden_layers')
-    if "boolena_p_uninformative" in old_config:
-        old_config['p_uninformative'] = old_config.pop('boolena_p_uninformative')
+    if "boolean_p_uninformative" in old_config:
+        old_config['p_uninformative'] = old_config.pop('boolean_p_uninformative')
     if "boolean_max_fraction_uninformative" in old_config:
         old_config['max_fraction_uninformative'] = old_config.pop('boolean_max_fraction_uninformative')
     if old_config.pop("special_token", False):
