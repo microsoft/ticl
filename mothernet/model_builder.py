@@ -87,6 +87,7 @@ def get_y_encoder(config):
 
 
 def old_config_to_new(old_config, new_config):
+    # this is not for restarting learning, only inference, so it doesn't convert orchestration parameters
     old_config['learning_rate'] = old_config.pop('lr')
     old_config['n_samples'] = old_config.pop('bptt')
     old_config.update(old_config.pop("differentiable_hyperparameters", {}))
@@ -100,11 +101,14 @@ def old_config_to_new(old_config, new_config):
         old_config['decoder_type'] = 'special_token'
     if not old_config.pop("output_attention", True):
         raise NotImplementedError("output_attention=False is not supported anymore")
+    if old_config.pop("decoder_two_hidden_layers", False):
+        old_config['decoder_hidden_layers'] = 2
     ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a',
                        'differentiable', 'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample',
                        'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
                        'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training', 'mix_activations',
-                       'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates', 'num_gpus', 'device']
+                       'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates',
+                       'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config']
     for k in ignored_configs:
         old_config.pop(k, None)
     for k, v in new_config.items():
