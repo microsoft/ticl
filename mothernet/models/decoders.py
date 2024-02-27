@@ -128,7 +128,7 @@ class SummaryLayer(nn.Module):
         elif decoder_type == "class_average":
             out_size = emsize * n_out
         elif decoder_type == "average":
-            pass
+            out_size = emsize
         else:
             raise ValueError(f"Unknown decoder_type {decoder_type}")
 
