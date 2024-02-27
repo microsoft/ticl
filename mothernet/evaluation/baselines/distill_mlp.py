@@ -135,8 +135,7 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, categorical_features=None, N_ensemble_configurations=32, verbose=0, **kwargs):
-        self.temperature = temperature
+    def __init__(self, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, categorical_features=None, N_ensemble_configurations=32, verbose=0, **kwargs):
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
@@ -151,9 +150,9 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y):
         self.classes_ = np.unique(y)
-        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations, temperature=self.temperature,
+        tbfn = TabPFNClassifier(N_ensemble_configurations=self.N_ensemble_configurations,
                                 device=self.device, verbose=self.verbose, **self.kwargs).fit(X, y)
-        y_train_soft_probs = tbfn.predict_proba(X) * self.temperature ** 2
+        y_train_soft_probs = tbfn.predict_proba(X)
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
 
@@ -168,9 +167,8 @@ class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):
 
 
 class DistilledMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, clf, temperature=1, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, verbose=0, **kwargs):
+    def __init__(self, clf, n_epochs=10, hidden_size=128, n_layers=2, learning_rate=1e-3, device="cpu", dropout_rate=0.0, layernorm=False, verbose=0, **kwargs):
         self.clf = clf
-        self.temperature = temperature
         self.n_epochs = n_epochs
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
@@ -182,7 +180,7 @@ class DistilledMLP(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y):
         y, self.classes_ = _encode_y(y)
-        y_train_soft_probs = self.clf.predict_proba(X) * self.temperature ** 2
+        y_train_soft_probs = self.clf.predict_proba(X)
         self.mlp_ = TorchMLP(n_epochs=self.n_epochs, learning_rate=self.learning_rate, hidden_size=self.hidden_size,
                              n_layers=self.n_layers, dropout_rate=self.dropout_rate, device=self.device, layernorm=self.layernorm, verbose=self.verbose)
 
