@@ -16,23 +16,23 @@ class MLPModelPredictor(nn.Module):
         if len(src) == 2:  # (x,y) and no style
             src = (None,) + src
 
-        _, x_src_org, y_src = src
-        x_src = self.encoder(x_src_org)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+        _, x, y = src
+        x_enc = self.encoder(x)
+        y_enc = self.y_encoder(y.unsqueeze(-1) if len(y.shape) < len(x.shape) else y)
+        enc_train = x_enc[:single_eval_pos] + y_enc[:single_eval_pos]
         if self.decoder_type in ["special_token", "special_token_simple"]:
-            train_x = torch.cat([self.token_embedding.repeat(1, train_x.shape[1], 1), train_x], 0)
+            enc_train = torch.cat([self.token_embedding.repeat(1, enc_train.shape[1], 1), enc_train], 0)
         elif self.decoder_type == "class_tokens":
             if not isinstance(self.y_encoder, OneHotAndLinear):
                 raise ValueError("class_tokens decoder type is only supported with OneHotAndLinear y_encoder")
-            repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, train_x.shape[1], 1)
-            train_x = torch.cat([repeated_class_tokens, train_x], 0)
+            repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, enc_train.shape[1], 1)
+            enc_train = torch.cat([repeated_class_tokens, enc_train], 0)
 
-        output = self.inner_forward(train_x)
-        (b1, w1), *layers = self.decoder(output)
+        output = self.inner_forward(enc_train)
+        (b1, w1), *layers = self.decoder(output, y[:single_eval_pos])
 
-        x_src_org_nona = torch.nan_to_num(x_src_org[single_eval_pos:], nan=0)
-        h = (x_src_org_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
+        x_test_nona = torch.nan_to_num(x[single_eval_pos:], nan=0)
+        h = (x_test_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
 
         if self.decoder.weight_embedding_rank is not None:
             h = torch.matmul(h, self.decoder.shared_weights[0])

@@ -114,6 +114,18 @@ def test_train_class_tokens():
     assert results['loss'] == pytest.approx(2.160637378692627)
 
 
+def test_train_class_average():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_average'])
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "class_average"
+    assert count_parameters(results['model']) == 1625930
+    assert count_parameters(results['model'].decoder) == 1081674
+    assert results['model'].decoder.mlp[0].in_features == 1280
+    assert results['loss'] == pytest.approx(0.791477620601654)
+
+
 def test_train_simple_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

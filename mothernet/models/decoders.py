@@ -117,7 +117,6 @@ class MLPModelDecoder(nn.Module):
         self.decoder_type = decoder_type
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
         self.in_size = 100
-        out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank if low_rank_weights else None
 
@@ -134,11 +133,12 @@ class MLPModelDecoder(nn.Module):
             out_size = emsize
         elif decoder_type == "class_tokens":
             out_size = emsize * n_out
+        elif decoder_type == "class_average":
+            out_size = emsize * n_out
         elif decoder_type == "average":
             pass
         else:
             raise ValueError(f"Unknown decoder_type {decoder_type}")
-
 
         if self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + (self.in_size + 1) * self.predicted_hidden_layer_size
@@ -166,7 +166,8 @@ class MLPModelDecoder(nn.Module):
                 nn.ReLU(),
                 nn.Linear(hidden_size, self.num_output_layer_weights))
 
-    def forward(self, x):
+    def forward(self, x, y_src):
+        # x is samples x batch x emsize
         hidden_size = self.predicted_hidden_layer_size
         if x.shape[0] != 0:
             if self.decoder_type == "output_attention":
@@ -177,6 +178,23 @@ class MLPModelDecoder(nn.Module):
                 res = self.mlp(x[0])
             elif self.decoder_type == "class_tokens":
                 res = self.mlp(x[:10].transpose(0, 1).reshape(x.shape[1], -1))
+            elif self.decoder_type == "class_average":
+                # per-class mean
+                # clamping y_src to avoid -100 which should be ignored in loss
+                # fingers crossed this will not mess things up
+                y_src = y_src.long().clamp(0)
+                sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device)
+                # scatter add does not broadcast so we need to expand
+                indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
+                sums.scatter_add_(0, indices, x)
+                # create counts
+                ones = torch.ones(1).expand(x.shape[0], x.shape[1])
+                counts = torch.zeros(self.n_out, x.shape[1])
+
+                counts.scatter_add_(0, y_src, ones)
+                counts = counts.clamp(1e-10)  # don't divide by zero
+                means = sums / counts.unsqueeze(-1)
+                res = self.mlp(means.reshape(x.shape[1], -1))
             elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
             else:
