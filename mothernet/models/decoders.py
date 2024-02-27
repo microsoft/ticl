@@ -180,7 +180,7 @@ class MLPModelDecoder(nn.Module):
             elif self.decoder_type == "average":
                 res = self.mlp(x.mean(0))
             else:
-                raise ValueError(f"Unknown decoder_type: {decoder_type}")
+                raise ValueError(f"Unknown decoder_type: {self.decoder_type}")
         else:
             raise ValueError("Empty input")
 
