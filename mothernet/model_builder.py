@@ -148,7 +148,8 @@ def old_config_to_new(old_config, new_config):
                             new_config[k][k2][k3] = old_config.pop(k3)
                 elif k2 in old_config:
                     new_config[k][k2] = old_config.pop(k2)
-    assert len(old_config) == 0
+    if len(old_config):
+        raise ValueError(f"Unknown parameters: {old_config.keys()}")
     return new_config
 
 
