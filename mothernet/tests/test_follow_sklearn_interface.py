@@ -57,6 +57,19 @@ def test_mothernet_paper():
     assert classifier.score(X_test, y_test) > 0.9
 
 
+def test_mothernet_jan_2024():
+    X, y = load_iris(return_X_y=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "mn_P512_SFalse_L2_1_gpu_01_24_2024_00_31_59_epoch_3950.cpkt"
+    model_path = get_mn_model(model_string)
+    classifier = MotherNetClassifier(device='cpu', path=model_path)
+    classifier.fit(X_train, y_train)
+    print(classifier)
+    prob = classifier.predict_proba(X_test)
+    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
+    assert classifier.score(X_test, y_test) > 0.9
+
+
 def test_distilled_mlp_paper():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
