@@ -188,8 +188,8 @@ class MLPModelDecoder(nn.Module):
                 indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
                 sums.scatter_add_(0, indices, x)
                 # create counts
-                ones = torch.ones(1).expand(x.shape[0], x.shape[1])
-                counts = torch.zeros(self.n_out, x.shape[1])
+                ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1])
+                counts = torch.zeros(self.n_out, x.shape[1], device=x.device)
 
                 counts.scatter_add_(0, y_src, ones)
                 counts = counts.clamp(1e-10)  # don't divide by zero
