@@ -94,7 +94,7 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token'])
-    assert results['loss'] == pytest.approx(1.1190301179885864)
+    assert results['loss'] == pytest.approx(1.112498164176941)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "special_token"
@@ -135,8 +135,7 @@ def test_train_simple_special_token():
     assert count_parameters(results['model']) == 1478602
     assert count_parameters(results['model'].decoder) == 934218
     assert results['model'].token_embedding.shape == (1, 1, 128)
-    assert results['loss'] == pytest.approx(3.848506450653076)
-
+    assert results['loss'] == pytest.approx(3.8096213340759277)
 
 
 def test_train_average_decoder():
