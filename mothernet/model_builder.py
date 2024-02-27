@@ -96,7 +96,8 @@ def get_y_encoder(config):
 def old_config_to_new(old_config, new_config):
     # this is not for restarting learning, only inference, so it doesn't convert orchestration parameters
     old_config['learning_rate'] = old_config.pop('lr')
-    old_config['n_samples'] = old_config.pop('bptt')
+    if "bptt" in old_config:
+        old_config['n_samples'] = old_config.pop('bptt')
     old_config.update(old_config.pop("differentiable_hyperparameters", {}))
     if "y_encoder" not in old_config:
         old_config['y_encoder'] = 'linear'
