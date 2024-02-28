@@ -28,15 +28,15 @@ steps:
 
 - task: Cache@2
   inputs:
-    key: "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer"
+    key: '"mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer" | "not_a_filename"'
     path: "mothernet/models_diff/mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
 
 - task: Cache@2
   inputs:
-    key: "tabpfn_nooptimizer_emsize_512_nlayers_12_steps_2048_bs_32ada_lr_0.0001_1_gpu_07_24_2023_01_43_33_epoch_1650"
+    key: '"tabpfn_nooptimizer_emsize_512_nlayers_12_steps_2048_bs_32ada_lr_0.0001_1_gpu_07_24_2023_01_43_33_epoch_1650" | "not_a_filename"'
     path: "mothernet/models_diff/tabpfn_nooptimizer_emsize_512_nlayers_12_steps_2048_bs_32ada_lr_0.0001_1_gpu_07_24_2023_01_43_33_epoch_1650.cpkt"
 
 - task: Cache@2
   inputs:
-    key: "download_epoch_100"
+    key: '"download_epoch_100" | "not_a_filename"'
     path: "mothernet/models_diff/download_epoch_100.cpkt"
