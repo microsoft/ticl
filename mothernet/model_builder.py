@@ -109,8 +109,6 @@ def old_config_to_new(old_config, new_config):
         old_config['emsize'] = old_config.pop('em_size')
     if "aggregate_gradients" in old_config:
         old_config['aggregate_k_gradients'] = old_config.pop('aggregate_gradients')
-    if "model-type" in old_config:
-        old_config['model_type'] = old_config.pop('model-type')
     if "model_type" not in old_config:
         old_config['model_type'] = 'tabpfn'
     if "num_predicted_hidden_layers" in old_config:
@@ -135,7 +133,7 @@ def old_config_to_new(old_config, new_config):
                        'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates', 'experiment', 'base_path',
                        'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config', 'use_cpu', 'st_checkpoint_dir',
                        'no_mlflow', 'load_file', 'continue_run', 'load_strict', 'restart_scheduler', 'extra_fast_test', 'stop_after_epochs', 'shared_embedding',
-                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything']
+                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything', 'model-type']
     for k in ignored_configs:
         old_config.pop(k, None)
 
@@ -192,7 +190,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model_type = config['model_type']
 
-    if model_type == "mlp":
+    if model_type in ["mothernet", "mlp"]:
         model = MotherNet(
             encoder, n_out=n_out,
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']
