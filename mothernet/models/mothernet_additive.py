@@ -49,11 +49,11 @@ class MotherNetAdditive(nn.Module):
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
-                                                          embed_dim=decoder_embed_dim,
+                                                          embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                           decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
-                                                embed_dim=decoder_embed_dim,
+                                                embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead)
 
         self.init_weights()

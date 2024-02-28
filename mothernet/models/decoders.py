@@ -40,7 +40,7 @@ class AdditiveModelDecoder(nn.Module):
         self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
 
     def forward(self, x, y_src):
-        res = self.mlp(self.summary_layer(x, y_src)).squeeze(0)
+        res = self.mlp(self.summary_layer(x, y_src))
         assert res.shape[1] == self.num_output_layer_weights
         return res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out), res[:, -self.n_out:]
 
@@ -71,7 +71,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
     def forward(self, x, y_src):
-        res = self.mlp(self.summary_layer(x, y_src)).squeeze(0)
+        res = self.mlp(self.summary_layer(x, y_src))
         res = res.reshape(x.shape[1], self.n_features, self.rank)
         # b batch, k feature, r rank, o outputs
         out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
@@ -109,7 +109,7 @@ class SummaryLayer(nn.Module):
     def forward(self, x, y_src):
         if x.shape[0] != 0:
             if self.decoder_type == "output_attention":
-                res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]
+                res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0].squeeze(0)
             elif self.decoder_type == "special_token":
                 res = self.output_layer(x[[0]], x[1:], x[1:], need_weights=False)[0]
             elif self.decoder_type == "special_token_simple":
@@ -123,6 +123,9 @@ class SummaryLayer(nn.Module):
                 y_src = y_src.long().clamp(0)
                 sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device)
                 # scatter add does not broadcast so we need to expand
+                if y_src.ndim == 1:
+                    # batch size 1
+                    y_src = y_src.unsqueeze(1)
                 indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
                 sums.scatter_add_(0, indices, x)
                 # create counts
@@ -185,7 +188,7 @@ class MLPModelDecoder(nn.Module):
         # x is samples x batch x emsize
         hidden_size = self.predicted_hidden_layer_size
         # summary layer goes from per-sample to per-dataset representations
-        res = self.mlp(self.summary_layer(x, y_src)).squeeze(0)
+        res = self.mlp(self.summary_layer(x, y_src))
         assert res.shape[1] == self.num_output_layer_weights
 
         # let's confuse ourselves by storing them in the opposite order!

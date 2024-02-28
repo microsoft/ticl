@@ -113,6 +113,8 @@ def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert results['loss'] == pytest.approx(1.112498164176941)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
@@ -125,6 +127,8 @@ def test_train_class_tokens():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_tokens'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "class_tokens"
     assert count_parameters(results['model']) == 1625930
@@ -137,6 +141,8 @@ def test_train_class_average():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_average'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "class_average"
     assert count_parameters(results['model']) == 1625930
@@ -149,6 +155,8 @@ def test_train_simple_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token_simple'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "special_token_simple"
     assert count_parameters(results['model']) == 1478602
@@ -161,6 +169,8 @@ def test_train_average_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'average'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "average"
     assert count_parameters(results['model']) == 1478474
@@ -292,6 +302,17 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
+    assert count_parameters(results['model']) == 9690634
+    assert isinstance(results['model'], MotherNetAdditive)
+
+
+def test_train_additive_class_tokens():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'class_tokens'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
