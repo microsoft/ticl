@@ -304,9 +304,9 @@ def test_train_additive_defaults():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
-    assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 9690634
+    assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
 
 
 def test_train_additive_class_tokens():
@@ -315,9 +315,9 @@ def test_train_additive_class_tokens():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'class_tokens'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
-    assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 9771914
+    assert results['loss'] == pytest.approx(1.3962957859039307, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding():
