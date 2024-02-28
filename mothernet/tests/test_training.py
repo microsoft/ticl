@@ -11,6 +11,10 @@ from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
 from mothernet.models.mothernet import MotherNet
 from mothernet.config_utils import compare_dicts
+from mothernet.prediction import MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveClassifier
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
 
 
 def count_parameters(model):
@@ -27,10 +31,25 @@ TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128'
 DEFAULT_LOSS = pytest.approx(1.0794482231140137)
 
 
+def get_model_path(results):
+    return f"{results['base_path']}/models_diff/{results['model_string']}_epoch_{results['epoch']}.cpkt"
+
+
+def check_predict_iris(clf):
+    # smoke test for predict, models aren't trained enough to check for accuracy
+    iris = load_iris()
+    X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    assert y_pred.shape[0] == X_test.shape[0]
+
+
 def test_train_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert results['loss'] == DEFAULT_LOSS
     assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_tFalse_cpu_")
     assert count_parameters(results['model']) == 1544650
@@ -192,6 +211,8 @@ def test_train_low_rank():
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert count_parameters(results['model']) == 926474
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
@@ -204,6 +225,8 @@ def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
+        clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        check_predict_iris(clf)
     assert results['loss'] == pytest.approx(1.6330838203430176, rel=1e-5)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
@@ -269,6 +292,8 @@ def test_train_additive_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert results['loss'] == pytest.approx(0.7711865901947021, rel=1e-5)
     assert count_parameters(results['model']) == 9690634
     assert isinstance(results['model'], MotherNetAdditive)
@@ -277,7 +302,9 @@ def test_train_additive_defaults():
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True', '--save-every', '2'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
@@ -305,7 +332,9 @@ def test_train_additive_input_bin_embedding_linear():
 def test_train_additive_factorized_output():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--save-every', '2'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1649994

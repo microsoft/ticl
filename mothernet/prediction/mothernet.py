@@ -84,7 +84,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
                 x = self_ff(x) + x
 
         output = rearrange(x, 'b n d -> n b d')
-    (b1, w1), *layers = model.decoder(output)
+    (b1, w1), *layers = model.decoder(output, ys)
 
     w1_data_space_prenorm = w1.squeeze()[:n_features, :]
     b1_data_space = b1.squeeze()
@@ -194,7 +194,7 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
 
 class MotherNetClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu"):
-        self.path = path or "models_diff/prior_diff_real_checkpoint_predict_mlp_nlayer12_multiclass_04_13_2023_16_41_16_n_0_epoch_37.cpkt"
+        self.path = path
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device
@@ -207,7 +207,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] != "mlp":
+        if config['model_type'] not in ["mlp", "mothernet"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         n_classes = len(le.classes_)

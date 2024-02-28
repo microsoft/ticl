@@ -25,3 +25,8 @@ steps:
     ls
     pytest -sv mothernet/tests/
   displayName: 'Run tests'
+
+- task: Cache@2
+  inputs:
+    key: '"2/28/2024" | "no_additive" | "not_a_filename"'
+    path: "mothernet/models_diff/"

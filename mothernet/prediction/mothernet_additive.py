@@ -20,13 +20,12 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         raise ValueError("Cannot run inference on data with more than 100 features")
     x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins)
-    X_onehot_flat = X_onehot.reshape((*X_onehot.shape[:-2], -1)).float()
     # why need :len?
-    x_src = model.encoder(X_onehot_flat.unsqueeze(1)[:len(X_train)])
+    x_src = model.encoder(X_onehot.unsqueeze(1)[:len(X_train)].float())
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
     output = model.transformer_encoder(train_x)
-    weights, biases = model.decoder(output)
+    weights, biases = model.decoder(output, ys)
     w = weights.squeeze()[:n_features, :, :n_classes]
     b = biases.squeeze()[:n_classes]
     bins_data_space = bin_edges[:n_features]

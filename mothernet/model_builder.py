@@ -59,11 +59,16 @@ def load_model(path, device, verbose=False):
     model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
     model_state.pop("criterion.weight", None)
 
-    decoder_summary_weights = ["query", "output_layer.q_proj_weight", "output_layer.k_proj_weight", "output_layer.v_proj_weight",
+    decoder_summary_weights = ["query", "output_layer.q_proj_weight", "output_layer.in_proj_weight", "output_layer.k_proj_weight", "output_layer.v_proj_weight",
                                "output_layer.in_proj_bias", "output_layer.out_proj.weight", "output_layer.out_proj.bias"]
     for weights in decoder_summary_weights:
-        if "decoder." + weights in model_state:
-            model_state['decoder.summary_layer.' + weights] = model_state.pop(weights)
+        full_name = "decoder." + weights
+        if full_name in model_state:
+            model_state['decoder.summary_layer.' + weights] = model_state.pop(full_name)
+
+    if "encoder.weight" in model_state and "model_type" in config_sample and config_sample['model_type'] == "additive":
+        model_state['encoder.1.weight'] = model_state.pop("encoder.weight")
+        model_state['encoder.1.bias'] = model_state.pop("encoder.bias")
 
     model.load_state_dict(model_state)
     model.to(device)
@@ -95,16 +100,32 @@ def get_y_encoder(config):
 def old_config_to_new(old_config, new_config):
     # this is not for restarting learning, only inference, so it doesn't convert orchestration parameters
     old_config['learning_rate'] = old_config.pop('lr')
-    old_config['n_samples'] = old_config.pop('bptt')
+    if "bptt" in old_config:
+        old_config['n_samples'] = old_config.pop('bptt')
     old_config.update(old_config.pop("differentiable_hyperparameters", {}))
     if "y_encoder" not in old_config:
         old_config['y_encoder'] = 'linear'
+    if "decoder_em_size" in old_config:
+        old_config['decoder_embed_dim'] = old_config.pop('decoder_em_size')
     if "model_maker" in old_config:
         old_config['model_type'] = old_config.pop('model_maker')
+    if "em_size" in old_config:
+        old_config['emsize'] = old_config.pop('em_size')
+    if "aggregate_gradients" in old_config:
+        old_config['aggregate_k_gradients'] = old_config.pop('aggregate_gradients')
     if "model_type" not in old_config:
         old_config['model_type'] = 'tabpfn'
+    if "num_predicted_hidden_layers" in old_config:
+        old_config['predicted_hidden_layers'] = old_config.pop('num_predicted_hidden_layers')
+    if "boolean_p_uninformative" in old_config:
+        old_config['p_uninformative'] = old_config.pop('boolean_p_uninformative')
+    if "boolean_max_fraction_uninformative" in old_config:
+        old_config['max_fraction_uninformative'] = old_config.pop('boolean_max_fraction_uninformative')
     if old_config.pop("special_token", False):
         old_config['decoder_type'] = 'special_token'
+        
+    if old_config.pop("prenorm", False):
+        print("prenorm is not supported anymore")
     if not old_config.pop("output_attention", True):
         raise NotImplementedError("output_attention=False is not supported anymore")
     if old_config.pop("decoder_two_hidden_layers", False):
@@ -112,11 +133,14 @@ def old_config_to_new(old_config, new_config):
     ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a',
                        'differentiable', 'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample',
                        'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
-                       'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training', 'mix_activations',
-                       'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates',
-                       'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config']
+                       'total_available_time_in_s', 'normalize_with_sqrt', 'done_part_in_training', 'mix_activations', 'save_every', 'create_new_run',
+                       'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates', 'experiment', 'base_path',
+                       'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config', 'use_cpu', 'st_checkpoint_dir',
+                       'no_mlflow', 'load_file', 'continue_run', 'load_strict', 'restart_scheduler', 'extra_fast_test', 'stop_after_epochs', 'shared_embedding',
+                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything', 'model-type']
     for k in ignored_configs:
         old_config.pop(k, None)
+
     for k, v in new_config.items():
         if k in old_config:
             new_config[k] = old_config.pop(k)
@@ -128,7 +152,8 @@ def old_config_to_new(old_config, new_config):
                             new_config[k][k2][k3] = old_config.pop(k3)
                 elif k2 in old_config:
                     new_config[k][k2] = old_config.pop(k2)
-    assert len(old_config) == 0
+    if len(old_config):
+        raise ValueError(f"Unknown parameters: {old_config.keys()}")
     return new_config
 
 
@@ -169,7 +194,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model_type = config['model_type']
 
-    if model_type == "mlp":
+    if model_type in ["mothernet", "mlp"]:
         model = MotherNet(
             encoder, n_out=n_out,
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']

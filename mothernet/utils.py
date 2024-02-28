@@ -3,7 +3,8 @@ import os
 import random
 import shutil
 import warnings
-
+import urllib.request
+from tqdm import tqdm
 import mlflow
 import numpy as np
 import torch
@@ -14,6 +15,28 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 from mothernet.model_configs import get_base_config
 from mothernet.config_utils import flatten_dict
+
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
+def get_mn_model(file_name):
+    model_path = Path(get_module_path()) / 'models_diff' / file_name
+    if not model_path.exists():
+        url = f'https://amuellermothernet.blob.core.windows.net/models/{file_name}'
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        print(f"Downloading model from {url} to {model_path}. This can take a bit.")
+        with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
+            urllib.request.urlretrieve(url, filename=model_path, reporthook=t.update_to)
+    return model_path.resolve()
+
+
+def get_module_path():
+    return Path(__file__).parent.resolve()
 
 
 def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
@@ -363,7 +386,7 @@ def init_device(gpu_id, use_cpu):
 def get_model_string(config, num_gpus, device, parser):
     config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
     mm = config['model_type']
-    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm == "mlp" else "tabpfn")
+    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm in ["mlp", "mothernet"] else "tabpfn")
     default_config_flat = flatten_dict(get_base_config(), only_last=True)
     config_flat = flatten_dict(config, only_last=True)
     config_string = ""
