@@ -302,7 +302,7 @@ def test_train_additive_defaults():
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True', '--save-every', '2'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -332,7 +332,7 @@ def test_train_additive_input_bin_embedding_linear():
 def test_train_additive_factorized_output():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--save-every', '2'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)

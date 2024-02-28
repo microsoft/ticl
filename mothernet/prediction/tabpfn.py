@@ -164,8 +164,12 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         if c.get("model_type", "tabpfn") != "tabpfn":
             raise ValueError(f"Cannot load {c['model_type']} weights into TabPFNClassifier.")
         self.c = c
-        self.max_num_features = self.c['num_features']
-        self.max_num_classes = self.c['max_num_classes']
+        # Support both new nested config as well as original flat config
+        self.max_num_features = c.get('prior', c)['num_features']
+        if "prior" in c:
+            self.max_num_classes = c['prior']['classification']['max_num_classes']
+        else:
+            self.max_num_classes = c['max_num_classes']
 
         self.model = model
         if self.no_grad:
@@ -236,7 +240,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          return_logits=return_logits,
                                          no_grad=self.no_grad,
                                          batch_size_inference=self.batch_size_inference, scale=self.scale,
-                                         **get_params_from_config(self.c))
+                                         max_features=self.max_num_features)
         prediction_ = prediction.squeeze(0)
 
         return prediction_.detach().cpu().numpy() if self.no_grad else prediction_
@@ -421,7 +425,3 @@ def transformer_predict(
     output = torch.transpose(output, 0, 1)
 
     return output
-
-
-def get_params_from_config(c):
-    return {'max_features': c['num_features']}
