@@ -110,7 +110,7 @@ def old_config_to_new(old_config, new_config):
     if "aggregate_gradients" in old_config:
         old_config['aggregate_k_gradients'] = old_config.pop('aggregate_gradients')
     if "model-type" in old_config:
-        old_config['model-type'] = old_config.pop('model-type')
+        old_config['model_type'] = old_config.pop('model-type')
     if "model_type" not in old_config:
         old_config['model_type'] = 'tabpfn'
     if "num_predicted_hidden_layers" in old_config:
