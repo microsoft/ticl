@@ -19,7 +19,7 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None):
+                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, decoder_type="output_attention"):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -29,26 +29,25 @@ class AdditiveModelDecoder(nn.Module):
         self.hidden_size = hidden_size
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
         self.in_size = 100
-        out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
 
         self.predicted_hidden_layers = predicted_hidden_layers
-        self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
-        out_size = embed_dim
-        self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
-        self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
-        self.mlp = make_decoder_mlp(out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        self.decoder_type = decoder_type
+        self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
-    def forward(self, x):
-        res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
+        self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
+        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+
+    def forward(self, x, y_src):
+        res = self.mlp(self.summary_layer(x, y_src)).squeeze(0)
         assert res.shape[1] == self.num_output_layer_weights
         return res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out), res[:, -self.n_out:]
 
 
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, rank=16):
+                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, rank=16, decoder_type="output_attention"):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -59,23 +58,20 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.hidden_size = hidden_size
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
         self.in_size = 100
-        out_size = emsize
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
-
+        self.decoder_type = decoder_type
+        self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
         self.predicted_hidden_layers = predicted_hidden_layers
-        self.query = nn.Parameter(torch.randn(1, 1, embed_dim))
-        out_size = embed_dim
-        self.output_layer = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=self.nhead, kdim=emsize, vdim=emsize)
         self.num_output_layer_weights = rank * n_features
 
-        self.mlp = make_decoder_mlp(out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
         # these serve as shared prototypes across features
         self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
-    def forward(self, x):
-        res = self.mlp(self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0]).squeeze(0)
+    def forward(self, x, y_src):
+        res = self.mlp(self.summary_layer(x, y_src)).squeeze(0)
         res = res.reshape(x.shape[1], self.n_features, self.rank)
         # b batch, k feature, r rank, o outputs
         out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)

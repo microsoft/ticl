@@ -93,7 +93,7 @@ class MotherNetAdditive(nn.Module):
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
         output = self.transformer_encoder(train_x)
-        weights, biases = self.decoder(output)
+        weights, biases = self.decoder(output, y_src)
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
         h = h + biases
