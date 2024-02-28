@@ -207,7 +207,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] != "mlp":
+        if config['model_type'] not in ["mlp", "mothernet"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         n_classes = len(le.classes_)
