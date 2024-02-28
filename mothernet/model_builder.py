@@ -66,6 +66,10 @@ def load_model(path, device, verbose=False):
         if full_name in model_state:
             model_state['decoder.summary_layer.' + weights] = model_state.pop(full_name)
 
+    if "encoder.weight" in model_state:
+        model_state['encoder.1.weight'] = model_state.pop("encoder.weight")
+        model_state['encoder.1.bias'] = model_state.pop("encoder.bias")
+
     model.load_state_dict(model_state)
     model.to(device)
     model.eval()
