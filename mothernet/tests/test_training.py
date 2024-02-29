@@ -148,7 +148,7 @@ def test_train_class_average():
     assert count_parameters(results['model']) == 1625930
     assert count_parameters(results['model'].decoder) == 1081674
     assert results['model'].decoder.mlp[0].in_features == 1280
-    assert results['loss'] == pytest.approx(0.791477620601654)
+    assert results['loss'] == pytest.approx(0.7571563124656677)
 
 
 def test_train_simple_special_token():
@@ -318,6 +318,17 @@ def test_train_additive_class_tokens():
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2192897
     assert results['loss'] == pytest.approx(2.492729902267456, rel=1e-5)
+
+
+def test_train_additive_class_average():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'class_average'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 2192897
+    assert results['loss'] == pytest.approx(2.0791170597076416, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding():

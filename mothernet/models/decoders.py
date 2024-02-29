@@ -36,7 +36,7 @@ class AdditiveModelDecoder(nn.Module):
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
-        if decoder_type == "class_tokens":
+        if decoder_type in ["class_tokens", "class_average"]:
             self.num_output_layer_weights = n_bins * n_features + 1
             mlp_in_size = emsize
         else:
@@ -49,7 +49,8 @@ class AdditiveModelDecoder(nn.Module):
         data_summary = self.summary_layer(x, y_src)
         res = self.mlp(data_summary)
 
-        if self.decoder_type == "class_tokens":
+        if self.decoder_type in ["class_tokens", "class_average"]:
+            # res is (batch, classes, n_features * n_bins + 1)
             shape_functions = res[:, :, :-1].reshape(-1, self.n_out, self.n_features, self.n_bins)
             shape_functions = shape_functions.permute(0, 2, 3, 1)
             biases = res[:, :, -1]
@@ -151,8 +152,7 @@ class SummaryLayer(nn.Module):
 
                 counts.scatter_add_(0, y_src, ones)
                 counts = counts.clamp(1e-10)  # don't divide by zero
-                means = sums / counts.unsqueeze(-1)
-                res = means.reshape(x.shape[1], -1)
+                res = (sums / counts.unsqueeze(-1)).transpose(0, 1)
             elif self.decoder_type == "average":
                 res = x.mean(0)
             else:
