@@ -317,7 +317,7 @@ def test_train_additive_class_tokens():
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2192897
-    assert results['loss'] == pytest.approx(1.9675467014312744, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.492729902267456, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding():

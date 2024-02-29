@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
-from mothernet.models.encoders import BinEmbeddingEncoder, Linear
+from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
 from mothernet.utils import SeqBN
@@ -46,6 +46,7 @@ class MotherNetAdditive(nn.Module):
         self.input_bin_embedding = input_bin_embedding
         self.output_rank = output_rank
         self.factorized_output = factorized_output
+        self.decoder_type = decoder_type
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -77,15 +78,24 @@ class MotherNetAdditive(nn.Module):
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        _, x_src_org, y_src = src
+        _, x_src_org, y_src_org = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
         X_onehot = X_onehot.float()
         x_src = self.encoder(X_onehot)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+        y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
+        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
-        output = self.transformer_encoder(train_x)
-        weights, biases = self.decoder(output, y_src)
+        # FIXME Refactor into a function to share with mothernet
+        if self.decoder_type in ["special_token", "special_token_simple"]:
+            enc_train = torch.cat([self.token_embedding.repeat(1, enc_train.shape[1], 1), enc_train], 0)
+        elif self.decoder_type == "class_tokens":
+            if not isinstance(self.y_encoder, OneHotAndLinear):
+                raise ValueError("class_tokens decoder type is only supported with OneHotAndLinear y_encoder")
+            repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, enc_train.shape[1], 1)
+            enc_train = torch.cat([repeated_class_tokens, enc_train], 0)
+
+        output = self.transformer_encoder(enc_train)
+        weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
         h = h + biases
