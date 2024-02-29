@@ -36,13 +36,30 @@ class AdditiveModelDecoder(nn.Module):
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
-        self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
-        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        if decoder_type == "class_tokens":
+            self.num_output_layer_weights = n_bins * n_features + 1
+            mlp_in_size = emsize
+        else:
+            mlp_in_size = self.summary_layer.out_size
+            self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
+
+        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
 
     def forward(self, x, y_src):
-        res = self.mlp(self.summary_layer(x, y_src))
-        assert res.shape[1] == self.num_output_layer_weights
-        return res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out), res[:, -self.n_out:]
+        data_summary = self.summary_layer(x, y_src)
+        res = self.mlp(data_summary)
+
+        if self.decoder_type == "class_tokens":
+            shape_functions = res[:, :, :-1].reshape(-1, self.n_out, self.n_features, self.n_bins)
+            shape_functions = shape_functions.permute(0, 2, 3, 1)
+            biases = res[:, :, -1]
+        else:
+            assert res.shape[1] == self.num_output_layer_weights
+            shape_functions = res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out)
+            biases = res[:, -self.n_out:]
+        assert shape_functions.shape == (x.shape[1], self.n_features, self.n_bins, self.n_out)
+        assert biases.shape == (x.shape[1], self.n_out)
+        return shape_functions, biases
 
 
 class FactorizedAdditiveModelDecoder(nn.Module):
@@ -115,7 +132,7 @@ class SummaryLayer(nn.Module):
             elif self.decoder_type == "special_token_simple":
                 res = x[0]
             elif self.decoder_type == "class_tokens":
-                res = x[:10].transpose(0, 1).reshape(x.shape[1], -1)
+                res = x[:10].transpose(0, 1)
             elif self.decoder_type == "class_average":
                 # per-class mean
                 # clamping y_src to avoid -100 which should be ignored in loss
@@ -188,7 +205,7 @@ class MLPModelDecoder(nn.Module):
         # x is samples x batch x emsize
         hidden_size = self.predicted_hidden_layer_size
         # summary layer goes from per-sample to per-dataset representations
-        res = self.mlp(self.summary_layer(x, y_src))
+        res = self.mlp(self.summary_layer(x, y_src).reshape(x.shape[1], self.summary_layer.out_size))
         assert res.shape[1] == self.num_output_layer_weights
 
         # let's confuse ourselves by storing them in the opposite order!

@@ -316,8 +316,8 @@ def test_train_additive_class_tokens():
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
-    assert count_parameters(results['model']) == 9771914
-    assert results['loss'] == pytest.approx(1.3962957859039307, rel=1e-5)
+    assert count_parameters(results['model']) == 2192897
+    assert results['loss'] == pytest.approx(1.9675467014312744, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding():
