@@ -16,7 +16,7 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None):
+                 decoder_type=None, input_layer_norm=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -47,6 +47,7 @@ class MotherNetAdditive(nn.Module):
         self.output_rank = output_rank
         self.factorized_output = factorized_output
         self.decoder_type = decoder_type
+        self.input_layer_norm = input_layer_norm
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -56,7 +57,8 @@ class MotherNetAdditive(nn.Module):
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead)
-
+        if self.input_layer_norm:
+            self.input_norm = nn.LayerNorm(normalized_shape=(n_features, n_bins))
         self.init_weights()
 
     def __setstate__(self, state):
@@ -81,6 +83,8 @@ class MotherNetAdditive(nn.Module):
         _, x_src_org, y_src_org = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
         X_onehot = X_onehot.float()
+        if self.input_layer_norm:
+            X_onehot = self.input_norm(X_onehot)
         x_src = self.encoder(X_onehot)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
         enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos]

@@ -136,7 +136,9 @@ def get_base_config():
         'input_bin_embedding': 'none',
         'factorized_output': False,
         'output_rank': 16,
-        'bin_embedding_rank': 16}
+        'bin_embedding_rank': 16,
+        'input_layer_norm': False,
+        }
 
     config['transformer'].update({
         'recompute_attn': True,

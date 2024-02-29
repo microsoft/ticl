@@ -331,6 +331,17 @@ def test_train_additive_class_average():
     assert results['loss'] == pytest.approx(2.0791170597076416, rel=1e-5)
 
 
+def test_train_additive_class_average_input_layer_norm():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'class_average', '--input-layer-norm', 'True'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 2205697
+    assert results['loss'] == pytest.approx(6.360681056976318, rel=1e-5)
+                                            
+
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
