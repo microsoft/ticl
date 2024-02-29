@@ -85,19 +85,18 @@ def get_classification_prior_config(max_features, n_samples):
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
-        "num_classes": uniform_int_sampler_f(2, max_num_classes),
+        "num_classes": {'distribution': 'uniform_int', 'min': 2, 'max': max_num_classes},
         # "noise_type": "Gaussian",  # NN unused?!
         "balanced": False,
         'output_multiclass_ordered_p': 0.,
         'multiclass_max_steps': 10,
         "multiclass_type": 'rank',
-        "num_features_used": uniform_int_sampler_f(1, max_features),
+        "num_features_used": {'distribution': 'uniform_int', 'min': 1, 'max': max_features},
         'categorical_feature_p': .2,  # diff: .0
         'nan_prob_no_reason': 0.0,
         'nan_prob_unknown_reason': 0.0,
         'nan_prob_a_reason': 0.0,
         'set_value_to_nan': .1,
-
     }
     return {'prior': {'classification': config_classsification_prior}}
 
