@@ -4,7 +4,7 @@ import torch
 import pytest
 
 from mothernet.priors import ClassificationAdapterPrior, MLPPrior
-from mothernet.priors.classifiation_adapter import ClassificationAdapter
+from mothernet.priors.classification_adapter import ClassificationAdapter
 
 
 @pytest.mark.parametrize("num_features", [11, 51])
