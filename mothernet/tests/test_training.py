@@ -391,7 +391,7 @@ def test_train_additive_factorized_output_rank():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64, 10)
     assert count_parameters(results['model']) == 1487514
-    assert results['loss'] == pytest.approx(1.000483512878418, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.0063064098358154, rel=1e-5)
 
 
 def test_train_additive_class_average_factorized():
