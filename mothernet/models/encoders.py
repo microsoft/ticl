@@ -35,10 +35,6 @@ class Linear(nn.Linear):
             x = torch.nan_to_num(x, nan=0.0)
         return super().forward(x)
 
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        self.__dict__.setdefault('replace_nan_by_zero', True)
-
 
 class BinEmbeddingEncoder(nn.Module):
     def __init__(self, num_features, emsize, n_bins, rank, nonlinear=True):
@@ -83,6 +79,3 @@ class OneHotAndLinear(nn.Linear):
             out[:, 0][mask] = 0
             out = out.unsqueeze(1)
         return super().forward(out)
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
