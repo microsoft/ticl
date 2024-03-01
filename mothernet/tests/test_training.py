@@ -220,14 +220,14 @@ def test_train_low_rank():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
-                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '1'])
+                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '2'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert count_parameters(results['model']) == 926474
+    assert count_parameters(results['model']) == 1067850
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
-    assert results['model'].decoder.mlp[2].out_features == 2314
+    assert results['model'].decoder.mlp[2].out_features == 3402
     # suspiciously low tolerance here
-    assert results['loss'] == pytest.approx(1.1127089262008667, rel=1e-4)
+    assert results['loss'] == pytest.approx(1.1005988121032715, rel=1e-4)
     assert isinstance(results['model'], MotherNet)
 
 
