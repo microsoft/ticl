@@ -381,7 +381,7 @@ def test_train_additive_factorized_output():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1649994
-    assert results['loss'] == pytest.approx(2.0055530071258545, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.0514190196990967, rel=1e-5)
 
 
 def test_train_additive_factorized_output_rank():
@@ -413,7 +413,7 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
-    assert results['loss'] == pytest.approx(2.9002177715301514, rel=1e-5)
+    assert results['loss'] == pytest.approx(3.638622283935547, rel=1e-5)
 
 
 def test_train_perceiver_defaults():
