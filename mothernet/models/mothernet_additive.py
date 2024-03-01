@@ -16,12 +16,13 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None, input_layer_norm=False):
+                 decoder_type=None, input_layer_norm=False, shape_attention=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
+    
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
@@ -48,11 +49,13 @@ class MotherNetAdditive(nn.Module):
         self.factorized_output = factorized_output
         self.decoder_type = decoder_type
         self.input_layer_norm = input_layer_norm
+        self.shape_attention = shape_attention
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim, decoder_type=decoder_type,
-                                                          decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank)
+                                                          decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank,
+                                                          shape_attention=shape_attention)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,

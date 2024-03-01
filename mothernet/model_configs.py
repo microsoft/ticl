@@ -138,6 +138,7 @@ def get_base_config():
         'output_rank': 16,
         'bin_embedding_rank': 16,
         'input_layer_norm': False,
+        'shape_attention': False,
         }
 
     config['transformer'].update({

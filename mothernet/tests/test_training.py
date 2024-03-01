@@ -405,6 +405,17 @@ def test_train_additive_class_average_factorized():
     assert results['loss'] == pytest.approx(0.8343020081520081, rel=1e-5)
 
 
+def test_train_additive_class_average_shape_attention():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True',
+                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True'])
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model'].decoder.output_weights.shape == (4, 64)
+    assert count_parameters(results['model']) == 1419034
+    assert results['loss'] == pytest.approx(0.8343020081520081, rel=1e-5)
+
+
 def test_train_additive_factorized_in_and_out():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -64,7 +64,7 @@ class AdditiveModelDecoder(nn.Module):
 
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention"):
+                 decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -78,6 +78,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
         self.decoder_type = decoder_type
+        self.shape_attention = shape_attention
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
         self.num_output_layer_weights = rank * n_features
         if decoder_type in ["class_tokens", "class_average"]:
@@ -85,6 +86,8 @@ class FactorizedAdditiveModelDecoder(nn.Module):
             # these serve as shared prototypes across features
             self.output_weights = nn.Parameter(torch.randn(rank, n_bins))
         else:
+            if shape_attention:
+                raise ValueError("Shape attention is not supported for unless using class_tokens or class_average")
             mlp_in_size = self.summary_layer.out_size
             # these serve as shared prototypes across features and classes
             self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
@@ -96,7 +99,11 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         res = self.mlp(self.summary_layer(x, y_src))
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)
-            out = torch.einsum('bokr, rd -> bkdo', res, self.output_weights)
+            if self.shape_attention:
+                import pdb; pdb.set_trace()
+                out = nn.functional.scaled_dot_product_attention(res, self.output_weights.T, self.output_weights.T)
+            else:
+                out = torch.einsum('bokr, rd -> bkdo', res, self.output_weights)
         else:
             res = res.reshape(x.shape[1], self.n_features, self.rank)
             # b batch, k feature, r rank, o outputs, d bins
