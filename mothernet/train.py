@@ -186,6 +186,10 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     aggregate_k_gradients *= 2
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
+                elif increased_batch_size == 3 and total_loss <= .435:
+                    aggregate_k_gradients *= 2
+                    increased_batch_size = 4
+                    print("increased aggregate_k_gradients size to", aggregate_k_gradients)
             scheduler.step()
             if spike_scheduler is not None:
                 spike_scheduler.step(metrics=total_loss)
