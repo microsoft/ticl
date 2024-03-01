@@ -51,7 +51,7 @@ def test_train_defaults():
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == DEFAULT_LOSS
-    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_tFalse_cpu_")
+    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
@@ -220,7 +220,7 @@ def test_train_low_rank():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
-                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
+                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '1'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert count_parameters(results['model']) == 926474
