@@ -123,10 +123,10 @@ def get_base_config():
     config['mothernet'] = {
         'weight_embedding_rank': 32,
         'low_rank_weights': True,
-        'predicted_hidden_layer_size': 128,
+        'predicted_hidden_layer_size': 512,
         'decoder_type': "output_attention",
         'decoder_embed_dim': 1024,
-        'predicted_hidden_layers': 1,
+        'predicted_hidden_layers': 2,
         'decoder_hidden_layers': 1,
         'decoder_hidden_size': 2048}
 
