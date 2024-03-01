@@ -96,11 +96,10 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         res = self.mlp(self.summary_layer(x, y_src))
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)
-            res = res.permute(0, 2, 3, 1)
-            out = torch.einsum('bkro, rd -> bkdo', res, self.output_weights)
+            out = torch.einsum('bokr, rd -> bkdo', res, self.output_weights)
         else:
             res = res.reshape(x.shape[1], self.n_features, self.rank)
-            # b batch, k feature, r rank, o outputs
+            # b batch, k feature, r rank, o outputs, d bins
             out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
         return out, self.output_biases
 
