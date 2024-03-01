@@ -80,17 +80,28 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
         self.num_output_layer_weights = rank * n_features
+        if decoder_type in ["class_tokens", "class_average"]:
+            mlp_in_size = emsize
+            # these serve as shared prototypes across features
+            self.output_weights = nn.Parameter(torch.randn(rank, n_bins))
+        else:
+            mlp_in_size = self.summary_layer.out_size
+            # these serve as shared prototypes across features and classes
+            self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
 
-        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
-        # these serve as shared prototypes across features
-        self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
+        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
     def forward(self, x, y_src):
         res = self.mlp(self.summary_layer(x, y_src))
-        res = res.reshape(x.shape[1], self.n_features, self.rank)
-        # b batch, k feature, r rank, o outputs
-        out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
+        if self.decoder_type in ["class_tokens", "class_average"]:
+            res = res.reshape(-1, self.n_out, self.n_features, self.rank)
+            res = res.permute(0, 2, 3, 1)
+            out = torch.einsum('bkro, rd -> bkdo', res, self.output_weights)
+        else:
+            res = res.reshape(x.shape[1], self.n_features, self.rank)
+            # b batch, k feature, r rank, o outputs
+            out = torch.einsum('bkr, rdo -> bkdo', res, self.output_weights)
         return out, self.output_biases
 
 
