@@ -61,11 +61,6 @@ class MotherNetAdditive(nn.Module):
             self.input_norm = nn.LayerNorm(normalized_shape=(n_features, n_bins))
         self.init_weights()
 
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        # ?!?!? FIXME THIS SEEMS WRONG
-        self.__dict__.setdefault('efficient_eval_masking', False)
-
     def init_weights(self):
         if self.init_method is not None:
             self.apply(self.init_method)

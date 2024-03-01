@@ -88,11 +88,6 @@ class MotherNet(MLPModelPredictor):
 
         self.init_weights()
 
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        # ?!?!? FIXME THIS SEEMS WRONG
-        self.__dict__.setdefault('efficient_eval_masking', False)
-
     def init_weights(self):
         if self.init_method is not None:
             self.apply(self.init_method)

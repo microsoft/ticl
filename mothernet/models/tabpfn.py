@@ -34,10 +34,6 @@ class TabPFN(nn.Module):
 
         self.init_weights()
 
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        self.__dict__.setdefault('efficient_eval_masking', False)
-
     def init_weights(self):
         if self.init_method is not None:
             self.apply(self.init_method)
