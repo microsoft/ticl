@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
-from mothernet.models.encoders import BinEmbeddingEncoder, Linear
+from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
 from mothernet.utils import SeqBN
@@ -16,7 +16,7 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None):
+                 decoder_type=None, input_layer_norm=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -46,16 +46,19 @@ class MotherNetAdditive(nn.Module):
         self.input_bin_embedding = input_bin_embedding
         self.output_rank = output_rank
         self.factorized_output = factorized_output
+        self.decoder_type = decoder_type
+        self.input_layer_norm = input_layer_norm
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
-                                                          embed_dim=decoder_embed_dim,
+                                                          embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                           decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
-                                                embed_dim=decoder_embed_dim,
+                                                embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead)
-
+        if self.input_layer_norm:
+            self.input_norm = nn.LayerNorm(normalized_shape=(n_features, n_bins))
         self.init_weights()
 
     def __setstate__(self, state):
@@ -77,15 +80,26 @@ class MotherNetAdditive(nn.Module):
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        _, x_src_org, y_src = src
+        _, x_src_org, y_src_org = src
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
         X_onehot = X_onehot.float()
+        if self.input_layer_norm:
+            X_onehot = self.input_norm(X_onehot)
         x_src = self.encoder(X_onehot)
-        y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-        train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+        y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
+        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
-        output = self.transformer_encoder(train_x)
-        weights, biases = self.decoder(output, y_src)
+        # FIXME Refactor into a function to share with mothernet
+        if self.decoder_type in ["special_token", "special_token_simple"]:
+            enc_train = torch.cat([self.token_embedding.repeat(1, enc_train.shape[1], 1), enc_train], 0)
+        elif self.decoder_type == "class_tokens":
+            if not isinstance(self.y_encoder, OneHotAndLinear):
+                raise ValueError("class_tokens decoder type is only supported with OneHotAndLinear y_encoder")
+            repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, enc_train.shape[1], 1)
+            enc_train = torch.cat([repeated_class_tokens, enc_train], 0)
+
+        output = self.transformer_encoder(enc_train)
+        weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
         h = h + biases

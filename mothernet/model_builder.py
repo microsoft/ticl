@@ -66,7 +66,7 @@ def load_model(path, device, verbose=False):
         if full_name in model_state:
             model_state['decoder.summary_layer.' + weights] = model_state.pop(full_name)
 
-    if "encoder.weight" in model_state:
+    if "encoder.weight" in model_state and "model_type" in config_sample and config_sample['model_type'] == "additive":
         model_state['encoder.1.weight'] = model_state.pop("encoder.weight")
         model_state['encoder.1.bias'] = model_state.pop("encoder.bias")
 

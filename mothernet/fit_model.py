@@ -91,7 +91,7 @@ def main(argv):
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
     if orchestration.no_mlflow or mlflow_hostname is None:
-        print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment variable enable mlflow.")
+        print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment to variable enable mlflow.")
         total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                  optimizer_state=optimizer_state, scheduler=scheduler,
                                                  load_model_strict=orchestration.continue_run or orchestration.load_strict)

@@ -3,10 +3,10 @@ import numpy as np
 import torch
 
 from mothernet.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
-                          nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
-                          remove_outliers)
+                             nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
+                             remove_outliers)
 
-from mothernet.distributions import sample_distributions, uniform_int_sampler_f
+from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions
 from .utils import CategoricalActivation, randomize_classes
 
 
@@ -81,7 +81,7 @@ class ClassificationAdapter:
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, config):
-        self.h = sample_distributions(config)
+        self.h = sample_distributions(parse_distributions(config))
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:

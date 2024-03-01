@@ -77,6 +77,7 @@ def argparser_from_config(description="Train Mothernet"):
     additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
     additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
     additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)
+    additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool, default=False)
 
     # Perceiver
     perceiver = parser.add_argument_group('perceiver')
