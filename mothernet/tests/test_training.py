@@ -354,6 +354,17 @@ def test_train_additive_input_bin_embedding():
     assert results['loss'] == pytest.approx(0.7029958367347717, rel=1e-5)
 
 
+def test_train_additive_special_token_simple():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'special_token_simple', '--save-every', '2'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 9624586
+    assert results['loss'] == pytest.approx(3.113452911376953, rel=1e-5)
+
+
 def test_train_additive_input_bin_embedding_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
