@@ -19,7 +19,7 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, decoder_type="output_attention"):
+                 decoder_hidden_layers=1, nhead=4, weight_embedding_rank=None, decoder_type="output_attention"):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -32,7 +32,6 @@ class AdditiveModelDecoder(nn.Module):
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
 
-        self.predicted_hidden_layers = predicted_hidden_layers
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
@@ -65,7 +64,7 @@ class AdditiveModelDecoder(nn.Module):
 
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, rank=16, decoder_type="output_attention"):
+                 decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention"):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -80,7 +79,6 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.weight_embedding_rank = weight_embedding_rank
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
-        self.predicted_hidden_layers = predicted_hidden_layers
         self.num_output_layer_weights = rank * n_features
 
         self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
