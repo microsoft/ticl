@@ -7,6 +7,7 @@ from torch import nn
 
 from mothernet.utils import default_device
 from mothernet.distributions import parse_distributions, sample_distributions
+from mothernet.config_utils import str2bool
 
 
 class GaussianNoise(nn.Module):
@@ -50,7 +51,7 @@ class MLP(torch.nn.Module):
         self.prior_mlp_dropout_prob = prior_mlp_dropout_prob
         self.block_wise_dropout = block_wise_dropout
         self.init_std = init_std
-        self.sort_features = sort_features
+        self.sort_features = str2bool(sort_features) if isinstance(sort_features, str) else sort_features
         self.in_clique = in_clique
 
         with torch.no_grad():

@@ -400,6 +400,7 @@ def get_model_string(config, num_gpus, device, parser):
             print(f"Warning: {k} not in default config")
             continue
         if v != default_config_flat[k]:
+            import pdb; pdb.set_trace()
             shortname = config_shorthands.get(k, k)
             if isinstance(v, float):
                 config_string += f"_{shortname}{v:.4g}"

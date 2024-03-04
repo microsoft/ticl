@@ -2,6 +2,15 @@ from collections.abc import MutableMapping
 import torch
 
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ValueError("Boolean value expected.")
+
+
 def flatten_dict(dictionary, parent_key='', separator='_', only_last=False):
     if "distribution" in dictionary:
         return {parent_key: dictionary}
