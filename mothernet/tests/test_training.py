@@ -26,7 +26,8 @@ def count_parameters(model):
 TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1']
 TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1']
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1',
+                          '--save-every', '2']
 
 DEFAULT_LOSS = pytest.approx(1.0794482231140137)
 
@@ -245,8 +246,17 @@ def test_train_tabpfn_basic():
 def test_train_tabpfn_stepped_multiclass():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
-    assert results['loss'] == pytest.approx(0.7380795478820801)
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
+    assert results['loss'] == pytest.approx(0.5968285799026489)
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+
+def test_train_tabpfn_stepped_multiclass_steps3():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps', '--multiclass-max-steps', '3'])
+    assert results['loss'] == pytest.approx(0.6931300163269043)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
 
@@ -345,7 +355,7 @@ def test_train_additive_class_average_input_layer_norm():
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True', '--save-every', '2'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--input-bin-embedding', 'True'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -357,7 +367,7 @@ def test_train_additive_input_bin_embedding():
 def test_train_additive_special_token_simple():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'special_token_simple', '--save-every', '2'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'special_token_simple'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -386,7 +396,7 @@ def test_train_additive_input_bin_embedding_linear():
 def test_train_additive_factorized_output():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True', '--save-every', '2'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)

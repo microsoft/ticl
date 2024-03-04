@@ -1,4 +1,5 @@
 import argparse
+from mothernet.config_utils import str2bool
 
 
 class GroupedArgParser(argparse.ArgumentParser):
@@ -90,6 +91,7 @@ def argparser_from_config(description="Train Mothernet"):
     prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
     classification_prior = parser.add_argument_group('prior.classification')
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
+    classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", default=10, type=int)
 
     mlp_prior = parser.add_argument_group('prior.mlp')
     mlp_prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)
@@ -98,6 +100,7 @@ def argparser_from_config(description="Train Mothernet"):
                          default=0.5, type=float, dest='p_uninformative')
     boolean.add_argument('--boolean-max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior",
                          default=0.5, type=float, dest='max_fraction_uninformative')
+    boolean.add_argument('--sort-features', help="Whether to sort features by index in MLP prior.", default={'distribution': 'meta_choice', 'choice_values': [True, False]})
 
     # serialization, loading, logging
     orchestration = parser.add_argument_group('orchestration')
@@ -115,12 +118,3 @@ def argparser_from_config(description="Train Mothernet"):
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     return parser
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise ValueError("Boolean value expected.")
