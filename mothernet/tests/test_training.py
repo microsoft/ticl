@@ -24,9 +24,9 @@ def count_parameters(model):
 # really tiny model for smoke tests
 # one step per epoch, no adapting batchsize, CPU, Mothernet
 TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False']
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1']
 TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False']
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1']
 
 DEFAULT_LOSS = pytest.approx(1.0794482231140137)
 
@@ -51,7 +51,7 @@ def test_train_defaults():
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == DEFAULT_LOSS
-    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_tFalse_cpu_")
+    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
@@ -220,14 +220,14 @@ def test_train_low_rank():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
-                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True'])
+                        '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '2'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert count_parameters(results['model']) == 926474
+    assert count_parameters(results['model']) == 1067850
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
-    assert results['model'].decoder.mlp[2].out_features == 2314
+    assert results['model'].decoder.mlp[2].out_features == 3402
     # suspiciously low tolerance here
-    assert results['loss'] == pytest.approx(1.1127089262008667, rel=1e-4)
+    assert results['loss'] == pytest.approx(1.1005988121032715, rel=1e-4)
     assert isinstance(results['model'], MotherNet)
 
 
@@ -354,6 +354,17 @@ def test_train_additive_input_bin_embedding():
     assert results['loss'] == pytest.approx(0.7029958367347717, rel=1e-5)
 
 
+def test_train_additive_special_token_simple():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--decoder-type', 'special_token_simple', '--save-every', '2'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert count_parameters(results['model']) == 9624586
+    assert results['loss'] == pytest.approx(3.113452911376953, rel=1e-5)
+
+
 def test_train_additive_input_bin_embedding_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -381,7 +392,7 @@ def test_train_additive_factorized_output():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1649994
-    assert results['loss'] == pytest.approx(2.0055530071258545, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.0514190196990967, rel=1e-5)
 
 
 def test_train_additive_factorized_output_rank():
@@ -391,7 +402,7 @@ def test_train_additive_factorized_output_rank():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64, 10)
     assert count_parameters(results['model']) == 1487514
-    assert results['loss'] == pytest.approx(1.000483512878418, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.0063064098358154, rel=1e-5)
 
 
 def test_train_additive_class_average_factorized():
@@ -413,7 +424,7 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
-    assert results['loss'] == pytest.approx(2.9002177715301514, rel=1e-5)
+    assert results['loss'] == pytest.approx(3.638622283935547, rel=1e-5)
 
 
 def test_train_perceiver_defaults():

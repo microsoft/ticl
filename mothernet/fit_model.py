@@ -114,6 +114,8 @@ def main(argv):
             run_ids = mlflow.search_runs(filter_string=f"attribute.run_name='{model_string}'")['run_id']
             if len(run_ids) > 1:
                 raise ValueError(f"Found more than one run with name {model_string}")
+            if len(run_ids) < 1:
+                raise ValueError(f"Found no run with name {model_string}")
             run_id = run_ids.iloc[0]
             run_args = {'run_id': run_id}
 
@@ -125,7 +127,7 @@ def main(argv):
 
         with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
-            mlflow.log_params(flatten_dict(config))
+            mlflow.log_params({k: v for k, v in flatten_dict(config).items() if k not in ['wallclock_times', 'losses', 'learning_rates']})
             total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
                                                      optimizer_state=optimizer_state, scheduler=scheduler,
                                                      load_model_strict=orchestration.continue_run or orchestration.load_strict)
