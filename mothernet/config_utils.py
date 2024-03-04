@@ -3,6 +3,8 @@ import torch
 
 
 def flatten_dict(dictionary, parent_key='', separator='_', only_last=False):
+    if "distribution" in dictionary:
+        return {parent_key: dictionary}
     if only_last:
         parent_key = ""
     items = []
