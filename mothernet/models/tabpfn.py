@@ -9,11 +9,30 @@ from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.utils import SeqBN
 
 
+def get_init_method(init_method):
+    if init_method is None:
+        return None
+    if init_method == "kaiming-uniform":
+        method = nn.init.kaiming_uniform_
+    if init_method == "kaiming-normal":
+        method = nn.init.kaiming_normal_
+    if init_method == "xavier-uniform":
+        method = nn.init.xavier_uniform_
+    if init_method == "xavier-normal":
+        method = nn.init.xavier_normal_
+
+    def init_weights_inner(layer):
+        if isinstance(layer, nn.Linear):
+            method(layer.weight)
+            nn.init.zeros_(layer.bias)
+    return init_weights_inner
+
+
 class TabPFN(nn.Module):
     def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
-                 all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None):
+                 all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None, tabpfn_zero_weights=False):
         super().__init__()
         self.y_encoder = y_encoder_layer
         nhid = emsize * nhid_factor
@@ -28,22 +47,22 @@ class TabPFN(nn.Module):
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         self.efficient_eval_masking = efficient_eval_masking
-
+        self.tabpfn_zero_weights = tabpfn_zero_weights
         self.n_out = n_out
         self.nhid = nhid
-
         self.init_weights()
 
     def init_weights(self):
         if self.init_method is not None:
-            self.apply(self.init_method)
-        for layer in self.transformer_encoder.layers:
-            nn.init.zeros_(layer.linear2.weight)
-            nn.init.zeros_(layer.linear2.bias)
-            attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
-            for attn in attns:
-                nn.init.zeros_(attn.out_proj.weight)
-                nn.init.zeros_(attn.out_proj.bias)
+            self.apply(get_init_method(self.init_method))
+        if self.tabpfn_zero_weights:
+            for layer in self.transformer_encoder.layers:
+                nn.init.zeros_(layer.linear2.weight)
+                nn.init.zeros_(layer.linear2.bias)
+                attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
+                for attn in attns:
+                    nn.init.zeros_(attn.out_proj.weight)
+                    nn.init.zeros_(attn.out_proj.bias)
 
     def forward(self, src, src_mask=None, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'

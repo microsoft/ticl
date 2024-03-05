@@ -243,6 +243,24 @@ def test_train_tabpfn_basic():
     assert isinstance(results['model'], TabPFN)
 
 
+def test_train_tabpfn_init_weights():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--init-method', 'kaiming-uniform'])
+    assert count_parameters(results['model']) == 579850
+    assert results['loss'] == pytest.approx(1.1084306240081787)
+    assert isinstance(results['model'], TabPFN)
+
+
+def test_train_tabpfn_init_weights_no_zero():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--init-method', 'kaiming-uniform', '--tabpfn-zero-weights', 'False'])
+    assert count_parameters(results['model']) == 579850
+    assert results['loss'] == pytest.approx(1.2844524383544922)
+    assert isinstance(results['model'], TabPFN)
+
+
 def test_train_tabpfn_stepped_multiclass():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
