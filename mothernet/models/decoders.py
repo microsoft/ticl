@@ -65,7 +65,7 @@ class AdditiveModelDecoder(nn.Module):
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False,
-                 n_shape_functions=64):
+                 n_shape_functions=32):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -89,7 +89,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
             # these serve as shared prototypes across features
             if shape_attention:
                 self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins))
-                self.shape_attention_layer = nn.MultiheadAttention(embed_dim=n_bins, num_heads=nhead, kdim=n_shape_functions, vdim=n_shape_functions)
+                self.shape_function_keys = nn.Parameter(torch.randn(n_shape_functions, rank))
             else:
                 self.output_weights = nn.Parameter(torch.randn(rank, n_bins))
         else:
@@ -107,8 +107,9 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)
             if self.shape_attention:
-                import pdb; pdb.set_trace()
-                out = nn.functional.scaled_dot_product_attention(res, self.output_weights.T, self.output_weights.T)
+                out = nn.functional.scaled_dot_product_attention(res, self.shape_function_keys, self.shape_functions)
+                # reshape from batch, outputs, features, bins to batch, features, bins, outputs
+                out = out.permute(0, 2, 3, 1)
             else:
                 out = torch.einsum('bokr, rd -> bkdo', res, self.output_weights)
         else:

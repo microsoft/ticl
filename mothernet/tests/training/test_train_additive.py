@@ -27,9 +27,10 @@ def test_train_additive_class_average_shape_attention():
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True',
                                                  '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True'])
     assert isinstance(results['model'], MotherNetAdditive)
-    assert results['model'].decoder.output_weights.shape == (4, 64)
-    assert count_parameters(results['model']) == 1419034
-    assert results['loss'] == pytest.approx(0.8343020081520081, rel=1e-5)
+    assert results['model'].decoder.shape_functions.shape == (32, 64)
+    assert results['model'].decoder.shape_function_keys.shape == (32, 4)
+    assert count_parameters(results['model']) == 1420954
+    assert results['loss'] == pytest.approx(1.4642586708068848, rel=1e-5)
 
 
 def test_train_additive_class_tokens():
