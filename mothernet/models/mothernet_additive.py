@@ -16,7 +16,7 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None, input_layer_norm=False, tabpfn_zero_weights=True, low_card_binning='default'):
+                 decoder_type=None, input_layer_norm=False, tabpfn_zero_weights=True):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -49,7 +49,6 @@ class MotherNetAdditive(nn.Module):
         self.decoder_type = decoder_type
         self.input_layer_norm = input_layer_norm
         self.tabpfn_zero_weights = tabpfn_zero_weights
-        self.low_card_binning = low_card_binning
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -82,7 +81,7 @@ class MotherNetAdditive(nn.Module):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, low_card_binning=self.low_card_binning,
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
@@ -113,7 +112,7 @@ class MotherNetAdditive(nn.Module):
         return h
 
 
-def bin_data(data, n_bins, low_card_binning='default', single_eval_pos=None):
+def bin_data(data, n_bins, single_eval_pos=None):
     # data is samples x batch x features
     # FIXME treat NaN as separate bin
     data_nona = torch.nan_to_num(data, nan=0)
