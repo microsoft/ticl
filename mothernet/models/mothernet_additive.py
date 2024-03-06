@@ -5,7 +5,7 @@ from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveMo
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
-from mothernet.utils import SeqBN
+from mothernet.utils import SeqBN, get_init_method
 
 
 class MotherNetAdditive(nn.Module):
@@ -16,7 +16,7 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None, input_layer_norm=False, shape_attention=False):
+                 decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -50,6 +50,7 @@ class MotherNetAdditive(nn.Module):
         self.decoder_type = decoder_type
         self.input_layer_norm = input_layer_norm
         self.shape_attention = shape_attention
+        self.tabpfn_zero_weights = tabpfn_zero_weights
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -69,14 +70,15 @@ class MotherNetAdditive(nn.Module):
 
     def init_weights(self):
         if self.init_method is not None:
-            self.apply(self.init_method)
-        for layer in self.transformer_encoder.layers:
-            nn.init.zeros_(layer.linear2.weight)
-            nn.init.zeros_(layer.linear2.bias)
-            attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
-            for attn in attns:
-                nn.init.zeros_(attn.out_proj.weight)
-                nn.init.zeros_(attn.out_proj.bias)
+            self.apply(get_init_method(self.init_method))
+        if self.tabpfn_zero_weights:
+            for layer in self.transformer_encoder.layers:
+                nn.init.zeros_(layer.linear2.weight)
+                nn.init.zeros_(layer.linear2.bias)
+                attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
+                for attn in attns:
+                    nn.init.zeros_(attn.out_proj.weight)
+                    nn.init.zeros_(attn.out_proj.bias)
 
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'

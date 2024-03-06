@@ -69,7 +69,8 @@ def get_general_config(max_features, n_samples):
         "nlayers": 12,
         "dropout": 0.0,
         "nhid_factor": 2,
-        'nhead': 512 // 128
+        'nhead': 512 // 128,
+        'init_method': None,
 
     }
 
@@ -146,7 +147,8 @@ def get_base_config():
         'pre_norm': False,
         'y_encoder': "one_hot",
         'efficient_eval_masking': True,
-        'input_normalization': False
+        'input_normalization': False,
+        'tabpfn_zero_weights': True,
     })
 
     config['optimizer'].update({
