@@ -508,3 +508,22 @@ def synetune_handle_checkpoint(args):
             continue_run = True
             warm_start_from = checkpoint_path
     return base_path, continue_run, warm_start_from, report
+
+
+def get_init_method(init_method):
+    if init_method is None:
+        return None
+    if init_method == "kaiming-uniform":
+        method = nn.init.kaiming_uniform_
+    if init_method == "kaiming-normal":
+        method = nn.init.kaiming_normal_
+    if init_method == "xavier-uniform":
+        method = nn.init.xavier_uniform_
+    if init_method == "xavier-normal":
+        method = nn.init.xavier_normal_
+
+    def init_weights_inner(layer):
+        if isinstance(layer, nn.Linear):
+            method(layer.weight)
+            nn.init.zeros_(layer.bias)
+    return init_weights_inner

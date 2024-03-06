@@ -6,7 +6,7 @@ from mothernet.models.encoders import OneHotAndLinear
 from mothernet.models.decoders import LinearModelDecoder, MLPModelDecoder
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
-from mothernet.utils import SeqBN
+from mothernet.utils import SeqBN, get_init_method
 
 
 class MLPModelPredictor(nn.Module):
@@ -61,7 +61,7 @@ class MotherNet(MLPModelPredictor):
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
                  decoder_embed_dim=2048,
                  decoder_hidden_layers=1, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
-                 low_rank_weights=False):
+                 low_rank_weights=False, tabpfn_zero_weights=True):
         super().__init__()
         nhid = emsize * nhid_factor
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
@@ -79,6 +79,8 @@ class MotherNet(MLPModelPredictor):
         self.nhid = nhid
         self.decoder_type = decoder_type
         decoder_hidden_size = decoder_hidden_size or nhid
+        self.tabpfn_zero_weights = tabpfn_zero_weights
+
         self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=self.decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
@@ -90,23 +92,15 @@ class MotherNet(MLPModelPredictor):
 
     def init_weights(self):
         if self.init_method is not None:
-            if self.init_method == "kaiming-uniform":
-                self.apply(nn.init.kaiming_uniform_)
-            elif self.init_method == "kaiming-normal":
-                self.apply(nn.init.kaiming_normal_)
-            elif self.init_method == "xavier-uniform":
-                self.apply(nn.init.xavier_uniform_)
-            elif self.init_method == "xavier-normal":
-                self.apply(nn.init.xavier_normal_)
-            else:
-                self.apply(self.init_method)
-        for layer in self.transformer_encoder.layers:
-            nn.init.zeros_(layer.linear2.weight)
-            nn.init.zeros_(layer.linear2.bias)
-            attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
-            for attn in attns:
-                nn.init.zeros_(attn.out_proj.weight)
-                nn.init.zeros_(attn.out_proj.bias)
+            self.apply(get_init_method(self.init_method))
+        if self.tabpfn_zero_weights:
+            for layer in self.transformer_encoder.layers:
+                nn.init.zeros_(layer.linear2.weight)
+                nn.init.zeros_(layer.linear2.bias)
+                attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
+                for attn in attns:
+                    nn.init.zeros_(attn.out_proj.weight)
+                    nn.init.zeros_(attn.out_proj.bias)
             
     def inner_forward(self, train_x):
         return self.transformer_encoder(train_x)

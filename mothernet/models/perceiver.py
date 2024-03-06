@@ -277,6 +277,8 @@ class TabPerceiver(MLPModelPredictor):
         low_rank_weights=None,
         y_encoder=None,  # ignored, y_encoder_layer is passed
         weight_embedding_rank=None,
+        init_method=None,  # ignored
+        tabpfn_zero_weights=None,  # ignored
 
     ):
         """The shape of the final attention mechanism will be:
