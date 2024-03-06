@@ -84,7 +84,8 @@ class MotherNetAdditive(nn.Module):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins)
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins,
+                               single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
             X_onehot = self.input_norm(X_onehot)
@@ -114,11 +115,15 @@ class MotherNetAdditive(nn.Module):
         return h
 
 
-def bin_data(data, n_bins):
+def bin_data(data, n_bins, single_eval_pos=None):
+    # data is samples x batch x features
     # FIXME treat NaN as separate bin
     data_nona = torch.nan_to_num(data, nan=0)
     quantiles = torch.arange(n_bins + 1, device=data.device) / n_bins
-    bin_edges = torch.quantile(data_nona, quantiles[1:-1], dim=0)
+    if single_eval_pos is None:
+        bin_edges = torch.quantile(data_nona, quantiles[1:-1], dim=0)
+    else:
+        bin_edges = torch.quantile(data_nona[:single_eval_pos], quantiles[1:-1], dim=0)
     zero_padding = (data_nona == 0).all(axis=0)
     # FIXME extra data copy
     bin_edges = bin_edges.transpose(0, -1).contiguous()
