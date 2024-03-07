@@ -79,6 +79,8 @@ def load_model(path, device, verbose=False):
 
 
 def get_encoder(config):
+    if config['model_type'] == "batabpfn":
+        return encoders.Linear(1, config['transformer']['emsize'], replace_nan_by_zero=True)
     if ((config['prior']['classification']['nan_prob_no_reason'] > 0.0) or
         (config['prior']['classification']['nan_prob_a_reason'] > 0.0) or
             (config['prior']['classification']['nan_prob_unknown_reason'] > 0.0)):
@@ -214,6 +216,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
             encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
         )
     elif model_type == "batabpfn":
+        # FIXME hack
+        config['transformer']['nhead'] = 4
         model = BiAttentionTabPFN(
             encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
         )
