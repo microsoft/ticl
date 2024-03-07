@@ -140,6 +140,7 @@ def get_base_config():
         'bin_embedding_rank': 16,
         'input_layer_norm': False,
         'shape_attention': False,
+        'shape_attention_heads': 1,
         }
 
     config['transformer'].update({

@@ -65,7 +65,7 @@ class AdditiveModelDecoder(nn.Module):
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False,
-                 n_shape_functions=32):
+                 n_shape_functions=32, shape_attention_heads=1):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -83,13 +83,19 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
         self.num_output_layer_weights = rank * n_features
         self.n_shape_functions = n_shape_functions
+        self.shape_attention_heads = shape_attention_heads
 
         if decoder_type in ["class_tokens", "class_average"]:
             mlp_in_size = emsize
             # these serve as shared prototypes across features
             if shape_attention:
                 self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins))
-                self.shape_function_keys = nn.Parameter(torch.randn(n_shape_functions, rank))
+                if shape_attention_heads == 1:
+                    self.shape_function_keys = nn.Parameter(torch.randn(n_shape_functions, rank))
+                else:
+                    self.shape_function_keys = nn.ParameterList([nn.Parameter(torch.randn(n_shape_functions, rank)) for _ in range(shape_attention_heads)])
+                    self.feature_heads = nn.ParameterList([nn.Parameter(torch.randn(rank, rank)) for _ in range(shape_attention_heads)])
+                    self.head_weights = nn.Parameter(torch.randn(shape_attention_heads))
             else:
                 self.output_weights = nn.Parameter(torch.randn(rank, n_bins))
         else:
@@ -107,9 +113,17 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)
             if self.shape_attention:
-                out = nn.functional.scaled_dot_product_attention(res, self.shape_function_keys, self.shape_functions)
-                # reshape from batch, outputs, features, bins to batch, features, bins, outputs
-                out = out.permute(0, 2, 3, 1)
+                if self.shape_attention_heads == 1:
+                    out = nn.functional.scaled_dot_product_attention(res, self.shape_function_keys, self.shape_functions)
+                    # reshape from batch, outputs, features, bins to batch, features, bins, outputs
+                    out = out.permute(0, 2, 3, 1)
+                else:
+                    head_results = []
+                    for key, head in zip(self.shape_function_keys, self.feature_heads):
+                        head_results.append(nn.functional.scaled_dot_product_attention(res @ head, key, self.shape_functions))
+                    head_results = torch.stack(head_results, dim=-1)
+                    # b batch, k feature, r rank, o outputs, h heads, d bins
+                    out = torch.einsum('bokdh, h -> bkdo', head_results, self.head_weights)
             else:
                 out = torch.einsum('bokr, rd -> bkdo', res, self.output_weights)
         else:
