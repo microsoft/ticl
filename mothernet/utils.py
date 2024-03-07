@@ -39,14 +39,6 @@ def get_module_path():
     return Path(__file__).parent.resolve()
 
 
-def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
-    """
-    Just sample any evaluation position with the same weight
-    :return: Sampler that can be fed to `train()` as `single_eval_pos_gen`.
-    """
-    return lambda: random.choices(range(min_len, max_len))[0]
-
-
 class SeqBN(nn.Module):
     def __init__(self, d_model):
         super().__init__()

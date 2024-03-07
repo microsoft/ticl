@@ -60,7 +60,6 @@ def main(argv):
         64 // config['dataloader']['batch_size'] // config['optimizer']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
-        config['dataloader']['max_eval_pos'] = 16
         config['prior']['n_samples'] = 2 * 16
         config['transformer']['nhead'] = 1
 

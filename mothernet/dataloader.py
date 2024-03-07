@@ -6,20 +6,19 @@ from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjun
 
 
 class PriorDataLoader(DataLoader):
-    def __init__(self, prior, num_steps, batch_size, min_eval_pos, max_eval_pos, n_samples, device, num_features):
+    def __init__(self, prior, num_steps, batch_size, min_eval_pos, n_samples, device, num_features):
         self.prior = prior
         self.num_steps = num_steps
         self.batch_size = batch_size
         self.min_eval_pos = min_eval_pos
-        self.max_eval_pos = max_eval_pos
         self.n_samples = n_samples
         self.device = device
         self.num_features = num_features
         self.epoch_count = 0
 
     def gbm(self, epoch=None):
-        # Actually can only sample up to max_eval_pos-1 but that's how it was in the original code
-        single_eval_pos = np.random.randint(self.min_eval_pos, self.max_eval_pos)
+        # Actually can only sample up to n_samples-1
+        single_eval_pos = np.random.randint(self.min_eval_pos, self.n_samples)
         batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=self.n_samples, num_features=self.num_features, device=self.device,
                                      epoch=epoch,
                                      single_eval_pos=single_eval_pos)
@@ -59,5 +58,4 @@ def get_dataloader(prior_config, dataloader_config, device):
 
     return PriorDataLoader(prior=prior, num_steps=dataloader_config['num_steps'], batch_size=dataloader_config['batch_size'],
                            n_samples=prior_config['n_samples'], min_eval_pos=dataloader_config['min_eval_pos'],
-                           max_eval_pos=dataloader_config['max_eval_pos'], device=device,
-                           num_features=prior_config['num_features'])
+                           device=device, num_features=prior_config['num_features'])
