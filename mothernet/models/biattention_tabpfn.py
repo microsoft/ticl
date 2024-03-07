@@ -52,7 +52,7 @@ class BiAttentionTabPFN(nn.Module):
         if self.input_embedding == "linear":
             x_src = self.encoder(x_src.unsqueeze(-1))
         elif self.input_embedding == "random":
-            proj = torch.randn(x_src.shape[-1], self.emsize)
+            proj = torch.randn(x_src.shape[-1], self.emsize, device=x_src.device, dtype=x_src.dtype)
             x_src = x_src.unsqueeze(-1) * proj
         else:
             raise ValueError(f"input_embedding {self.input_embedding} not supported")
