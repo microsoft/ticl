@@ -27,10 +27,10 @@ def test_train_tabpfn_num_features():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--num-features', '13'])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
-    assert results['loss'] == pytest.approx(1.6330838203430176, rel=1e-5)
-    assert results['model'].encoder.embedding.weight.shape[0] == 13
-    assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
+    assert results['model'].encoder.weight.shape[1] == 13
+    assert count_parameters(results['model']) == 568714
+    assert results['loss'] == pytest.approx(0.6940146684646606, rel=1e-5)
 
 
 def test_train_tabpfn_init_weights():
