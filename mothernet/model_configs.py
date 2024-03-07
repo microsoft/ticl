@@ -152,6 +152,10 @@ def get_base_config():
         'tabpfn_zero_weights': True,
     })
 
+    config['biattention'] = {
+        'input_embedding': 'linear'
+    }
+
     config['optimizer'].update({
         'stop_after_epochs': None,
         'reduce_lr_on_spike': False,

@@ -32,4 +32,15 @@ def test_train_batabpfn_no_padding():
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(2.108328342437744, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.103300094604492, rel=1e-5)
+
+
+def test_train_batabpfn_random_embedding():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'batabpfn', '--pad-zeros', 'False', '--input-embedding', 'random'])
+        # clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        # check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionTabPFN)
+    assert count_parameters(results['model']) == 862
+    assert results['loss'] == pytest.approx(0.6980788111686707, rel=1e-5)

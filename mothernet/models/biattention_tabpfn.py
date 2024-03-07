@@ -10,7 +10,7 @@ class BiAttentionTabPFN(nn.Module):
     def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, efficient_eval_masking=True,
-                 all_layers_same_init=False,  y_encoder=None, tabpfn_zero_weights=False):
+                 all_layers_same_init=False,  y_encoder=None, tabpfn_zero_weights=False, input_embedding='linear'):
         super().__init__()
         self.y_encoder = y_encoder_layer
         nhid = emsize * nhid_factor
@@ -19,7 +19,9 @@ class BiAttentionTabPFN(nn.Module):
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.layers = nn.ModuleList([encoder_layer_creator() for _ in range(nlayers)])
         self.emsize = emsize
-        self.encoder = encoder_layer
+        self.input_embedding = input_embedding
+        if input_embedding == "linear":
+            self.encoder = encoder_layer
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
@@ -47,7 +49,13 @@ class BiAttentionTabPFN(nn.Module):
             style_src, x_src, y_src = src
         else:
             x_src, y_src = src
-        x_src = self.encoder(x_src.unsqueeze(-1))
+        if self.input_embedding == "linear":
+            x_src = self.encoder(x_src.unsqueeze(-1))
+        elif self.input_embedding == "random":
+            proj = torch.randn(x_src.shape[-1], self.emsize)
+            x_src = x_src.unsqueeze(-1) * proj
+        else:
+            raise ValueError(f"input_embedding {self.input_embedding} not supported")
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
 
         if src_mask is None:

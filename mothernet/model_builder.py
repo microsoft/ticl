@@ -219,7 +219,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         # FIXME hack
         config['transformer']['nhead'] = 4
         model = BiAttentionTabPFN(
-            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
+            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer'], **config['biattention']
         )
     else:
         raise ValueError(f"Unknown model type {model_type}.")
