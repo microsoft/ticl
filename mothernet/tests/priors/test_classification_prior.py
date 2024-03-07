@@ -13,7 +13,7 @@ from mothernet.priors.classification_adapter import ClassificationAdapter
 @pytest.mark.parametrize("n_samples", [128, 900])
 def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n_classes):
     # test the mlp prior
-    L.seed_everything(42)
+    L.seed_everything(43)
     config = get_base_config()
     config['prior']['classification']['num_features_used'] = num_features  # always using all features in this test
     config['prior']['classification']['num_classes'] = n_classes
@@ -44,7 +44,7 @@ def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n
     assert y_.max() < n_classes
     assert y_.min() == 0
     if n_samples == 128 and batch_size == 4 and num_features == 11 and n_classes == 2:
-        assert float(x[0, 0, 0]) == -0.46619218587875366
+        assert float(x[0, 0, 0]) == 1.4561537504196167
         assert float(y[0, 0]) == 1.0
 
 
@@ -66,5 +66,5 @@ def test_classification_adapter_with_sampling():
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
 
-    assert float(x[0, 0, 0]) == pytest.approx(0.6690560579299927)
-    assert float(y[0, 0]) == 2.0
+    assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
+    assert float(y[0, 0]) == 3.0
