@@ -9,10 +9,10 @@ from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
 
 from mothernet.testing_utils import count_parameters
 
-TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '4', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1']
-TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '4', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1',
+TESTING_DEFAULTS = ['-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False']
+TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '4', '-N', '4', '--experiment',
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                           '--save-every', '2']
 
 

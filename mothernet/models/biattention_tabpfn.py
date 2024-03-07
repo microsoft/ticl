@@ -43,7 +43,6 @@ class BiAttentionTabPFN(nn.Module):
 
     def forward(self, src, src_mask=None, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
-        import pdb; pdb.set_trace()
         if len(src) == 3:  # style is given
             style_src, x_src, y_src = src
         else:
@@ -56,7 +55,6 @@ class BiAttentionTabPFN(nn.Module):
 
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
         src = torch.cat([train_x, x_src[single_eval_pos:]], 0)
-
         if self.input_ln is not None:
             src = self.input_ln(src)
         output = src
