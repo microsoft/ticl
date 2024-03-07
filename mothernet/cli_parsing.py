@@ -98,6 +98,7 @@ def argparser_from_config(description="Train Mothernet"):
     classification_prior = parser.add_argument_group('prior.classification')
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", default=10, type=int)
+    classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", default=True, type=str2bool)
 
     mlp_prior = parser.add_argument_group('prior.mlp')
     mlp_prior.add_argument('--add-uninformative-features', help="Whether to add uniformative features in the MLP prior.", default=False, type=str2bool)

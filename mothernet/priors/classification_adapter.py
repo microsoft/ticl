@@ -157,8 +157,9 @@ class ClassificationAdapter:
             x, num_features_used, num_features)
 
         # Append empty features if enabled
-        x = torch.cat(
-            [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
+        if self.h['pad_zeros']:
+            x = torch.cat(
+                [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')

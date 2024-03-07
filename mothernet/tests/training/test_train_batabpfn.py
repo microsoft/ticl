@@ -22,3 +22,14 @@ def test_train_batabpfn_basic():
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
     assert results['loss'] == pytest.approx(2.108328342437744, rel=1e-5)
+
+
+def test_train_batabpfn_no_padding():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'batabpfn', '--pad-zeros', 'False'])
+        # clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        # check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionTabPFN)
+    assert count_parameters(results['model']) == 870
+    assert results['loss'] == pytest.approx(2.108328342437744, rel=1e-5)

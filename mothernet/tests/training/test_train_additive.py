@@ -44,7 +44,7 @@ def test_train_additive_class_average_multihead_shape_attention():
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
     assert results['model'].decoder.shape_function_keys[0].shape == (32, 4)
     assert count_parameters(results['model']) == 1421406
-    assert results['loss'] == pytest.approx(0.8446271419525146, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.8396743535995483, rel=1e-5)
 
 
 def test_train_additive_class_average_multihead_shape_attention_shape_functions8():
@@ -58,7 +58,7 @@ def test_train_additive_class_average_multihead_shape_attention_shape_functions8
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
     assert results['model'].decoder.shape_function_keys[0].shape == (8, 4)
     assert count_parameters(results['model']) == 1419486
-    assert results['loss'] == pytest.approx(1.8396743535995483, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.784806728363037, rel=1e-5)
 
 
 def test_train_additive_class_tokens():
@@ -69,7 +69,7 @@ def test_train_additive_class_tokens():
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2192897
-    assert results['loss'] == pytest.approx(2.564612865447998, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.1459790468215942, rel=1e-5)
 
 
 def test_train_additive_class_average():
@@ -80,7 +80,7 @@ def test_train_additive_class_average():
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2192897
-    assert results['loss'] == pytest.approx(2.1230266094207764, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.9740935564041138, rel=1e-5)
 
 
 def test_train_additive_class_average_input_layer_norm():
@@ -91,7 +91,7 @@ def test_train_additive_class_average_input_layer_norm():
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2205697
-    assert results['loss'] == pytest.approx(6.593766212463379, rel=1e-5)
+    assert results['loss'] == pytest.approx(3.257725238800049, rel=1e-5)
                                             
 
 def test_train_additive_input_bin_embedding():
@@ -103,7 +103,7 @@ def test_train_additive_input_bin_embedding():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(0.7059590816497803, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.892173171043396, rel=1e-5)
 
 
 def test_train_additive_special_token_simple():
@@ -114,7 +114,7 @@ def test_train_additive_special_token_simple():
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 9624586
-    assert results['loss'] == pytest.approx(1.060562252998352, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7590228915214539, rel=1e-5)
 
 
 def test_train_additive_input_bin_embedding_rank():
@@ -167,7 +167,7 @@ def test_train_additive_class_average_factorized():
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64)
     assert count_parameters(results['model']) == 1419034
-    assert results['loss'] == pytest.approx(0.8229849338531494, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.24804425239563, rel=1e-5)
 
 
 def test_train_additive_factorized_in_and_out():

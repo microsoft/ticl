@@ -96,6 +96,7 @@ def get_classification_prior_config(max_features, n_samples):
         'nan_prob_unknown_reason': 0.0,
         'nan_prob_a_reason': 0.0,
         'set_value_to_nan': .1,
+        'pad_zeros': True,
     }
     return {'prior': {'classification': config_classsification_prior}}
 

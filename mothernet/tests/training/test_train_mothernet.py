@@ -13,7 +13,7 @@ from mothernet.prediction import MotherNetClassifier
 
 from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
 
-DEFAULT_LOSS = pytest.approx(1.0794482231140137)
+DEFAULT_LOSS = pytest.approx(0.7113393545150757)
 
 
 def test_train_defaults():

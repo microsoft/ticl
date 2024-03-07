@@ -68,3 +68,24 @@ def test_classification_adapter_with_sampling():
 
     assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
     assert float(y[0, 0]) == 3.0
+
+
+def test_classification_adapter_with_sampling_no_padding():
+    batch_size = 16
+    num_features = 100
+    n_samples = 900
+    # test the mlp prior
+    L.seed_everything(42)
+    config = get_base_config()
+    prior_config = config['prior']['classification']
+    prior_config['pad_zeros'] = False
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
+
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert x.shape == (n_samples, batch_size, 72)
+    assert y.shape == (n_samples, batch_size)
+    assert y_.shape == (n_samples, batch_size)
+
+    assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
+    assert float(y[0, 0]) == 3.0
