@@ -13,7 +13,6 @@ def test_get_dataloader_base_config():
     config = get_base_config()
     # config['num_causes'] = 3
     # config['num_features'] = 10
-    # num_features really doesn't work lol
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     batch_size = 16
@@ -46,18 +45,18 @@ def test_get_dataloader_base_config():
     # assert config_sample['sort_features'] == False
     # assert config_sample['noise_std'] == 0.016730402817820244
 
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 73
+    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 61
 
     x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 74
+    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 83
     # assert config_sample['noise_std'] == 0.0004896957955177838
     # assert config_sample['sort_features'] == True
     # assert config_sample['is_causal'] == False
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
-@pytest.mark.parametrize("n_samples", [256, 512])
-@pytest.mark.parametrize("n_features", [100, 200, 311])
+@pytest.mark.parametrize("n_samples", [7, 256, 512, 2200])
+@pytest.mark.parametrize("n_features", [5, 15, 100, 200, 311])
 @pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
 def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)

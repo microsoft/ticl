@@ -80,9 +80,8 @@ class ClassificationAdapter:
     # adds NaN and potentially categorical features
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
-    def __init__(self, base_prior, num_features, config):
+    def __init__(self, base_prior, config):
         self.h = sample_distributions(parse_distributions(config))
-        self.h["num_features_used"] = np.random.randint(1, num_features)
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:
@@ -117,11 +116,12 @@ class ClassificationAdapter:
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
-        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'],
+        num_features_used = np.random.randint(1, num_features)
+        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features_used,
                 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(**args)
 
-        assert x.shape[2] == self.h['num_features_used']
+        assert x.shape[2] == num_features_used
 
         if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
             if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
@@ -154,12 +154,11 @@ class ClassificationAdapter:
         y = self.class_assigner(y).float()
 
         x = normalize_by_used_features_f(
-            x, self.h['num_features_used'], num_features)
+            x, num_features_used, num_features)
 
         # Append empty features if enabled
         x = torch.cat(
-            [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.h['num_features_used']),
-                            device=device)], -1)
+            [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
@@ -197,10 +196,9 @@ class ClassificationAdapter:
 
 
 class ClassificationAdapterPrior:
-    def __init__(self, base_prior, num_features, **config):
+    def __init__(self, base_prior, **config):
         self.base_prior = base_prior
         self.config = config
-        self.num_features = num_features
 
     def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
