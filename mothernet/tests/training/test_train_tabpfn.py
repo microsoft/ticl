@@ -21,6 +21,18 @@ def test_train_tabpfn_basic():
     assert isinstance(results['model'], TabPFN)
 
 
+def test_train_tabpfn_num_features():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--num-features', '13'])
+        clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        check_predict_iris(clf)
+    assert results['loss'] == pytest.approx(1.6330838203430176, rel=1e-5)
+    assert results['model'].encoder.embedding.weight.shape[0] == 13
+    assert count_parameters(results['model']) == 579850
+    assert isinstance(results['model'], TabPFN)
+
+
 def test_train_tabpfn_init_weights():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

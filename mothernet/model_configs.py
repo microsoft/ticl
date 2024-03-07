@@ -92,7 +92,6 @@ def get_classification_prior_config(max_features, n_samples):
         'output_multiclass_ordered_p': 0.,
         'multiclass_max_steps': 10,
         "multiclass_type": 'rank',
-        "num_features_used": {'distribution': 'uniform_int', 'min': 1, 'max': max_features},
         'categorical_feature_p': .2,  # diff: .0
         'nan_prob_no_reason': 0.0,
         'nan_prob_unknown_reason': 0.0,

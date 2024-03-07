@@ -92,6 +92,8 @@ def argparser_from_config(description="Train Mothernet"):
 
     # Prior and data generation
     prior = parser.add_argument_group('prior')
+    prior.add_argument('--num-features', help="Maximum number of features in prior", default=100, type=int)
+    prior.add_argument('--n-samples', help="Maximum Number of samples in prior", default=1024+128, type=int)
     prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", default='prior_bag', type=str)
     classification_prior = parser.add_argument_group('prior.classification')
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", default='rank', type=str)

@@ -80,8 +80,9 @@ class ClassificationAdapter:
     # adds NaN and potentially categorical features
     # and discretizes the classification output variable
     # It's instantiated anew for each batch that's created
-    def __init__(self, base_prior, config):
+    def __init__(self, base_prior, num_features, config):
         self.h = sample_distributions(parse_distributions(config))
+        self.h["num_features_used"] = np.random.randint(1, num_features)
 
         self.base_prior = base_prior
         if self.h['num_classes'] == 0:
@@ -196,9 +197,10 @@ class ClassificationAdapter:
 
 
 class ClassificationAdapterPrior:
-    def __init__(self, base_prior, **config):
+    def __init__(self, base_prior, num_features, **config):
         self.base_prior = base_prior
         self.config = config
+        self.num_features = num_features
 
     def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
