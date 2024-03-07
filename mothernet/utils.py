@@ -386,7 +386,7 @@ def init_device(gpu_id, use_cpu):
 def get_model_string(config, num_gpus, device, parser):
     config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
     mm = config['model_type']
-    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm in ["mlp", "mothernet"] else "tabpfn")
+    model_type_string = mm if mm in ["perceiver", "additive", "batabpfn"] else ('mn' if mm in ["mlp", "mothernet"] else "tabpfn")
     default_config_flat = flatten_dict(get_base_config(), only_last=True)
     config_flat = flatten_dict(config, only_last=True)
     config_string = ""

@@ -31,7 +31,7 @@ def argparser_from_config(description="Train Mothernet"):
     parser = GroupedArgParser(description=description)
 
     general = parser.add_argument_group('general')
-    general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, or tabpfn', default='mothernet')
+    general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, batabpfn or tabpfn', default='mothernet')
     general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 

@@ -12,6 +12,7 @@ from torch import nn
 from mothernet.models.mothernet_additive import MotherNetAdditive
 from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
+from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
 from mothernet.models.mothernet import MotherNet
 
 
@@ -210,6 +211,10 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive'])
     elif model_type == "tabpfn":
         model = TabPFN(
+            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
+        )
+    elif model_type == "batabpfn":
+        model = BiAttentionTabPFN(
             encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
         )
     else:
