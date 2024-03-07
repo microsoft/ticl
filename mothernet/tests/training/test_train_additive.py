@@ -47,6 +47,20 @@ def test_train_additive_class_average_multihead_shape_attention():
     assert results['loss'] == pytest.approx(0.8446271419525146, rel=1e-5)
 
 
+def test_train_additive_class_average_multihead_shape_attention_shape_functions8():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True',
+                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
+                                                 '--shape-attention-heads', '4', '--n-shape-functions', '8'])
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model'].decoder.shape_functions.shape == (8, 64)
+    assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
+    assert results['model'].decoder.shape_function_keys[0].shape == (8, 4)
+    assert count_parameters(results['model']) == 1419486
+    assert results['loss'] == pytest.approx(2.053046226501465, rel=1e-5)
+
+
 def test_train_additive_class_tokens():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:

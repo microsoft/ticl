@@ -141,6 +141,7 @@ def get_base_config():
         'input_layer_norm': False,
         'shape_attention': False,
         'shape_attention_heads': 1,
+        'n_shape_functions': 32
         }
 
     config['transformer'].update({

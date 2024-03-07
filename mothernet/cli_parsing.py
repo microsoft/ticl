@@ -83,6 +83,7 @@ def argparser_from_config(description="Train Mothernet"):
     additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool, default=False)
     additive.add_argument('--shape-attention', help="Whether to use attention in low rank output.", type=str2bool, default=False)
     additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int, default=1)
+    additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int, default=32)
 
     # Perceiver
     perceiver = parser.add_argument_group('perceiver')
