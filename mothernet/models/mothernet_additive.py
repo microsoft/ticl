@@ -16,7 +16,8 @@ class MotherNetAdditive(nn.Module):
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
-                 decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32):
+                 decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
+                 shape_init="constant"):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -56,7 +57,8 @@ class MotherNetAdditive(nn.Module):
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                           decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank,
-                                                          shape_attention=shape_attention, shape_attention_heads=shape_attention_heads, n_shape_functions=n_shape_functions)
+                                                          shape_attention=shape_attention, shape_attention_heads=shape_attention_heads,
+                                                          n_shape_functions=n_shape_functions, shape_init=shape_init)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,

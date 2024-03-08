@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+import numpy as np
 
 class LinearModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024):
@@ -65,7 +65,7 @@ class AdditiveModelDecoder(nn.Module):
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False,
-                 n_shape_functions=32, shape_attention_heads=1):
+                 n_shape_functions=32, shape_attention_heads=1, shape_init="constant"):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -84,12 +84,26 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.num_output_layer_weights = rank * n_features
         self.n_shape_functions = n_shape_functions
         self.shape_attention_heads = shape_attention_heads
+        self.shape_init = shape_init
 
         if decoder_type in ["class_tokens", "class_average"]:
             mlp_in_size = emsize
             # these serve as shared prototypes across features
             if shape_attention:
-                self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins) / (n_shape_functions * n_bins))
+                if shape_init == "constant":
+                    factor = 1
+                elif shape_init == 'inverse':
+                    factor = n_bins * n_features
+                elif shape_init == 'sqrt':
+                    factor = np.sqrt(n_bins * n_features)
+                elif shape_init == 'inverse_bins':
+                    factor = n_bins
+                elif shape_init == 'inverse_sqrt_bins':
+                    factor = np.sqrt(n_bins)
+                else:
+                    raise ValueError(f"Unknown shape_init: {shape_init}")
+
+                self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins) / factor)
                 if shape_attention_heads == 1:
                     self.shape_function_keys = nn.Parameter(torch.randn(n_shape_functions, rank))
                 else:

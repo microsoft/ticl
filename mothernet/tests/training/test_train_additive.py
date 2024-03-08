@@ -43,8 +43,24 @@ def test_train_additive_class_average_multihead_shape_attention():
     assert results['model'].decoder.shape_functions.shape == (32, 64)
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
     assert results['model'].decoder.shape_function_keys[0].shape == (32, 4)
+    assert results['model'].decoder.shape_functions.std().item() == pytest.approx(1, rel=2e-2)
     assert count_parameters(results['model']) == 1421406
     assert results['loss'] == pytest.approx(1.8396743535995483, rel=1e-5)
+
+
+def test_train_additive_class_average_multihead_shape_attention_init():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'additive', '--factorized-output', 'True',
+                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
+                                                 '--shape-attention-heads', '4', '--shape-init', 'inverse'])
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model'].decoder.shape_functions.shape == (32, 64)
+    assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
+    assert results['model'].decoder.shape_function_keys[0].shape == (32, 4)
+    assert results['model'].decoder.shape_functions.std().item() == pytest.approx(1/(32 * 64), rel=1e-2, abs=4e-4)
+    assert count_parameters(results['model']) == 1421406
+    assert results['loss'] == pytest.approx(1.7998731136322021, rel=1e-5)
 
 
 def test_train_additive_class_average_multihead_shape_attention_shape_functions8():
