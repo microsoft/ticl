@@ -89,7 +89,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
             mlp_in_size = emsize
             # these serve as shared prototypes across features
             if shape_attention:
-                self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins))
+                self.shape_functions = nn.Parameter(torch.randn(n_shape_functions, n_bins) / (n_shape_functions * n_bins))
                 if shape_attention_heads == 1:
                     self.shape_function_keys = nn.Parameter(torch.randn(n_shape_functions, rank))
                 else:
