@@ -58,6 +58,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 optimizer.zero_grad()
 
             if torch.isnan(loss):
+                import pdb; pdb.set_trace()
                 print("NAN loss encountered")
             else:
                 total_loss += loss.mean().cpu().detach().item()
