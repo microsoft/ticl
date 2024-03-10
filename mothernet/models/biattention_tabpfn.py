@@ -22,6 +22,8 @@ class BiAttentionTabPFN(nn.Module):
         self.input_embedding = input_embedding
         if input_embedding == "linear":
             self.encoder = encoder_layer
+        elif input_embedding == "random":
+            self.encoder = nn.LayerNorm(normalized_shape=[emsize])
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
@@ -52,8 +54,10 @@ class BiAttentionTabPFN(nn.Module):
         if self.input_embedding == "linear":
             x_src = self.encoder(x_src.unsqueeze(-1))
         elif self.input_embedding == "random":
-            proj = torch.randn(x_src.shape[-1], self.emsize, device=x_src.device, dtype=x_src.dtype)
+            proj = torch.randn(x_src.shape[-2], x_src.shape[-1], self.emsize, device=x_src.device, dtype=x_src.dtype)
             x_src = x_src.unsqueeze(-1) * proj
+            x_src = self.encoder(x_src)
+
         else:
             raise ValueError(f"input_embedding {self.input_embedding} not supported")
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
