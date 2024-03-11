@@ -90,8 +90,10 @@ class MotherNetAdditive(nn.Module):
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
-            X_onehot = self.input_norm(X_onehot)
-        x_src = self.encoder(X_onehot)
+            X_onehot_norm = self.input_norm(X_onehot)
+        else:
+            X_onehot_norm = X_onehot
+        x_src = self.encoder(X_onehot_norm)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
         enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos]
 
