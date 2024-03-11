@@ -125,7 +125,6 @@ class FactorizedAdditiveModelDecoder(nn.Module):
 
     def forward(self, x, y_src):
         summary = self.summary_layer(x, y_src)
-        import pdb; pdb.set_trace()
         res = self.mlp(summary)
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)

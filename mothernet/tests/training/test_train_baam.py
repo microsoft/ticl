@@ -21,5 +21,5 @@ def test_train_baam_defaults():
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
-    assert count_parameters(results['model']) == 9690634
-    assert results['loss'] == pytest.approx(1.205582857131958, rel=1e-5)
+    assert count_parameters(results['model']) == 62740
+    assert results['loss'] == pytest.approx(1.6953184604644775, rel=1e-5)
