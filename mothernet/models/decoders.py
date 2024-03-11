@@ -65,7 +65,7 @@ class AdditiveModelDecoder(nn.Module):
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False,
-                 n_shape_functions=32, shape_attention_heads=1, shape_init="constant"):
+                 n_shape_functions=32, shape_attention_heads=1, shape_init="constant", biattention=False):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -81,10 +81,11 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.decoder_type = decoder_type
         self.shape_attention = shape_attention
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
-        self.num_output_layer_weights = rank * n_features
+        self.num_output_layer_weights = rank if biattention else rank * n_features
         self.n_shape_functions = n_shape_functions
         self.shape_attention_heads = shape_attention_heads
         self.shape_init = shape_init
+        self.biattention = biattention
 
         if decoder_type in ["class_tokens", "class_average"]:
             mlp_in_size = emsize
@@ -123,7 +124,9 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
     def forward(self, x, y_src):
-        res = self.mlp(self.summary_layer(x, y_src))
+        summary = self.summary_layer(x, y_src)
+        import pdb; pdb.set_trace()
+        res = self.mlp(summary)
         if self.decoder_type in ["class_tokens", "class_average"]:
             res = res.reshape(-1, self.n_out, self.n_features, self.rank)
             if self.shape_attention:
@@ -190,18 +193,30 @@ class SummaryLayer(nn.Module):
                 # clamping y_src to avoid -100 which should be ignored in loss
                 # fingers crossed this will not mess things up
                 y_src = y_src.long().clamp(0)
-                sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device)
                 # scatter add does not broadcast so we need to expand
                 if y_src.ndim == 1:
                     # batch size 1
                     y_src = y_src.unsqueeze(1)
-                indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
-                sums.scatter_add_(0, indices, x)
-                # create counts
-                ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1])
-                counts = torch.zeros(self.n_out, x.shape[1], device=x.device)
-
-                counts.scatter_add_(0, y_src, ones)
+                if x.ndim == 3:
+                    indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
+                    sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device)
+                    sums.scatter_add_(0, indices, x)
+                    # create counts
+                    ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1])
+                    counts = torch.zeros(self.n_out, x.shape[1], device=x.device)
+                    indices = y_src
+                elif x.ndim == 4:
+                    # doing feature attention, need to also expand for features
+                    indices = y_src.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, x.shape[2], self.emsize)
+                    sums = torch.zeros(self.n_out, x.shape[1], x.shape[2], self.emsize, device=x.device)
+                    sums.scatter_add_(0, indices, x)
+                    # create counts
+                    ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1], x.shape[2])
+                    counts = torch.zeros(self.n_out, x.shape[1], x.shape[2], device=x.device)
+                    indices = y_src.unsqueeze(-1).expand(-1, -1, x.shape[2])
+                else:
+                    raise ValueError(f"Unknown x shape: {x.shape}")
+                counts.scatter_add_(0, indices, ones)
                 counts = counts.clamp(1e-10)  # don't divide by zero
                 res = (sums / counts.unsqueeze(-1)).transpose(0, 1)
             elif self.decoder_type == "average":

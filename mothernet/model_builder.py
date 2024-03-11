@@ -13,6 +13,7 @@ from mothernet.models.mothernet_additive import MotherNetAdditive
 from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
 from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
+from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
 from mothernet.models.mothernet import MotherNet
 
 
@@ -221,6 +222,14 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         model = BiAttentionTabPFN(
             encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer'], **config['biattention']
         )
+    elif model_type == "baam":
+        # FIXME hack
+        config['transformer']['nhead'] = 4
+        model = BiAttentionMotherNetAdditive(
+            n_out=n_out, n_features=config['prior']['num_features'],
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive']
+        )
+
     else:
         raise ValueError(f"Unknown model type {model_type}.")
 
