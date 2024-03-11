@@ -17,7 +17,7 @@ def test_train_baam_defaults():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'baam', '--decoder-type', 'class_average', '--factorized-output', 'True',
                                            '--shape-attention', 'True', '--shape-attention-heads', '2', '--n-shape-functions', '16', '--shape-init', 'constant',
-                                           '--output-rank', '8'])
+                                           '--output-rank', '8', '--pad-zeros', 'False'])
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)

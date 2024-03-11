@@ -127,7 +127,8 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         summary = self.summary_layer(x, y_src)
         res = self.mlp(summary)
         if self.decoder_type in ["class_tokens", "class_average"]:
-            res = res.reshape(-1, self.n_out, self.n_features, self.rank)
+            # for biattention, present features could be less than n_features
+            res = res.reshape(x.shape[1], self.n_out, -1, self.rank)
             if self.shape_attention:
                 if self.shape_attention_heads == 1:
                     out = nn.functional.scaled_dot_product_attention(res, self.shape_function_keys, self.shape_functions)
