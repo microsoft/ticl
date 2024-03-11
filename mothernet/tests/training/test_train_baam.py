@@ -12,7 +12,7 @@ TESTING_DEFAULTS = ['-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200']
 
 
-def test_train_baam_defaults():
+def test_train_baam_shape_attention():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'baam', '--decoder-type', 'class_average', '--factorized-output', 'True',
@@ -23,3 +23,14 @@ def test_train_baam_defaults():
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 62740
     assert results['loss'] == pytest.approx(1.6953184604644775, rel=1e-5)
+
+
+def test_train_baam_no_shape_attention():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'baam', '--decoder-type', 'class_average', '--pad-zeros', 'False'])
+        # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        # check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 176064
+    assert results['loss'] == pytest.approx(0.7351612448692322, rel=1e-5)
