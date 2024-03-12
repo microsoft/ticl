@@ -139,5 +139,3 @@ def test_distilled_mlp_paper():
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
 
-
-test_additive_mothernet_dense_step_function()
