@@ -34,3 +34,14 @@ def test_train_baam_no_shape_attention():
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 176064
     assert results['loss'] == pytest.approx(0.7351612448692322, rel=1e-5)
+
+
+def test_train_baam_input_layer_norm():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'baam', '--decoder-type', 'class_average', '--pad-zeros', 'False', '--input-layer-norm', 'True'])
+        # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        # check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 176192
+    assert results['loss'] == pytest.approx(1.1924283504486084, rel=1e-5)

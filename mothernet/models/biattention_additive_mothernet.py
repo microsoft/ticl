@@ -67,7 +67,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
         if self.input_layer_norm:
-            self.input_norm = nn.LayerNorm(normalized_shape=(n_features, n_bins))
+            self.input_norm = nn.LayerNorm(normalized_shape=(n_bins))
         self.init_weights()
 
     def init_weights(self):
