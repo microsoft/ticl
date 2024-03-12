@@ -5,6 +5,7 @@ import numpy as np
 from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier
 from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
 from mothernet.utils import get_mn_model
+from mothernet.datasets import linear_correlated_logistic_regression
 
 from sklearn.datasets import load_iris
 from sklearn.pipeline import make_pipeline
@@ -77,6 +78,36 @@ def test_additive_mothernet_dense():
     model_path = get_mn_model(model_string)
     classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
     classifier.fit(X_train, y_train)
+    print(classifier)
+    prob = classifier.predict_proba(X_test)
+    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
+    assert classifier.score(X_test, y_test) > 0.9
+
+
+def test_additive_mothernet_dense_logistic_regression():
+    X, y = linear_correlated_logistic_regression(
+        n_features=3, n_tasks=1, n_datapoints=1000, sampling_correlation=0.0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "additive_1_gpu_02_14_2024_16_34_15_epoch_950_fixed2.cpkt"
+    model_path = get_mn_model(model_string)
+    classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
+    classifier.fit(X_train, y_train)
+
+    # Plot shape function
+    bin_edges = classifier.bin_edges_
+    w = classifier.w_
+    import matplotlib.pyplot as plt
+    fig, axs = plt.subplots(1, 2, figsize=(4, 2))
+    axs = axs.flatten()
+    for i, (bin_edge, w) in enumerate(zip(bin_edges, w)):
+        axs[0].plot(bin_edge, w.T[0][1:], label=f'Feature {i}')
+        axs[1].plot(bin_edge, w.T[1][1:], label=f'Feature {i}')
+    axs[0].set_title('Class 0')
+    axs[1].set_title('Class 1')
+    legend = axs[1].legend(loc="upper left", bbox_to_anchor=(1, 1))
+    legend.set_zorder(102)
+    plt.tight_layout()
+    plt.show()
     print(classifier)
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()

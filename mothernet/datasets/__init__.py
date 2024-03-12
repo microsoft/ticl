@@ -2,6 +2,45 @@ import numpy as np
 import openml
 import pandas as pd
 import torch
+from scipy.special import expit as sigmoid
+
+
+def linear_correlated_logistic_regression(
+        n_features: int,
+        n_tasks: int,
+        n_datapoints: int,
+        seed: int | None = 42,
+        sampling_correlation: float = 0.0,
+        weights: np.array = None,
+        *args,
+        **kwargs,
+) -> tuple[np.array, np.array]:
+    """Sample features with linear contribution that are correlated."""
+    if weights is None:
+        weights = np.array([np.linspace(-1, 1 * i, n_features) for i in range(1, n_tasks + 1)])
+    else:
+        weights = weights.reshape((n_tasks, n_features))
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    inputs_correlated = np.array([np.linspace(-2, 2, n_datapoints) for _ in range(n_features)]).T
+    inputs_uniform = np.random.uniform(-2, 2, size=(n_datapoints, n_features))
+    inputs = sampling_correlation * inputs_correlated + (1 - sampling_correlation) * inputs_uniform
+
+    condition_number = np.linalg.cond(inputs.T @ inputs)
+
+    targets = np.array(sigmoid(weights.dot(inputs.T)) > 0.5, dtype=np.float64)
+
+    df = pd.DataFrame()
+    for i in range(n_features):
+        df[f"input_{i}"] = inputs[:, i]
+
+    for i in range(n_tasks):
+        df[f"target_{i}"] = targets[i, :]
+
+    y, X = df['target_0'].to_numpy(), df.drop(['target_0'], axis=1).to_numpy()
+    return X, y
 
 
 def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
