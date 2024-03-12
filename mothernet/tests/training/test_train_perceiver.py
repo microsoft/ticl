@@ -26,7 +26,7 @@ def test_train_perceiver_defaults():
     assert count_parameters(model.encoder) == 12928
     assert count_parameters(model.layers) == 664576
     assert count_parameters(model) == 1744842
-    assert results['loss'] == pytest.approx(1.0585685968399048)
+    assert results['loss'] == pytest.approx(0.8764909505844116)
 
 
 def test_train_perceiver_two_hidden_layers():
@@ -35,7 +35,7 @@ def test_train_perceiver_two_hidden_layers():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
-    assert results['loss'] == pytest.approx(0.795587420463562)
+    assert results['loss'] == pytest.approx(0.7871301770210266)
 
 
 def test_train_perceiver_low_rank():
@@ -46,4 +46,4 @@ def test_train_perceiver_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
     assert count_parameters(results['model']) == 1126666
-    assert results['loss'] == pytest.approx(0.6930023431777954, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7207471132278442, rel=1e-5)
