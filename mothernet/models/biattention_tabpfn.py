@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import math
 
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
@@ -24,6 +24,8 @@ class BiAttentionTabPFN(nn.Module):
             self.encoder = encoder_layer
         elif input_embedding == "random":
             self.encoder = nn.LayerNorm(normalized_shape=[emsize])
+        elif input_embedding == "fourier":
+            self.encoder = nn.Linear(emsize + 1, emsize)
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
@@ -57,7 +59,11 @@ class BiAttentionTabPFN(nn.Module):
             proj = torch.randn(x_src.shape[-2], x_src.shape[-1], self.emsize, device=x_src.device, dtype=x_src.dtype)
             x_src = x_src.unsqueeze(-1) * proj
             x_src = self.encoder(x_src)
-
+        elif self.input_embedding == "fourier":
+            div_term = torch.exp(torch.arange(0, self.emsize, 2) * (-math.log(10000.0) / self.emsize))
+            x_src = x_src.unsqueeze(-1)
+            x_fourier = torch.cat([x_src, torch.sin(x_src * div_term), torch.cos(x_src * div_term)], -1)
+            x_src = self.encoder(x_fourier)
         else:
             raise ValueError(f"input_embedding {self.input_embedding} not supported")
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)

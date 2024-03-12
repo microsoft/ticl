@@ -114,10 +114,14 @@ class BiAttentionMotherNetAdditive(nn.Module):
             output = mod(output, src_mask=single_eval_pos)
 
         weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
-        assert biases is None
+
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
-
+        if self.factorized_output:
+            h += biases
+        else:
+            assert biases is None
+            
         if h.isnan().all():
             print("NAN")
             import pdb
