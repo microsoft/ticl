@@ -130,4 +130,6 @@ def argparser_from_config(description="Train Mothernet"):
     orchestration.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
+    orchestration.add_argument('--detect-anomaly', help='Whether enable anomaly detection in pytorch. For debugging only.', action='store_true')
+
     return parser

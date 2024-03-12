@@ -85,6 +85,9 @@ def main(argv):
             print("WARNING warm starting with new settings")
             compare_dicts(config, old_config)
 
+    if config['orchestration']['detect_anomaly']:
+        torch.autograd.set_detect_anomaly(True)
+
     model_string = get_model_string(config, num_gpus, device, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow, orchestration.st_checkpoint_dir)
 
