@@ -60,7 +60,7 @@ class BiAttentionTabPFN(nn.Module):
             x_src = x_src.unsqueeze(-1) * proj
             x_src = self.encoder(x_src)
         elif self.input_embedding == "fourier":
-            div_term = torch.exp(torch.arange(0, self.emsize, 2) * (-math.log(10000.0) / self.emsize))
+            div_term = torch.exp(torch.arange(0, self.emsize, 2, device=x_src.device) * (-math.log(10000.0) / self.emsize))
             x_src = x_src.unsqueeze(-1)
             x_fourier = torch.cat([x_src, torch.sin(x_src * div_term), torch.cos(x_src * div_term)], -1)
             x_src = self.encoder(x_fourier)
