@@ -86,6 +86,7 @@ def main(argv):
             compare_dicts(config, old_config)
 
     if config['orchestration']['detect_anomaly']:
+        print("ENABLING GRADIENT DEBUGGING (detect-anomaly)! Don't use for training.")
         torch.autograd.set_detect_anomaly(True)
 
     model_string = get_model_string(config, num_gpus, device, parser)
