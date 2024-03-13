@@ -6,8 +6,8 @@ class GroupedArgParser(argparse.ArgumentParser):
     # This extends the argparse.ArgumentParser to allow for nested namespaces via groups
     # nesting of groups is done by giving them names with dots in them
 
-    def parse_args(self, argv):
-        results = super().parse_args(argv)
+    def parse_known_args(self, args=None, namespace=None):
+        results, args = super().parse_known_args(args=args, namespace=namespace)
         nested_by_groups = argparse.Namespace()
         for group in self._action_groups:
             # group could have been created if we saw a nested group first
@@ -24,17 +24,48 @@ class GroupedArgParser(argparse.ArgumentParser):
                     parent_namespace = getattr(parent_namespace, part)
                 setattr(parent_namespace, parts[-1], new_subnamespace)
 
-        return nested_by_groups
+        return nested_by_groups, args
 
 
-def argparser_from_config(description="Train Mothernet", config=None):
-    parser = GroupedArgParser(description=description)
+def make_model_level_argparser(description="Train transformer-style model on synthetic data", config=None):
+    parser = argparse.ArgumentParser(description=description)
+    subparsers = parser.add_subparsers(required=True, parser_class=GroupedArgParser,
+                                       description="Choose the model type to train.", dest='model_type')
+    mothernet_parser = subparsers.add_parser('mothernet', help='Train a mothernet model')
+    mothernet_parser.set_defaults(model_type='mothernet')
+    mothernet_parser = argparser_from_config(description="Train Mothernet", config=config, parser=mothernet_parser)
 
+    tabpfn_parser = subparsers.add_parser('tabpfn', help='Train a tabpfn model')
+    tabpfn_parser.set_defaults(model_type='tabpfn')
+    tabpfn_parser = argparser_from_config(description="Train tabpfn", config=config, parser=tabpfn_parser)
+
+    additive_parser = subparsers.add_parser('additive', help='Train an additive mothernet model')
+    additive_parser.set_defaults(model_type='additive')
+    additive_parser = argparser_from_config(description="Train additive", config=config, parser=additive_parser)
+
+    perceiver_parser = subparsers.add_parser('perceiver', help='Train a perceiver mothernet model')
+    perceiver_parser.set_defaults(model_type='perceiver')
+    perceiver_parser = argparser_from_config(description="Train perceiver", config=config, parser=perceiver_parser)
+
+    batabpfn_parser = subparsers.add_parser('batabpfn', help='Train a bi-attention tabpfn model')
+    batabpfn_parser.set_defaults(model_type='batabpfn')
+    batabpfn_parser = argparser_from_config(description="Train batabpfn", config=config, parser=batabpfn_parser)
+
+    baam_parser = subparsers.add_parser('baam', help='Train a bi-attention additive mothernet model')
+    baam_parser.set_defaults(model_type='baam')
+    baam_parser = argparser_from_config(description="Train baam", config=config, parser=baam_parser)
+
+    return parser
+
+
+def argparser_from_config(parser, description="Train Mothernet", config=None):
+    model_type = parser.get_default('model_type')
+    # all models have general, optimiizer, dataloader and transformer parameters
     general = parser.add_argument_group('general')
-    general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, batabpfn or tabpfn', default='mothernet')
+    #general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, batabpfn, baam or tabpfn', default='mothernet')
     general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
-
+    
     optimizer = parser.add_argument_group('optimizer')
     optimizer.add_argument('-E', '--epochs', type=int, help='number of epochs', default=4000)
     optimizer.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate', default=0.00003)
@@ -61,41 +92,42 @@ def argparser_from_config(description="Train Mothernet", config=None):
     transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', default=True, type=str2bool)
     transformer.add_argument('--pre-norm', action='store_true')
 
-    biattention = parser.add_argument_group('biattention')
-    biattention.add_argument('--input-embedding', type=str, help='input embedding type', default='linear')
+    if model_type in ['baam', 'batabpfn']:
+        biattention = parser.add_argument_group('biattention')
+        biattention.add_argument('--input-embedding', type=str, help='input embedding type', default='linear')
 
-    mothernet = parser.add_argument_group('mothernet')
-    mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
-    mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
-    mothernet.add_argument('--decoder-activation', type=str, help='decoder activation', default='relu')
+    if model_type in ['mothernet', 'additive', 'baam']:
+        mothernet = parser.add_argument_group('mothernet')
+        mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
+        mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
+        mothernet.add_argument('--decoder-activation', type=str, help='decoder activation', default='relu')
+        mothernet.add_argument('-D', '--decoder-type',
+                               help="Decoder Type. 'output_attention', 'special_token' or 'average'.", default='output_attention', type=str)
+        mothernet.add_argument('-T', '--decoder-hidden-layers', help='How many hidden layers to use in decoder MLP', default=1, type=int)
+        mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=512)
+        mothernet.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=2, dest='predicted_hidden_layers')
+        mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
+        mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
 
-    mothernet.add_argument('-D', '--decoder-type',
-                           help="Decoder Type. 'output_attention', 'special_token' or 'average'.", default='output_attention', type=str)
-    mothernet.add_argument('-T', '--decoder-hidden-layers', help='How many hidden layers to use in decoder MLP', default=1, type=int)
-    mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=512)
-    mothernet.add_argument('-L', '--num-predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=2, dest='predicted_hidden_layers')
-    mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
-    mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
+    if model_type in ['additive', 'baam']:
+        additive = parser.add_argument_group('additive')
+        additive.add_argument('--input-bin-embedding',
+                              help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str, default="none")
+        additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
+        additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
+        additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)
+        additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool, default=False)
+        additive.add_argument('--shape-attention', help="Whether to use attention in low rank output.", type=str2bool, default=False)
+        additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int, default=1)
+        additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int, default=32)
+        additive.add_argument('--shape-init', help="How to initialize shape functions. 'constant' for unit variance, 'inverse' for 1/(n_shape_functions * n_bins), "
+                            "'sqrt' for 1/sqrt(n_shape_functions * n_bins). 'inverse_bins' for 1/n_bins, 'inverse_sqrt_bins' for 1/sqrt(n_bins)",
+                            type=str, default='constant')
 
-    # Additive model (WIP)
-    additive = parser.add_argument_group('additive')
-    additive.add_argument('--input-bin-embedding',
-                          help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str, default="none")
-    additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
-    additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
-    additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)
-    additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool, default=False)
-    additive.add_argument('--shape-attention', help="Whether to use attention in low rank output.", type=str2bool, default=False)
-    additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int, default=1)
-    additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int, default=32)
-    additive.add_argument('--shape-init', help="How to initialize shape functions. 'constant' for unit variance, 'inverse' for 1/(n_shape_functions * n_bins), "
-                          "'sqrt' for 1/sqrt(n_shape_functions * n_bins). 'inverse_bins' for 1/n_bins, 'inverse_sqrt_bins' for 1/sqrt(n_bins)",
-                          type=str, default='constant')
-
-    # Perceiver
-    perceiver = parser.add_argument_group('perceiver')
-    perceiver.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
-    # perceiver.add_argument('--perceiver-large-dataset', action='store_true')
+    if model_type in ['perceiver']:
+        perceiver = parser.add_argument_group('perceiver')
+        perceiver.add_argument('--num-latents', help="number of latent variables in perceiver", default=512, type=int)
+        # perceiver.add_argument('--perceiver-large-dataset', action='store_true')
 
     # Prior and data generation
     prior = parser.add_argument_group('prior')

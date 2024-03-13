@@ -12,7 +12,7 @@ from mothernet.model_builder import get_model
 from mothernet.model_configs import get_base_config
 from mothernet.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 from mothernet.config_utils import compare_dicts, flatten_dict, update_config
-from mothernet.cli_parsing import argparser_from_config
+from mothernet.cli_parsing import make_model_level_argparser
 from argparse import Namespace
 
 
@@ -20,7 +20,7 @@ def main(argv, extra_config=None):
     # extra config is used for testing purposes only
     # this is the generic entry point for training any model, so it has A LOT of options
     config = get_base_config()
-    parser = argparser_from_config(config=config)
+    parser = make_model_level_argparser(config=config)
     args = parser.parse_args(argv)
     return training_setup(args, config, parser, extra_config)
 
@@ -34,9 +34,12 @@ def training_setup(args, config, parser, extra_config=None):
     if orchestration.create_new_run and not orchestration.continue_run:
         raise ValueError("Specifying create-new-run makes no sense when not continuing run")
     base_path = orchestration.base_path
-
     torch.set_num_threads(24)
     for group_name in vars(args):
+        if group_name == "model_type":
+            # the only non-group argument from the top level parser
+            config['model_type'] = args.model_type
+            continue
         if group_name not in config:
             config[group_name] = {}
         for k, v in vars(getattr(args, group_name)).items():
@@ -48,7 +51,6 @@ def training_setup(args, config, parser, extra_config=None):
             else:
                 config[group_name][k] = v
         config[group_name].update()
-
     if args.orchestration.seed_everything:
         import lightning as L
         L.seed_everything(42)
