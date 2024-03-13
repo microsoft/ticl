@@ -127,7 +127,8 @@ def get_base_config():
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 2,
         'decoder_hidden_layers': 1,
-        'decoder_hidden_size': 2048}
+        'decoder_hidden_size': 2048,
+        'decoder_activation': 'relu'}
 
     config['perceiver'] = {'num_latents': 512}
 

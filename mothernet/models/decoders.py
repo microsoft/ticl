@@ -236,17 +236,23 @@ class SummaryLayer(nn.Module):
         return res
 
 
-def make_decoder_mlp(in_size, hidden_size, out_size, n_layers=1):
+def make_decoder_mlp(in_size, hidden_size, out_size, n_layers=1, activation='relu'):
+    if activation == 'relu':
+        activation = nn.ReLU
+    elif activation == 'gelu':
+        activation = nn.GELU
+    else:
+        raise ValueError(f"Unknown activation: {activation}")
     return nn.Sequential(
         nn.Linear(in_size,  hidden_size),
-        nn.ReLU(),
-        *sum([[nn.Linear(hidden_size, hidden_size), nn.ReLU()] for _ in range(n_layers - 1)], []),
+        activation(),
+        *sum([[nn.Linear(hidden_size, hidden_size), activation()] for _ in range(n_layers - 1)], []),
         nn.Linear(hidden_size, out_size))
 
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, decoder_type='output_attention', predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False):
+                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False, decoder_activation='relu'):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
@@ -273,7 +279,7 @@ class MLPModelDecoder(nn.Module):
                                                                                        self.weight_embedding_rank + self.predicted_hidden_layer_size)
             self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(
                 self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
-        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
 
     def forward(self, x, y_src):
         # x is samples x batch x emsize

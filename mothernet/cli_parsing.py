@@ -67,6 +67,7 @@ def argparser_from_config(description="Train Mothernet"):
     mothernet = parser.add_argument_group('mothernet')
     mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
     mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
+    mothernet.add_argument('--decoder-activation', type=str, help='decoder activation', default='relu')
 
     mothernet.add_argument('-D', '--decoder-type',
                            help="Decoder Type. 'output_attention', 'special_token' or 'average'.", default='output_attention', type=str)

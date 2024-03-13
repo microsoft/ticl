@@ -185,6 +185,9 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         else:
             config['model_type'] = 'tabpfn'
 
+    if 'decoder_activation' not in passed_config.get('mothernet', {}):
+        config['mothernet']['decoder_activation'] = 'relu'
+
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], device=device)
 
     y_encoder = get_y_encoder(config)
