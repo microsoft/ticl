@@ -15,11 +15,14 @@ from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, co
 
 DEFAULT_LOSS = pytest.approx(0.7113393545150757)
 
+TESTING_DEFAULTS_MOTHERNET = ['mothernet'] + TESTING_DEFAULTS
+TESTING_DEFAULTS_MOTHERNET_SHORT = ['mothernet'] + TESTING_DEFAULTS_SHORT
+
 
 def test_train_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == DEFAULT_LOSS
@@ -32,7 +35,7 @@ def test_train_defaults():
 def test_train_gelu_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--decoder-activation', 'gelu'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--decoder-activation', 'gelu'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == 0.7392604351043701
@@ -44,12 +47,12 @@ def test_train_gelu_decoder():
 def test_train_synetune():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['--st_checkpoint_dir', tmpdir])
         assert results['epoch'] == 10
         assert results['loss'] == DEFAULT_LOSS
         assert count_parameters(results['model']) == 1544650
         assert isinstance(results['model'], MotherNet)
-        results = main(TESTING_DEFAULTS + ['--st_checkpoint_dir', tmpdir])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['--st_checkpoint_dir', tmpdir])
         # that we reloaded the model means we incidentally counted up to 11
         assert results['epoch'] == 11
 
@@ -57,13 +60,13 @@ def test_train_synetune():
 def test_train_reload():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--save-every', '1'])
+        results = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '--save-every', '1'])
         prev_file_name = f'{results["base_path"]}/models_diff/{results["model_string"]}_epoch_2.cpkt'
         assert results['epoch'] == 2
         assert results['loss'] == pytest.approx(1.1220229864120483)
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
-        results_new = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
+        results_new = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
         # epoch 3 didn't actually happen, but going through the training loop raises the counter by one...
         assert results_new['epoch'] == 3
         assert results_new['loss'] == np.inf
@@ -80,15 +83,15 @@ def test_train_reload():
                     assert results_new['config'][k] == v
         # strict loading should fail if we change model arch
         with pytest.raises(RuntimeError):
-            main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-L', '2'])
+            main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-L', '2'])
 
         # strict loading should work if we change learning rate
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-l', '1e-3'])
+        results = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-s', '-l', '1e-3'])
         assert results['epoch'] == 2
         assert results['config']['optimizer']['learning_rate'] == 1e-3
 
         # non-strict loading should allow changing architecture
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-L', '2'])
+        results = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-L', '2'])
         assert results['epoch'] == 2
         assert results['config']['mothernet']['predicted_hidden_layers'] == 2
 
@@ -96,7 +99,7 @@ def test_train_reload():
 def test_train_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'special_token'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert results['loss'] == pytest.approx(0.7064052820205688)
@@ -110,7 +113,7 @@ def test_train_special_token():
 def test_train_class_tokens():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_tokens'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'class_tokens'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
@@ -124,7 +127,7 @@ def test_train_class_tokens():
 def test_train_class_average():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_average'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'class_average'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
@@ -138,7 +141,7 @@ def test_train_class_average():
 def test_train_simple_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'special_token_simple'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'special_token_simple'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
@@ -152,7 +155,7 @@ def test_train_simple_special_token():
 def test_train_average_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'average'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'average'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNet)
@@ -165,7 +168,7 @@ def test_train_average_decoder():
 def test_train_reduce_on_spike():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--reduce-lr-on-spike', 'True'])
     assert results['loss'] == DEFAULT_LOSS
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
@@ -174,7 +177,7 @@ def test_train_reduce_on_spike():
 def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-L', '2'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-L', '2'])
     assert results['loss'] == pytest.approx(1.6209605932235718)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], MotherNet)
@@ -183,7 +186,7 @@ def test_train_two_hidden_layers():
 def test_train_two_decoder_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-T', '2'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-T', '2'])
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model']) == 1561162
     assert results['loss'] == pytest.approx(0.6974108815193176)
@@ -193,7 +196,7 @@ def test_train_low_rank_ignored():
     # it boolean flag is not set, -W is ignored for easier hyperparameter search
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'False'])
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-W', '16', '--low-rank-weights', 'False'])
     assert results['loss'] == DEFAULT_LOSS
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)

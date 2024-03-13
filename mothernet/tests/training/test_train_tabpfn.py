@@ -13,7 +13,7 @@ from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, co
 def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
     assert results['loss'] == pytest.approx(0.7061134576797485, rel=1e-5)
@@ -24,7 +24,7 @@ def test_train_tabpfn_basic():
 def test_train_tabpfn_num_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--num-features', '13'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--num-features', '13'])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
     assert isinstance(results['model'], TabPFN)
@@ -37,7 +37,7 @@ def test_train_tabpfn_num_samples():
     # smoke test only since I'm too lazy to mock
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--n-samples', '35'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--n-samples', '35'])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
     assert isinstance(results['model'], TabPFN)
@@ -48,7 +48,7 @@ def test_train_tabpfn_num_samples():
 def test_train_tabpfn_init_weights():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--init-method', 'kaiming-uniform'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--init-method', 'kaiming-uniform'])
     assert isinstance(results['model'], TabPFN)
     assert count_parameters(results['model']) == 579850
     assert results['loss'] == pytest.approx(2.239567518234253)
@@ -57,7 +57,7 @@ def test_train_tabpfn_init_weights():
 def test_train_tabpfn_init_weights_no_zero():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--init-method', 'kaiming-uniform', '--tabpfn-zero-weights', 'False'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--init-method', 'kaiming-uniform', '--tabpfn-zero-weights', 'False'])
     assert isinstance(results['model'], TabPFN)
     assert count_parameters(results['model']) == 579850
     assert results['loss'] == pytest.approx(2.2118871212005615)
@@ -66,7 +66,7 @@ def test_train_tabpfn_init_weights_no_zero():
 def test_train_tabpfn_stepped_multiclass():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--multiclass-type', 'steps'])
     assert isinstance(results['model'], TabPFN)
     assert count_parameters(results['model']) == 579850
     assert results['loss'] == pytest.approx(1.1249290704727173)
@@ -75,7 +75,7 @@ def test_train_tabpfn_stepped_multiclass():
 def test_train_tabpfn_stepped_multiclass_steps3():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '-m', 'tabpfn', '--multiclass-type', 'steps', '--multiclass-max-steps', '3'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--multiclass-type', 'steps', '--multiclass-max-steps', '3'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.9831984043121338)
@@ -84,7 +84,7 @@ def test_train_tabpfn_stepped_multiclass_steps3():
 def test_train_tabpfn_boolean_prior():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7063115835189819)
@@ -93,7 +93,7 @@ def test_train_tabpfn_boolean_prior():
 def test_train_tabpfn_boolean_prior_p_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.714724600315094)
@@ -102,7 +102,7 @@ def test_train_tabpfn_boolean_prior_p_uninformative():
 def test_train_tabpfn_boolean_prior_max_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '2'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '2'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7176578044891357)
@@ -113,7 +113,7 @@ def test_train_tabpfn_boolean_mixed_prior():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
-                        'True', '-B', tmpdir, '-m', 'tabpfn', '--prior-type', 'bag_boolean'])
+                        'True', '-B', tmpdir, '--prior-type', 'bag_boolean'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.6884923577308655)
@@ -122,7 +122,7 @@ def test_train_tabpfn_boolean_mixed_prior():
 def test_train_tabpfn_uninformative_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'tabpfn', '--add-uninformative-features', 'True'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--add-uninformative-features', 'True'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7006930708885193)

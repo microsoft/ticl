@@ -13,7 +13,7 @@ from mothernet.testing_utils import TESTING_DEFAULTS, count_parameters
 def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver'])
+        results = main(["perceiver", '-B', tmpdir] + + TESTING_DEFAULTS)
     model = results['model']
     assert isinstance(model, TabPerceiver)
     assert model.ff_dropout == 0
@@ -32,7 +32,7 @@ def test_train_perceiver_defaults():
 def test_train_perceiver_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-L', '2'])
+        results = main(["perceiver", '-B', tmpdir] + TESTING_DEFAULTS + ['-L', '2'])
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
     assert results['loss'] == pytest.approx(0.7871301770210266)
@@ -41,7 +41,7 @@ def test_train_perceiver_two_hidden_layers():
 def test_train_perceiver_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-m', 'perceiver', '-W', '16', '--low-rank-weights', 'True'])
+        results = main(["perceiver", '-B', tmpdir] + TESTING_DEFAULTS + ['-W', '16', '--low-rank-weights', 'True'])
     assert isinstance(results['model'], TabPerceiver)
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
