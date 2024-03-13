@@ -376,7 +376,9 @@ def init_device(gpu_id, use_cpu):
 
 
 def get_model_string(config, num_gpus, device, parser):
-    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
+    # get the subparser for the model type
+    subparser = parser._actions[1].choices[config['model_type']]
+    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in subparser._actions if arg.option_strings}
     mm = config['model_type']
     model_type_string = 'mn' if mm in ["mlp", "mothernet"] else mm
     default_config_flat = flatten_dict(get_base_config(), only_last=True)
