@@ -27,7 +27,7 @@ class GroupedArgParser(argparse.ArgumentParser):
         return nested_by_groups
 
 
-def argparser_from_config(description="Train Mothernet"):
+def argparser_from_config(description="Train Mothernet", config=None):
     parser = GroupedArgParser(description=description)
 
     general = parser.add_argument_group('general')

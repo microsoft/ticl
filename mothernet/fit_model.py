@@ -18,11 +18,15 @@ from argparse import Namespace
 
 def main(argv, extra_config=None):
     # extra config is used for testing purposes only
+    # this is the generic entry point for training any model, so it has A LOT of options
     config = get_base_config()
-    parser = argparser_from_config(config)
+    parser = argparser_from_config(config=config)
     args = parser.parse_args(argv)
-    device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
+    return training_setup(args, config, parser, extra_config)
 
+
+def training_setup(args, config, parser, extra_config=None):
+    device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
     # handle syne-tune restarts
     orchestration = args.orchestration
     orchestration.base_path, orchestration.continue_run, orchestration.warm_start_from, report = synetune_handle_checkpoint(orchestration)
