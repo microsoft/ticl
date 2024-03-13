@@ -19,7 +19,7 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, weight_embedding_rank=None, decoder_type="output_attention", biattention=False):
+                 decoder_hidden_layers=1, nhead=4, weight_embedding_rank=None, decoder_type="output_attention", biattention=False, decoder_activation='relu'):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -32,7 +32,7 @@ class AdditiveModelDecoder(nn.Module):
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank
         self.biattention = biattention
-
+        self.decoder_activation = decoder_activation
         self.decoder_type = decoder_type
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
@@ -43,7 +43,7 @@ class AdditiveModelDecoder(nn.Module):
             mlp_in_size = self.summary_layer.out_size
             self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
 
-        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
 
     def forward(self, x, y_src):
         batch_size = x.shape[1]
@@ -73,7 +73,7 @@ class AdditiveModelDecoder(nn.Module):
 class FactorizedAdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
                  decoder_hidden_layers=1, nhead=4,  weight_embedding_rank=None, rank=16, decoder_type="output_attention", shape_attention=False,
-                 n_shape_functions=32, shape_attention_heads=1, shape_init="constant", biattention=False):
+                 n_shape_functions=32, shape_attention_heads=1, shape_init="constant", biattention=False, decoder_activation='relu'):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -94,6 +94,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.shape_attention_heads = shape_attention_heads
         self.shape_init = shape_init
         self.biattention = biattention
+        self.decoder_activation = decoder_activation
 
         if decoder_type in ["class_tokens", "class_average"]:
             mlp_in_size = emsize
@@ -128,7 +129,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
             # these serve as shared prototypes across features and classes
             self.output_weights = nn.Parameter(torch.randn(rank, n_bins, n_out))
 
-        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers)
+        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
     def forward(self, x, y_src):
@@ -279,7 +280,8 @@ class MLPModelDecoder(nn.Module):
                                                                                        self.weight_embedding_rank + self.predicted_hidden_layer_size)
             self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(
                 self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
-        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
+        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers,
+                                    activation=decoder_activation)
 
     def forward(self, x, y_src):
         # x is samples x batch x emsize

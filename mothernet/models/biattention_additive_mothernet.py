@@ -18,7 +18,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant"):
+                 shape_init="constant", decoder_activation='relu'):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -31,9 +31,11 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.emsize = emsize
 
         if input_bin_embedding == "linear":
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=False)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=False,
+                                               decoder_activation=decoder_activation)
         elif input_bin_embedding in ["True", "nonlinear"] or isinstance(input_bin_embedding, bool) and input_bin_embedding:
-            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True)
+            self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True,
+                                               decoder_activation=decoder_activation)
         elif input_bin_embedding in ["none", "False"] or isinstance(input_bin_embedding, bool) and not input_bin_embedding:
             self.encoder = Linear(num_features=n_bins, emsize=emsize, replace_nan_by_zero=True)
         else:
@@ -52,17 +54,20 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.input_layer_norm = input_layer_norm
         self.shape_attention = shape_attention
         self.tabpfn_zero_weights = tabpfn_zero_weights
+        self.decoder_activation = decoder_activation
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                           decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank,
                                                           shape_attention=shape_attention, shape_attention_heads=shape_attention_heads,
-                                                          n_shape_functions=n_shape_functions, shape_init=shape_init, biattention=True)
+                                                          n_shape_functions=n_shape_functions, shape_init=shape_init, biattention=True,
+                                                          decoder_activation=decoder_activation)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
-                                                decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, biattention=True)
+                                                decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, biattention=True,
+                                                decoder_activation=decoder_activation)
             
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
