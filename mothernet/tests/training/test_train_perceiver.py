@@ -13,7 +13,7 @@ from mothernet.testing_utils import TESTING_DEFAULTS, count_parameters
 def test_train_perceiver_defaults():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(["perceiver", '-B', tmpdir] + + TESTING_DEFAULTS)
+        results = main(["perceiver", '-B', tmpdir] + TESTING_DEFAULTS)
     model = results['model']
     assert isinstance(model, TabPerceiver)
     assert model.ff_dropout == 0

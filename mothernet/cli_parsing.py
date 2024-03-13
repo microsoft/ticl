@@ -96,7 +96,7 @@ def argparser_from_config(parser, description="Train Mothernet", config=None):
         biattention = parser.add_argument_group('biattention')
         biattention.add_argument('--input-embedding', type=str, help='input embedding type', default='linear')
 
-    if model_type in ['mothernet', 'additive', 'baam']:
+    if model_type in ['mothernet', 'additive', 'baam', 'perceiver']:
         mothernet = parser.add_argument_group('mothernet')
         mothernet.add_argument('-d', '--decoder-em-size', type=int, help='decoder embedding size', default=1024, dest='decoder_embed_dim')
         mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)

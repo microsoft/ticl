@@ -7,7 +7,13 @@ from mothernet.fit_model import main
 from mothernet.models.tabpfn import TabPFN
 from mothernet.prediction import TabPFNClassifier
 
-from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris
+from mothernet.testing_utils import count_parameters, check_predict_iris
+
+TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False']
+TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
+                          '--save-every', '2']
 
 
 def test_train_tabpfn_basic():
@@ -111,8 +117,8 @@ def test_train_tabpfn_boolean_prior_max_uninformative():
 def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                       'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',  '--low-rank-weights', 'False', '--reduce-lr-on-spike',
+        results = main(['tabpfn', '-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
+                       'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0', '--reduce-lr-on-spike',
                         'True', '-B', tmpdir, '--prior-type', 'bag_boolean'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)

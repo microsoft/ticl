@@ -33,7 +33,7 @@ def test_train_batabpfn_no_padding():
 def test_train_batabpfn_random_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+        results = main(['batabpfn', '-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                         '--n-samples', '200', '-B', tmpdir, '--pad-zeros', 'False', '--input-embedding', 'random', '--num-features', '20'])
     assert isinstance(results['model'], BiAttentionTabPFN)
@@ -44,7 +44,7 @@ def test_train_batabpfn_random_embedding():
 def test_train_batabpfn_fourier_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+        results = main(['batabpfn', '-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                         '--n-samples', '200', '-B', tmpdir, '--pad-zeros', 'False', '--input-embedding', 'fourier', '--num-features', '20'])
     assert isinstance(results['model'], BiAttentionTabPFN)
@@ -56,7 +56,7 @@ def test_train_batabpfn_fourier_features_nans():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         extra_config = {'prior': {'classification': {'nan_prob_no_reason': 0.5}}}
-        results = main(['-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+        results = main(['batabpfn', '-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                         '--n-samples', '200', '-B', tmpdir, '--pad-zeros', 'False', '--input-embedding', 'fourier', '--num-features', '20'],
                        extra_config)
@@ -69,7 +69,7 @@ def test_train_batabpfn_linear_features_nans():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         extra_config = {'prior': {'classification': {'nan_prob_no_reason': 0.5}}}
-        results = main(['-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+        results = main(['batabpfn', '-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                         '--n-samples', '200', '-B', tmpdir, '--pad-zeros', 'False', '--input-embedding', 'linear', '--num-features', '20'],
                        extra_config)
@@ -82,7 +82,7 @@ def test_train_batabpfn_random_features_nans():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         extra_config = {'prior': {'classification': {'nan_prob_no_reason': 0.5}}}
-        results = main(['-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
+        results = main(['batabpfn', '-C', '-E', '8', '-n', '4', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                         '--n-samples', '200', '-B', tmpdir, '--pad-zeros', 'False', '--input-embedding', 'random', '--num-features', '20'],
                        extra_config)

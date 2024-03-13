@@ -205,7 +205,7 @@ def test_train_low_rank_ignored():
 def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
+        results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
                         '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '2'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
