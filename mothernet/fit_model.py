@@ -9,23 +9,20 @@ import os
 from git import Repo
 
 from mothernet.model_builder import get_model
-from mothernet.model_configs import get_base_config
 from mothernet.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
 from mothernet.config_utils import compare_dicts, flatten_dict, update_config
 from mothernet.cli_parsing import make_model_level_argparser
+from mothernet.model_configs import get_model_default_config
 from argparse import Namespace
 
 
 def main(argv, extra_config=None):
     # extra config is used for testing purposes only
     # this is the generic entry point for training any model, so it has A LOT of options
-    config = get_base_config()
-    parser = make_model_level_argparser(config=config)
+    parser = make_model_level_argparser()
     args = parser.parse_args(argv)
-    return training_setup(args, config, parser, extra_config)
+    config = get_model_default_config(args.model_type)
 
-
-def training_setup(args, config, parser, extra_config=None):
     device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
     # handle syne-tune restarts
     orchestration = args.orchestration

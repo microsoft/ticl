@@ -107,6 +107,10 @@ def get_prior_config_causal(max_features=100):
     return config
 
 
+def get_model_default_config(model_type):
+    return get_base_config()
+
+
 def get_base_config():
     config = get_prior_config_causal()
     config['prior'].update({
