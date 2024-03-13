@@ -4,7 +4,7 @@ import math
 
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
-
+from mothernet.models.encoders import Linear
 
 class BiAttentionTabPFN(nn.Module):
     def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
@@ -25,7 +25,7 @@ class BiAttentionTabPFN(nn.Module):
         elif input_embedding == "random":
             self.encoder = nn.LayerNorm(normalized_shape=[emsize])
         elif input_embedding == "fourier":
-            self.encoder = nn.Linear(emsize + 1, emsize)
+            self.encoder = Linear(emsize + 1, emsize, replace_nan_by_zero=True)
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
@@ -57,7 +57,7 @@ class BiAttentionTabPFN(nn.Module):
             x_src = self.encoder(x_src.unsqueeze(-1))
         elif self.input_embedding == "random":
             proj = torch.randn(x_src.shape[-2], x_src.shape[-1], self.emsize, device=x_src.device, dtype=x_src.dtype)
-            x_src = x_src.unsqueeze(-1) * proj
+            x_src = x_src.unsqueeze(-1).nan_to_num(0) * proj
             x_src = self.encoder(x_src)
         elif self.input_embedding == "fourier":
             div_term = torch.exp(torch.arange(0, self.emsize, 2, device=x_src.device) * (-math.log(10000.0) / self.emsize))
