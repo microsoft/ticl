@@ -83,7 +83,6 @@ def get_classification_prior_config(max_features, n_samples):
     max_num_classes = 10
     config_classsification_prior = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
-        "nan_prob_a_reason": 0.0,
         "max_num_classes": max_num_classes,
         "num_classes": {'distribution': 'uniform_int', 'min': 2, 'max': max_num_classes},
         # "noise_type": "Gaussian",  # NN unused?!

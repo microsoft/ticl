@@ -11,12 +11,13 @@ from git import Repo
 from mothernet.model_builder import get_model
 from mothernet.model_configs import get_base_config
 from mothernet.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
-from mothernet.config_utils import compare_dicts, flatten_dict
+from mothernet.config_utils import compare_dicts, flatten_dict, update_config
 from mothernet.cli_parsing import argparser_from_config
 from argparse import Namespace
 
 
-def main(argv):
+def main(argv, extra_config=None):
+    # extra config is used for testing purposes only
     config = get_base_config()
     parser = argparser_from_config(config)
     args = parser.parse_args(argv)
@@ -62,6 +63,9 @@ def main(argv):
     if args.orchestration.extra_fast_test:
         config['prior']['n_samples'] = 2 * 16
         config['transformer']['nhead'] = 1
+
+    if extra_config is not None:
+        update_config(config, extra_config)
 
     save_every = orchestration.save_every
 

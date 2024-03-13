@@ -78,8 +78,5 @@ class BiAttentionTabPFN(nn.Module):
         output = src
         for mod in self.layers:
             output = mod(output, src_mask=src_mask)
-        output = self.decoder(output.mean(axis=-2))
-        if torch.isnan(output).sum() > 0:
-            print('Nans in output!')
-            import pdb; pdb.set_trace()
-        return output[single_eval_pos:]
+        decoded_output = self.decoder(output.mean(axis=-2))
+        return decoded_output[single_eval_pos:]

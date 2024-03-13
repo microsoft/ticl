@@ -63,7 +63,7 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
     config = get_base_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
-    dataloader_config['steps_per_epoch'] = 1
+    dataloader_config['num_steps'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
     prior_config['num_features'] = n_features
@@ -74,12 +74,26 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
     assert y.shape == (n_samples, batch_size)
 
 
+def test_get_dataloader_no_nan_in_flexible():
+    L.seed_everything(42)
+    config = get_base_config()
+    prior_config = config['prior']
+    dataloader_config = config['dataloader']
+    dataloader_config['num_steps'] = 10000
+    print("making dataloader")
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, device="cpu")
+    print("starting to get data")
+    for i, ((_, x, y), target_y, single_eval_pos) in enumerate(dataloader):
+        print(i)
+        assert not x.isnan().any()
+
+
 def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
     config = get_base_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
-    dataloader_config['steps_per_epoch'] = 1
+    dataloader_config['num_steps'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
     prior_config['num_features'] = n_features

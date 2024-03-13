@@ -68,3 +68,12 @@ def merge_dicts(*dicts):
         else:
             raise ValueError(f"Can't merge {values} for key {k}")
     return merged
+
+
+def update_config(config, extra_config):
+    for k, v in extra_config.items():
+        if isinstance(v, dict):
+            config[k] = update_config(config[k], v)
+        else:
+            config[k] = v
+    return config
