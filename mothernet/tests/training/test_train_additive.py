@@ -20,6 +20,7 @@ def test_train_additive_defaults():
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model_string'].startswith("additive_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_03_13_2024_15_05_04")
     assert count_parameters(results['model']) == 9690634
     assert results['loss'] == pytest.approx(1.205582857131958, rel=1e-5)
 

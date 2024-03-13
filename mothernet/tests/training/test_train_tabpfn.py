@@ -22,9 +22,10 @@ def test_train_tabpfn_basic():
         results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
-    assert results['loss'] == pytest.approx(0.7061134576797485, rel=1e-5)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
+    assert results['model_string'].startswith("tabpfn_AFalse_e128_E10_N4_n1_tFalse_cpu_03_13_2024_15_34_15")
+    assert results['loss'] == pytest.approx(0.7061134576797485, rel=1e-5)
 
 
 def test_train_tabpfn_num_features():

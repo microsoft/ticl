@@ -21,6 +21,8 @@ def test_train_baam_shape_attention():
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model_string'].startswith("baam_AFalse_Dclass_average_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
+                                              "_n1_outputrank8_padzerosFalse_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_03_1")
     assert count_parameters(results['model']) == 62740
     assert results['loss'] == pytest.approx(1.6953184604644775, rel=1e-5)
 
