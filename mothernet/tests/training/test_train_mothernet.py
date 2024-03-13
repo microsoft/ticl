@@ -210,7 +210,7 @@ def test_train_low_rank():
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '2'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
+    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_minlr0_N4_n1_P64_reducelronspikeTrue_tFalse_W16_cpu_03_13_2024_15_35_16")
     assert count_parameters(results['model']) == 1067850
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 3402
