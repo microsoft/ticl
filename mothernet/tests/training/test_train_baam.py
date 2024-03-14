@@ -23,8 +23,8 @@ def test_train_baam_shape_attention():
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert results['model_string'].startswith("baam_AFalse_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
                                               "_n1_outputrank8_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_03_1")
-    assert count_parameters(results['model']) == 62740
-    assert results['loss'] == pytest.approx(1.6953184604644775, rel=1e-5)
+    assert count_parameters(results['model']) == 24340
+    assert results['loss'] == pytest.approx(1.5674822330474854, rel=1e-5)
 
 
 def test_train_baam_no_shape_attention():
@@ -34,8 +34,8 @@ def test_train_baam_no_shape_attention():
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
-    assert count_parameters(results['model']) == 176064
-    assert results['loss'] == pytest.approx(0.7351612448692322, rel=1e-5)
+    assert count_parameters(results['model']) == 51648
+    assert results['loss'] == pytest.approx(0.7915395498275757, rel=1e-5)
 
 
 def test_train_baam_input_layer_norm():
@@ -45,5 +45,5 @@ def test_train_baam_input_layer_norm():
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
-    assert count_parameters(results['model']) == 176192
-    assert results['loss'] == pytest.approx(1.1924283504486084, rel=1e-5)
+    assert count_parameters(results['model']) == 51776
+    assert results['loss'] == pytest.approx(1.4997518062591553, rel=1e-5)
