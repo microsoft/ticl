@@ -202,6 +202,7 @@ def get_tabpfn_default_config():
 def get_batabpfn_default_config():
     config = get_shared_defaults()
     config.update(get_biattention_config())
+    config['biattention']['input_embedding'] = 'fourier'
     config['prior']['classification']['pad_zeros'] = False
     return config
 
