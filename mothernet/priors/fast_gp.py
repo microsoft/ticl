@@ -35,27 +35,26 @@ class GPPrior:
 
     def get_batch(self, batch_size, n_samples, num_features, device=default_device,
                   equidistant_x=False, fix_x=None, epoch=None, single_eval_pos=None):
-        hypers = sample_distributions(self.config)
         with torch.no_grad():
             assert not (equidistant_x and (fix_x is not None))
-
-            with gpytorch.settings.fast_computations(*hypers.get('fast_computations', (True, True, True))):
-                if equidistant_x:
-                    assert num_features == 1
-                    x = torch.linspace(0, 1., n_samples).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
-                elif fix_x is not None:
-                    assert fix_x.shape == (n_samples, num_features)
-                    x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
-                else:
-                    if hypers['sampling'] == 'uniform':
-                        x = torch.rand(batch_size, n_samples, num_features, device=device)
+            is_fitted = False
+            while not is_fitted:
+                hypers = sample_distributions(self.config)
+                with gpytorch.settings.fast_computations(*hypers.get('fast_computations', (True, True, True))):
+                    if equidistant_x:
+                        assert num_features == 1
+                        x = torch.linspace(0, 1., n_samples).unsqueeze(0).repeat(batch_size, 1).unsqueeze(-1)
+                    elif fix_x is not None:
+                        assert fix_x.shape == (n_samples, num_features)
+                        x = fix_x.unsqueeze(0).repeat(batch_size, 1, 1).to(device)
                     else:
-                        x = torch.randn(batch_size, n_samples, num_features, device=device)
-                model, likelihood = get_model(x, torch.Tensor(), hypers)
-                model.to(device)
+                        if hypers['sampling'] == 'uniform':
+                            x = torch.rand(batch_size, n_samples, num_features, device=device)
+                        else:
+                            x = torch.randn(batch_size, n_samples, num_features, device=device)
+                    model, likelihood = get_model(x, torch.Tensor(), hypers)
+                    model.to(device)
 
-                is_fitted = False
-                while not is_fitted:
                     try:
                         with gpytorch.settings.prior_mode(True):
                             model, likelihood = get_model(x, torch.Tensor(), hypers)
