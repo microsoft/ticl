@@ -1,5 +1,5 @@
 from mothernet.dataloader import get_dataloader
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_prior_config
 from mothernet.priors import BagPrior, ClassificationAdapterPrior
 from mothernet.distributions import LogUniformHyperparameter
 
@@ -10,7 +10,7 @@ import pytest
 
 def test_get_dataloader_base_config():
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     # config['num_causes'] = 3
     # config['num_features'] = 10
     prior_config = config['prior']
@@ -60,7 +60,7 @@ def test_get_dataloader_base_config():
 @pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
 def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     dataloader_config['num_steps'] = 1
@@ -77,7 +77,7 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
 def test_get_dataloader_no_nan_in_flexible():
     # this apparently doesn't run long enough to find the occasional nan
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     dataloader_config['num_steps'] = 100
@@ -88,7 +88,7 @@ def test_get_dataloader_no_nan_in_flexible():
 
 def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     dataloader_config['num_steps'] = 1
@@ -110,7 +110,7 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
 
 def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     dataloader_config['steps_per_epoch'] = 1

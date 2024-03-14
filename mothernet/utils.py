@@ -13,7 +13,7 @@ from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_model_default_config
 from mothernet.config_utils import flatten_dict
 
 
@@ -381,7 +381,7 @@ def get_model_string(config, num_gpus, device, parser):
     config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in subparser._actions if arg.option_strings}
     mm = config['model_type']
     model_type_string = 'mn' if mm in ["mlp", "mothernet"] else mm
-    default_config_flat = flatten_dict(get_base_config(), only_last=True)
+    default_config_flat = flatten_dict(get_model_default_config(config['model_type']), only_last=True)
     config_flat = flatten_dict(config, only_last=True)
     config_string = ""
     for k in sorted(config_flat.keys()):

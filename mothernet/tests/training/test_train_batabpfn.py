@@ -17,7 +17,7 @@ def test_train_batabpfn_basic():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
     assert isinstance(results['model'], BiAttentionTabPFN)
-    assert results['model_string'].startswith("batabpfn_AFalse_e4_E8_nsamples200_N2_numfeatures20_n1_tFalse_cpu_03_13_2024_15_33_46")
+    assert results['model_string'].startswith("batabpfn_AFalse_e4_E8_nsamples200_N2_numfeatures20_n1_tFalse_cpu")
     assert count_parameters(results['model']) == 870
     assert results['loss'] == pytest.approx(2.108328342437744, rel=1e-5)
 

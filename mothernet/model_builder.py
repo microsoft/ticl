@@ -6,7 +6,7 @@ import torch
 import mothernet.models.encoders as encoders
 from mothernet.dataloader import get_dataloader
 from mothernet.train import train
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_model_default_config
 from torch import nn
 
 from mothernet.models.mothernet_additive import MotherNetAdditive
@@ -164,9 +164,13 @@ def old_config_to_new(old_config, new_config):
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None,
               scheduler=None, epoch_callback=None, load_model_strict=True):
-    # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
-    config = get_base_config()
+    if 'model_type' not in passed_config:
+        if 'model_maker' in passed_config:
+            config['model_type'] = config['model_maker']
+        else:
+            config['model_type'] = 'tabpfn'
+    config = get_model_default_config(config['model_type'])
     if 'optimizer' not in passed_config:
         passed_config = old_config_to_new(passed_config, config)
     config.update(passed_config)
@@ -180,13 +184,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         config['prior']['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config['transformer']:
         config['transformer']['y_encoder'] = 'linear'
-    if 'model_type' not in passed_config:
-        if 'model_maker' in passed_config:
-            config['model_type'] = config['model_maker']
-        else:
-            config['model_type'] = 'tabpfn'
 
-    if 'decoder_activation' not in passed_config.get('mothernet', {}):
+    if 'mothernet' in config and 'decoder_activation' not in passed_config.get('mothernet', {}):
         config['mothernet']['decoder_activation'] = 'relu'
 
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], device=device)

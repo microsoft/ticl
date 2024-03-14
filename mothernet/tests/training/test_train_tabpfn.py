@@ -24,7 +24,7 @@ def test_train_tabpfn_basic():
         check_predict_iris(clf)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
-    assert results['model_string'].startswith("tabpfn_AFalse_e128_E10_N4_n1_tFalse_cpu_03_13_2024_15_34_15")
+    assert results['model_string'].startswith("tabpfn_AFalse_e128_E10_N4_n1_tFalse_cpu")
     assert results['loss'] == pytest.approx(0.7061134576797485, rel=1e-5)
 
 
@@ -100,7 +100,7 @@ def test_train_tabpfn_boolean_prior():
 def test_train_tabpfn_boolean_prior_p_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--boolean-p-uninformative', '.9'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--p-uninformative', '.9'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.714724600315094)
@@ -109,7 +109,7 @@ def test_train_tabpfn_boolean_prior_p_uninformative():
 def test_train_tabpfn_boolean_prior_max_uninformative():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--boolean-max-fraction-uninformative', '2'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--prior-type', 'boolean_only', '--max-fraction-uninformative', '2'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7176578044891357)

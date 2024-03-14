@@ -1,4 +1,4 @@
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_prior_config
 import lightning as L
 import torch
 import pytest
@@ -14,7 +14,7 @@ from mothernet.priors.classification_adapter import ClassificationAdapter
 def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n_classes):
     # test the mlp prior
     L.seed_everything(43)
-    config = get_base_config()
+    config = get_prior_config()
     config['prior']['classification']['num_features_used'] = num_features  # always using all features in this test
     config['prior']['classification']['num_classes'] = n_classes
     hyperparameters = {
@@ -54,7 +54,7 @@ def test_classification_adapter_with_sampling():
     n_samples = 900
     # test the mlp prior
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=config['prior']['classification'])
     # assert adapter.h['num_layers'] == 6
     # assert adapter.h['num_features_used'] == 7
@@ -76,7 +76,7 @@ def test_classification_adapter_with_sampling_no_padding():
     n_samples = 900
     # test the mlp prior
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']['classification']
     prior_config['pad_zeros'] = False
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)

@@ -1,17 +1,58 @@
 import torch
 
-from mothernet.distributions import uniform_int_sampler_f
 from mothernet.config_utils import merge_dicts
 
 
-def get_general_config(max_features, n_samples):
+def get_optimizer_config():
+    optimizer = {
+        "aggregate_k_gradients": 1,
+        "learning_rate": 0.00003,
+        "epochs": 4000,
+        "train_mixed_precision": True,
+        'stop_after_epochs': None,
+        'reduce_lr_on_spike': False,
+        'warmup_epochs': 20,
+        'learning_rate_schedule': 'cosine',
+        'min_lr': 1e-8,
+        'adam_beta1': 0.9,
+        'spike_tolerance': 4,
+        'weight_decay': 0.0,
+        'lr_decay': 0.99,
+        'adaptive_batch_size': True
+    }
+    return {'optimizer': optimizer}
+
+
+def get_transformer_config():
+    transformer = {
+        "emsize": 512,
+        "nlayers": 12,
+        "dropout": 0.0,
+        "nhid_factor": 2,
+        'nhead': 512 // 128,
+        'init_method': None,
+        'recompute_attn': True,
+        'pre_norm': False,
+        'y_encoder': "one_hot",
+        'efficient_eval_masking': True,
+        'input_normalization': False,
+        'tabpfn_zero_weights': True,
+
+    }
+    return {'transformer': transformer}
+
+
+def get_prior_config(max_features=100, n_samples=1024+128):
     """"
-    Returns the general PFN training hyperparameters.
+    Returns the configuration parameters for the tabular multiclass wrapper.
     """
+
     prior = {
         "num_features": max_features,
         "n_samples": n_samples,
         "eval_positions": [n_samples * 0.95],
+        'heterogeneous_batches': False,
+        'multiclass_loss_type': 'nono',  # 'compatible'
         'prior_type': 'prior_bag',
         'prior_bag': {'prior_bag_exp_weights_1': {'distribution': 'uniform', 'min': 2.0, 'max': 10.0}}}
 
@@ -50,36 +91,6 @@ def get_general_config(max_features, n_samples):
 
     prior['gp'] = gp_prior_config
 
-    dataloader = {
-        "batch_size": 8,
-        "num_steps": 8192,
-        'min_eval_pos': 2}
-
-    optimizer = {
-        "aggregate_k_gradients": 1,
-        "learning_rate": 0.00003,
-        "epochs": 4000,
-        "train_mixed_precision": True
-
-    }
-
-    transformer = {
-        "emsize": 512,
-        "nlayers": 12,
-        "dropout": 0.0,
-        "nhid_factor": 2,
-        'nhead': 512 // 128,
-        'init_method': None,
-
-    }
-
-    return {'prior': prior, 'optimizer': optimizer, 'transformer': transformer, 'dataloader': dataloader}
-
-
-def get_classification_prior_config(max_features, n_samples):
-    """"
-    Returns the configuration parameters for the tabular multiclass wrapper.
-    """
     max_num_classes = 10
     config_classsification_prior = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
@@ -97,33 +108,22 @@ def get_classification_prior_config(max_features, n_samples):
         'set_value_to_nan': .1,
         'pad_zeros': True,
     }
-    return {'prior': {'classification': config_classsification_prior}}
+    prior['classification'] = config_classsification_prior
+
+    dataloader = {
+        "batch_size": 8,
+        "num_steps": 8192,
+        'min_eval_pos': 2}
+
+    prior['boolean'] = {
+        'max_fraction_uninformative': 0.5,
+        'p_uninformative': 0.5}
+
+    return {'prior': prior, 'dataloader': dataloader}
 
 
-def get_prior_config_causal(max_features=100):
-    config_general = get_general_config(max_features, n_samples=1024+128)
-    config_classsification_prior = get_classification_prior_config(max_features, n_samples=1024+128)
-    config = merge_dicts(config_general, config_classsification_prior)
-    return config
-
-
-def get_model_default_config(model_type):
-    return get_base_config()
-
-
-def get_base_config():
-    config = get_prior_config_causal()
-    config['prior'].update({
-        'heterogeneous_batches': False,
-        'multiclass_loss_type': 'nono',  # 'compatible'
-        'boolean': {
-            'max_fraction_uninformative': 0.5,
-            'p_uninformative': 0.5},
-    })
-
-    config['model_type'] = 'mothernet'
-
-    config['mothernet'] = {
+def get_mothernet_config():
+    return {'mothernet': {
         'weight_embedding_rank': 32,
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 512,
@@ -133,10 +133,11 @@ def get_base_config():
         'decoder_hidden_layers': 1,
         'decoder_hidden_size': 2048,
         'decoder_activation': 'relu'}
+        }
 
-    config['perceiver'] = {'num_latents': 512}
 
-    config['additive'] = {
+def get_additive_config():
+    return {'additive': {
         'input_bin_embedding': 'none',
         'factorized_output': False,
         'output_rank': 16,
@@ -146,31 +147,73 @@ def get_base_config():
         'shape_attention_heads': 1,
         'n_shape_functions': 32,
         'shape_init': 'constant'
-        }
+        }}
 
-    config['transformer'].update({
-        'recompute_attn': True,
-        'pre_norm': False,
-        'y_encoder': "one_hot",
-        'efficient_eval_masking': True,
-        'input_normalization': False,
-        'tabpfn_zero_weights': True,
-    })
 
-    config['biattention'] = {
+def get_biattention_config():
+    return {'biattention': {
         'input_embedding': 'linear'
-    }
+    }}
 
-    config['optimizer'].update({
-        'stop_after_epochs': None,
-        'reduce_lr_on_spike': False,
-        'warmup_epochs': 20,
-        'learning_rate_schedule': 'cosine',
-        'min_lr': 1e-8,
-        'adam_beta1': 0.9,
-        'spike_tolerance': 4,
-        'weight_decay': 0.0,
-        'lr_decay': 0.99,
-        'adaptive_batch_size': True
-    })
+
+def get_shared_defaults():
+    config = get_prior_config()
+    config.update(get_optimizer_config())
+    config.update(get_transformer_config())
     return config
+
+
+def get_mothernet_default_config():
+    config = get_shared_defaults()
+    config.update(get_mothernet_config())
+    return config
+
+
+def get_additive_default_config():
+    config = get_shared_defaults()
+    config.update(get_mothernet_config())
+    config.update(get_additive_config())
+    return config
+
+
+def get_baam_default_config():
+    config = get_shared_defaults()
+    config.update(get_mothernet_config())
+    config.update(get_additive_config())
+    config.update(get_biattention_config())
+    return config
+
+
+def get_perceiver_default_config():
+    config = get_shared_defaults()
+    config['perceiver'] = {'num_latents': 512}
+    config.update(get_mothernet_config())
+    return config
+
+
+def get_tabpfn_default_config():
+    config = get_shared_defaults()
+    return config
+
+
+def get_batabpfn_default_config():
+    config = get_shared_defaults()
+    config.update(get_biattention_config())
+    return config
+
+
+def get_model_default_config(model_type):
+    if model_type == 'mothernet':
+        return get_mothernet_default_config()
+    elif model_type == 'batabpfn':
+        return get_batabpfn_default_config()
+    elif model_type == 'tabpfn':
+        return get_tabpfn_default_config()
+    elif model_type == 'additive':
+        return get_additive_default_config()
+    elif model_type == 'baam':
+        return get_baam_default_config()
+    elif model_type == 'perceiver':
+        return get_perceiver_default_config()
+    else:
+        raise ValueError(f"Unknown model type {model_type}")
