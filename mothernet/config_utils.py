@@ -1,4 +1,5 @@
 from collections.abc import MutableMapping
+from collections import defaultdict
 import torch
 
 
@@ -77,3 +78,7 @@ def update_config(config, extra_config):
         else:
             config[k] = v
     return config
+
+
+def nested_dict():
+    return defaultdict(nested_dict)

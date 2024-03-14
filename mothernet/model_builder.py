@@ -2,20 +2,19 @@ import os
 import subprocess as sp
 
 import torch
+from torch import nn
 
 import mothernet.models.encoders as encoders
 from mothernet.dataloader import get_dataloader
 from mothernet.train import train
 from mothernet.model_configs import get_model_default_config
-from torch import nn
-
 from mothernet.models.mothernet_additive import MotherNetAdditive
 from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
 from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
 from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
 from mothernet.models.mothernet import MotherNet
-
+from mothernet.config_utils import nested_dict
 
 try:
     from functools import cache
@@ -103,6 +102,7 @@ def get_y_encoder(config):
 
 def old_config_to_new(old_config, new_config):
     # this is not for restarting learning, only inference, so it doesn't convert orchestration parameters
+    # it takes a flat config and converts it to a nested one based on the structure of new_config
     old_config['learning_rate'] = old_config.pop('lr')
     if "bptt" in old_config:
         old_config['n_samples'] = old_config.pop('bptt')
@@ -134,6 +134,9 @@ def old_config_to_new(old_config, new_config):
         raise NotImplementedError("output_attention=False is not supported anymore")
     if old_config.pop("decoder_two_hidden_layers", False):
         old_config['decoder_hidden_layers'] = 2
+    else:
+        old_config['decoder_hidden_layers'] = 1
+
     ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a',
                        'differentiable', 'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample',
                        'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
@@ -145,31 +148,33 @@ def old_config_to_new(old_config, new_config):
                        'num_features_used', 'max_eval_pos']
     if old_config['model_type'] == 'tabpfn':
         # we used to store mothernet parameters in tabpfn models, but we no longer allow that
-        ignored_configs.extend(['decoder_embed_dim', 'decoder_hidden_size', 'predicted_hidden_layer_size', 'predicted_hidden_layers', 'weight_embedding_rank'])
+        ignored_configs.extend(['decoder_embed_dim', 'decoder_hidden_size', 'predicted_hidden_layer_size',
+                                'predicted_hidden_layers', 'weight_embedding_rank', 'decoder_hidden_layers'])
     if old_config['model_type'] in ['mothernet', 'additive']:
         ignored_configs.extend(['num_latents'])
     for k in ignored_configs:
         old_config.pop(k, None)
-
+    translated_config = nested_dict()
     for k, v in new_config.items():
         if k in old_config:
-            new_config[k] = old_config.pop(k)
+            translated_config[k] = old_config.pop(k)
         elif isinstance(v, dict):
             for k2, v2 in v.items():
                 if isinstance(v2, dict):
                     for k3, v3 in v2.items():
                         if k3 in old_config:
-                            new_config[k][k2][k3] = old_config.pop(k3)
+                            translated_config[k][k2][k3] = old_config.pop(k3)
                 elif k2 in old_config:
-                    new_config[k][k2] = old_config.pop(k2)
+                    translated_config[k][k2] = old_config.pop(k2)
     if len(old_config):
         raise ValueError(f"Unknown parameters: {old_config.keys()}")
-    return new_config
+    return translated_config
 
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None,
               scheduler=None, epoch_callback=None, load_model_strict=True):
     passed_config = config.copy()
+
     # backwards compatibility for model names
     if 'model_type' not in passed_config:
         if 'model_maker' in passed_config:
@@ -180,6 +185,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     if passed_config['model_type'] == 'mlp':
         passed_config['model_type'] = 'mothernet'
     config = get_model_default_config(passed_config['model_type'])
+
     if 'optimizer' not in passed_config:
         passed_config = old_config_to_new(passed_config, config)
     config.update(passed_config)
@@ -194,8 +200,14 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
     if 'y_encoder' not in passed_config['transformer']:
         config['transformer']['y_encoder'] = 'linear'
 
-    if 'mothernet' in config and 'decoder_activation' not in passed_config.get('mothernet', {}):
-        config['mothernet']['decoder_activation'] = 'relu'
+    if 'mothernet' in config:
+        if 'decoder_activation' not in passed_config['mothernet']:
+            config['mothernet']['decoder_activation'] = 'relu'
+        if 'decoder_type' not in passed_config['mothernet']:
+            config['mothernet']['decoder_type'] = 'output_attention'
+        if (passed_config['mothernet'].get('weight_embedding_rank', None) is not None
+                and 'low_rank_weights' not in passed_config['mothernet']):
+            config['mothernet']['low_rank_weights'] = True
 
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], device=device)
 

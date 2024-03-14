@@ -382,12 +382,10 @@ def get_model_string(config, num_gpus, device, parser):
     mm = config['model_type']
     model_type_string = 'mn' if mm in ["mlp", "mothernet"] else mm
     default_config_flat = flatten_dict(get_model_default_config(config['model_type']), only_last=True)
-    config_flat = flatten_dict(config, only_last=True)
+    config_flat = flatten_dict({k: v for k, v in config.items() if k != 'orchestration'}, only_last=True)
     config_string = ""
     for k in sorted(config_flat.keys()):
-        if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
-                 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type', 'extra_fast_test',
-                 'seed_everything', 'no_mlflow', 'num_gpus', 'device', 'nhead']:
+        if k in ['run_id', 'use_cpu', 'gpu_id', 'help', 'model_type', 'num_gpus', 'device', 'nhead']:
             continue
         v = config_flat[k]
         if k not in default_config_flat:

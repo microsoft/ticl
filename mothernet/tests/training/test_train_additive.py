@@ -9,7 +9,7 @@ from mothernet.prediction import MotherNetAdditiveClassifier
 
 from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
 
-TESTING_DEFAULTS_ADDITIVE = ['additive'] + TESTING_DEFAULTS
+TESTING_DEFAULTS_ADDITIVE = ['additive'] + TESTING_DEFAULTS + ['']
 TESTING_DEFAULTS_SHORT_ADDITIVE = ['additive'] + TESTING_DEFAULTS_SHORT
 
 
