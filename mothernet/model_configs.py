@@ -174,6 +174,7 @@ def get_additive_default_config():
     config.update(get_mothernet_config())
     config.update(get_additive_config())
     config['mothernet']['decoder_type'] = 'class_average'
+    config['mothernet']['decoder_hidden_size'] = 512
     return config
 
 
@@ -184,6 +185,7 @@ def get_baam_default_config():
     config.update(get_biattention_config())
     config['prior']['classification']['pad_zeros'] = False
     config['mothernet']['decoder_type'] = 'class_average'
+    config['mothernet']['decoder_hidden_size'] = 512
     return config
 
 
