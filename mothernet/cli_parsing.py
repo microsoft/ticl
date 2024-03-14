@@ -4,6 +4,9 @@ from mothernet.model_configs import get_model_default_config
 
 
 class GroupedArgParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        super().__init__(*args, **kwargs)
     # This extends the argparse.ArgumentParser to allow for nested namespaces via groups
     # nesting of groups is done by giving them names with dots in them
 
@@ -29,7 +32,7 @@ class GroupedArgParser(argparse.ArgumentParser):
 
 
 def make_model_level_argparser(description="Train transformer-style model on synthetic data"):
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(required=True, parser_class=GroupedArgParser,
                                        description="Choose the model type to train.", dest='model_type')
     mothernet_parser = subparsers.add_parser('mothernet', help='Train a mothernet model')
