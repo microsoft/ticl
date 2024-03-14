@@ -204,16 +204,18 @@ def get_batabpfn_default_config():
 
 def get_model_default_config(model_type):
     if model_type == 'mothernet':
-        return get_mothernet_default_config()
+        config = get_mothernet_default_config()
     elif model_type == 'batabpfn':
-        return get_batabpfn_default_config()
+        config = get_batabpfn_default_config()
     elif model_type == 'tabpfn':
-        return get_tabpfn_default_config()
+        config = get_tabpfn_default_config()
     elif model_type == 'additive':
-        return get_additive_default_config()
+        config = get_additive_default_config()
     elif model_type == 'baam':
-        return get_baam_default_config()
+        config = get_baam_default_config()
     elif model_type == 'perceiver':
-        return get_perceiver_default_config()
+        config = get_perceiver_default_config()
     else:
         raise ValueError(f"Unknown model type {model_type}")
+    config['model_type'] = model_type
+    return config

@@ -143,6 +143,11 @@ def old_config_to_new(old_config, new_config):
                        'no_mlflow', 'load_file', 'continue_run', 'load_strict', 'restart_scheduler', 'extra_fast_test', 'stop_after_epochs', 'shared_embedding',
                        'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything', 'model-type',
                        'num_features_used', 'max_eval_pos']
+    if old_config['model_type'] == 'tabpfn':
+        # we used to store mothernet parameters in tabpfn models, but we no longer allow that
+        ignored_configs.extend(['decoder_embed_dim', 'decoder_hidden_size', 'predicted_hidden_layer_size', 'predicted_hidden_layers', 'weight_embedding_rank'])
+    if old_config['model_type'] in ['mothernet', 'additive']:
+        ignored_configs.extend(['num_latents'])
     for k in ignored_configs:
         old_config.pop(k, None)
 
@@ -165,12 +170,16 @@ def old_config_to_new(old_config, new_config):
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None,
               scheduler=None, epoch_callback=None, load_model_strict=True):
     passed_config = config.copy()
+    # backwards compatibility for model names
     if 'model_type' not in passed_config:
         if 'model_maker' in passed_config:
-            config['model_type'] = config['model_maker']
+            passed_config['model_type'] = passed_config.pop('model_maker')
         else:
-            config['model_type'] = 'tabpfn'
-    config = get_model_default_config(config['model_type'])
+            passed_config['model_type'] = 'tabpfn'
+
+    if passed_config['model_type'] == 'mlp':
+        passed_config['model_type'] = 'mothernet'
+    config = get_model_default_config(passed_config['model_type'])
     if 'optimizer' not in passed_config:
         passed_config = old_config_to_new(passed_config, config)
     config.update(passed_config)
@@ -201,7 +210,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model_type = config['model_type']
 
-    if model_type in ["mothernet", "mlp"]:
+    if model_type == "mothernet":
         model = MotherNet(
             encoder, n_out=n_out,
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']
