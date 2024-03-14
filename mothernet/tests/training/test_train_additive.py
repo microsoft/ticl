@@ -13,14 +13,14 @@ TESTING_DEFAULTS_ADDITIVE = ['additive'] + TESTING_DEFAULTS
 TESTING_DEFAULTS_SHORT_ADDITIVE = ['additive'] + TESTING_DEFAULTS_SHORT
 
 
-def test_train_additive_defaults():
+def test_train_additive_old_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'output_attention'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
-    assert results['model_string'].startswith("additive_AFalse_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu")
+    assert results['model_string'].startswith("additive_AFalse_d128_H128_Doutput_attention_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
     assert count_parameters(results['model']) == 9690634
     assert results['loss'] == pytest.approx(1.205582857131958, rel=1e-5)
 
@@ -117,7 +117,7 @@ def test_train_additive_class_average_input_layer_norm():
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'True', '--decoder-type', 'output_attention'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -140,7 +140,8 @@ def test_train_additive_special_token_simple():
 def test_train_additive_input_bin_embedding_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'True', '--bin-embedding-rank', '8'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'True', '--bin-embedding-rank', '8',
+                                                          '--decoder-type', 'output_attention'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 8)
     assert count_parameters(results['model']) == 8975018
@@ -150,7 +151,8 @@ def test_train_additive_input_bin_embedding_rank():
 def test_train_additive_input_bin_embedding_linear():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'linear'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--input-bin-embedding', 'linear',
+                                                          '--decoder-type', 'output_attention'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert count_parameters(results['model']) == 9078730
@@ -160,7 +162,8 @@ def test_train_additive_input_bin_embedding_linear():
 def test_train_additive_factorized_output():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
+                                                          '--decoder-type', 'output_attention'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -172,7 +175,8 @@ def test_train_additive_factorized_output():
 def test_train_additive_factorized_output_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True', '--output-rank', '4'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True', '--output-rank', '4',
+                                                          '--decoder-type', 'output_attention'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64, 10)
     assert count_parameters(results['model']) == 1487514
@@ -193,7 +197,8 @@ def test_train_additive_class_average_factorized():
 def test_train_additive_factorized_in_and_out():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True', '--input-bin-embedding', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True', '--input-bin-embedding', 'True',
+                                                          '--decoder-type', 'output_attention'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].encoder.embedding.shape == (64, 16)
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
