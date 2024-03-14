@@ -29,7 +29,7 @@ def test_train_additive_class_average_shape_attention():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
-                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True'])
+                                                          '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.shape_functions.shape == (32, 64)
     assert results['model'].decoder.shape_function_keys.shape == (32, 4)
@@ -41,8 +41,8 @@ def test_train_additive_class_average_multihead_shape_attention():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
-                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
-                                                 '--shape-attention-heads', '4'])
+                                                          '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
+                                                          '--shape-attention-heads', '4'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.shape_functions.shape == (32, 64)
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
@@ -56,8 +56,8 @@ def test_train_additive_class_average_multihead_shape_attention_init():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
-                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
-                                                 '--shape-attention-heads', '4', '--shape-init', 'inverse'])
+                                                          '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
+                                                          '--shape-attention-heads', '4', '--shape-init', 'inverse'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.shape_functions.shape == (32, 64)
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
@@ -71,8 +71,8 @@ def test_train_additive_class_average_multihead_shape_attention_shape_functions8
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
-                                                 '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
-                                                 '--shape-attention-heads', '4', '--n-shape-functions', '8'])
+                                                          '--output-rank', '4', '--decoder-type', 'class_average', '--shape-attention', 'True',
+                                                          '--shape-attention-heads', '4', '--n-shape-functions', '8'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.shape_functions.shape == (8, 64)
     assert len(results['model'].decoder.shape_function_keys) == 4  # number of attention heads
@@ -112,7 +112,7 @@ def test_train_additive_class_average_input_layer_norm():
     assert isinstance(results['model'], MotherNetAdditive)
     assert count_parameters(results['model']) == 2205697
     assert results['loss'] == pytest.approx(0.7719804048538208, rel=1e-5)
-                                            
+
 
 def test_train_additive_input_bin_embedding():
     L.seed_everything(42)
@@ -183,7 +183,7 @@ def test_train_additive_class_average_factorized():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--factorized-output', 'True',
-                                                 '--output-rank', '4', '--decoder-type', 'class_average'])
+                                                          '--output-rank', '4', '--decoder-type', 'class_average'])
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model'].decoder.output_weights.shape == (4, 64)
     assert count_parameters(results['model']) == 1419034

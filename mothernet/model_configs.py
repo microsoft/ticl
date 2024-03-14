@@ -133,7 +133,7 @@ def get_mothernet_config():
         'decoder_hidden_layers': 1,
         'decoder_hidden_size': 2048,
         'decoder_activation': 'relu'}
-        }
+    }
 
 
 def get_additive_config():
@@ -147,7 +147,7 @@ def get_additive_config():
         'shape_attention_heads': 1,
         'n_shape_functions': 32,
         'shape_init': 'constant'
-        }}
+    }}
 
 
 def get_biattention_config():

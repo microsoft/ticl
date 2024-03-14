@@ -103,6 +103,6 @@ class MotherNet(MLPModelPredictor):
                 for attn in attns:
                     nn.init.zeros_(attn.out_proj.weight)
                     nn.init.zeros_(attn.out_proj.bias)
-            
+
     def inner_forward(self, train_x):
         return self.transformer_encoder(train_x)

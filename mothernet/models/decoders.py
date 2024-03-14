@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 
+
 class LinearModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024):
         super().__init__()
@@ -59,7 +60,7 @@ class AdditiveModelDecoder(nn.Module):
                 shape_functions = res[:, :, :-1].reshape(batch_size, self.n_out, -1, self.n_bins)
                 biases = res[:, :, -1]
             shape_functions = shape_functions.permute(0, 2, 3, 1)
-            
+
         else:
             assert res.shape[1] == self.num_output_layer_weights
             shape_functions = res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out)
@@ -299,7 +300,7 @@ class MLPModelDecoder(nn.Module):
             else:
                 raise ValueError("Only 1D and 2D shapes are supported")
             return res[:, :size].reshape(-1, *shape), res[:, size:]
-        
+
         if self.weight_embedding_rank is not None:
             second_shape = self.weight_embedding_rank
         else:

@@ -6,6 +6,7 @@ from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
 from mothernet.models.encoders import Linear
 
+
 class BiAttentionTabPFN(nn.Module):
     def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,

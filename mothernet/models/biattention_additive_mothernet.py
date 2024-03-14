@@ -68,7 +68,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, biattention=True,
                                                 decoder_activation=decoder_activation)
-            
+
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
         if self.input_layer_norm:
@@ -126,7 +126,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
             h += biases
         else:
             assert biases is None
-            
+
         if h.isnan().all():
             print("NAN")
             import pdb

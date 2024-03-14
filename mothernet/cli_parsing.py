@@ -70,7 +70,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     # general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, batabpfn, baam or tabpfn', default='mothernet')
     general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
-    
+
     optimizer = parser.add_argument_group('optimizer')
     optimizer.add_argument('-E', '--epochs', type=int, help='number of epochs')
     optimizer.add_argument('-l', '--learning-rate', type=float, help='maximum learning rate')
@@ -132,8 +132,8 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int, default=1)
         additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int, default=32)
         additive.add_argument('--shape-init', help="How to initialize shape functions. 'constant' for unit variance, 'inverse' for 1/(n_shape_functions * n_bins), "
-                            "'sqrt' for 1/sqrt(n_shape_functions * n_bins). 'inverse_bins' for 1/n_bins, 'inverse_sqrt_bins' for 1/sqrt(n_bins)",
-                            type=str, default='constant')
+                              "'sqrt' for 1/sqrt(n_shape_functions * n_bins). 'inverse_bins' for 1/n_bins, 'inverse_sqrt_bins' for 1/sqrt(n_bins)",
+                              type=str, default='constant')
         additive.set_defaults(**config['additive'])
 
     if model_type in ['perceiver']:

@@ -24,7 +24,7 @@ class MotherNetAdditive(nn.Module):
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         self.decoder_activation = decoder_activation
-    
+
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
@@ -66,7 +66,7 @@ class MotherNetAdditive(nn.Module):
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, decoder_activation=decoder_activation,)
-            
+
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
         if self.input_layer_norm:
