@@ -15,14 +15,14 @@ TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16
 def test_train_baam_shape_attention():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--decoder-type', 'class_average', '--factorized-output', 'True',
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--factorized-output', 'True',
                                            '--shape-attention', 'True', '--shape-attention-heads', '2', '--n-shape-functions', '16', '--shape-init', 'constant',
-                                           '--output-rank', '8', '--pad-zeros', 'False'])
+                                           '--output-rank', '8'])
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
-    assert results['model_string'].startswith("baam_AFalse_Dclass_average_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
-                                              "_n1_outputrank8_padzerosFalse_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_03_1")
+    assert results['model_string'].startswith("baam_AFalse_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
+                                              "_n1_outputrank8_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_03_1")
     assert count_parameters(results['model']) == 62740
     assert results['loss'] == pytest.approx(1.6953184604644775, rel=1e-5)
 
@@ -30,7 +30,7 @@ def test_train_baam_shape_attention():
 def test_train_baam_no_shape_attention():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--decoder-type', 'class_average', '--pad-zeros', 'False'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir])
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
@@ -41,7 +41,7 @@ def test_train_baam_no_shape_attention():
 def test_train_baam_input_layer_norm():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--decoder-type', 'class_average', '--pad-zeros', 'False', '--input-layer-norm', 'True'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--input-layer-norm', 'True'])
         # clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         # check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)

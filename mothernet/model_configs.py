@@ -92,7 +92,7 @@ def get_prior_config(max_features=100, n_samples=1024+128):
     prior['gp'] = gp_prior_config
 
     max_num_classes = 10
-    config_classsification_prior = {
+    classsification_prior = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
         "max_num_classes": max_num_classes,
         "num_classes": {'distribution': 'uniform_int', 'min': 2, 'max': max_num_classes},
@@ -108,7 +108,7 @@ def get_prior_config(max_features=100, n_samples=1024+128):
         'set_value_to_nan': .1,
         'pad_zeros': True,
     }
-    prior['classification'] = config_classsification_prior
+    prior['classification'] = classsification_prior
 
     dataloader = {
         "batch_size": 8,
@@ -173,6 +173,7 @@ def get_additive_default_config():
     config = get_shared_defaults()
     config.update(get_mothernet_config())
     config.update(get_additive_config())
+    config['mothernet']['decoder_type'] = 'class_average'
     return config
 
 
@@ -181,6 +182,8 @@ def get_baam_default_config():
     config.update(get_mothernet_config())
     config.update(get_additive_config())
     config.update(get_biattention_config())
+    config['prior']['classification']['pad_zeros'] = False
+    config['mothernet']['decoder_type'] = 'class_average'
     return config
 
 
@@ -199,6 +202,7 @@ def get_tabpfn_default_config():
 def get_batabpfn_default_config():
     config = get_shared_defaults()
     config.update(get_biattention_config())
+    config['prior']['classification']['pad_zeros'] = False
     return config
 
 
