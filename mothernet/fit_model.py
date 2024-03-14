@@ -20,7 +20,7 @@ def main(argv, extra_config=None):
     # extra config is used for testing purposes only
     # this is the generic entry point for training any model, so it has A LOT of options
     parser = make_model_level_argparser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(args=argv or ['--help'])
     config = get_model_default_config(args.model_type)
 
     device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
