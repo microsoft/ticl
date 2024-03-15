@@ -24,7 +24,13 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     x_src = model.encoder(X_onehot.unsqueeze(1)[:len(X_train)].float())
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
-    output = model.transformer_encoder(train_x)
+    if hasattr(model, "layers"):
+        # baam model
+        output = train_x
+        for mod in model.layers:
+            output = mod(output)
+    else:
+        output = model.transformer_encoder(train_x)
     weights, biases = model.decoder(output, ys)
     w = weights.squeeze()[:n_features, :, :n_classes]
     b = biases.squeeze()[:n_classes]
@@ -90,7 +96,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] != "additive":
+        if config['model_type'] not in ["additive", "baam"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device)
