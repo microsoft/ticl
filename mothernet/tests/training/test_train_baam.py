@@ -10,7 +10,8 @@ from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
 from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200']
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
+                    '--decoder-activation', 'relu']
 
 
 def test_train_baam_shape_attention():
@@ -22,7 +23,7 @@ def test_train_baam_shape_attention():
         #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         #check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
-    assert results['model_string'].startswith("baam_AFalse_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
+    assert results['model_string'].startswith("baam_AFalse_decoderactivationrelu_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
                                               "_n1_outputrank8_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_03_1")
     assert count_parameters(results['model']) == 24340
     assert results['loss'] == pytest.approx(1.5674822330474854, rel=1e-5)
