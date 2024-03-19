@@ -29,6 +29,21 @@ def test_train_baam_shape_attention():
     assert results['loss'] == pytest.approx(1.5674822330474854, rel=1e-5)
 
 
+def test_train_baam_nbins():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--n-bins', '512'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+        assert clf.w_.shape == (4, 512, 3)
+
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model_string'].startswith("baam_AFalse_decoderactivationrelu_e16_E8_nbins512_nsamples200_N2_numfeatures20_n1_tFalse_cpu_")
+    assert count_parameters(results['model']) == 288640
+    assert results['model'].decoder.mlp[2].weight.shape == (512, 512)
+    assert results['loss'] == pytest.approx(0.5595921874046326, rel=1e-5)
+
+
 def test_train_baam_no_shape_attention():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:

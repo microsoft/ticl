@@ -2,6 +2,7 @@ import tempfile
 
 import lightning as L
 import pytest
+import torch
 
 from mothernet.fit_model import main
 from mothernet.models.mothernet_additive import MotherNetAdditive
@@ -23,6 +24,21 @@ def test_train_additive_old_defaults():
     assert results['model_string'].startswith("additive_AFalse_decoderactivationrelu_d128_H128_Doutput_attention_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
     assert count_parameters(results['model']) == 9690634
     assert results['loss'] == pytest.approx(1.205582857131958, rel=1e-5)
+
+
+def test_train_additive_nbins():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--n-bins', '512'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+        assert clf.w_.shape == (4, 512, 3)
+
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model_string'].startswith("additive_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_nbins512_N4_n1_P64_L1_tFalse_cpu")
+    assert count_parameters(results['model']) == 13706497
+    assert results['model'].decoder.mlp[2].weight.shape[0] == 51201
+    assert results['loss'] == pytest.approx(1.32425856590271, rel=1e-5)
 
 
 def test_train_additive_class_average_shape_attention():

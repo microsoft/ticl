@@ -146,7 +146,8 @@ def get_additive_config():
         'shape_attention': False,
         'shape_attention_heads': 1,
         'n_shape_functions': 32,
-        'shape_init': 'constant'
+        'shape_init': 'constant',
+        'n_bins': 64,
     }}
 
 
