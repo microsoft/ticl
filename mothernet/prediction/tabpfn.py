@@ -220,7 +220,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
         eval_pos = self.X_.shape[0]
         try:
-            import pdb; pdb.set_trace()
             extend_features = self.c['prior']['classification']['pad_zeros']
         except KeyError:
             extend_features = True
