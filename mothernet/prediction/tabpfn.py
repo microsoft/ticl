@@ -122,7 +122,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.multiclass_decoder = multiclass_decoder
         self.seed = seed
         self.no_grad = no_grad
-        self.subsample_features = subsample_features
         self.epoch = epoch
         self.temperature = None
         self.scale = scale
@@ -183,11 +182,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.X_ = X
         self.y_ = y
 
-        if (X.shape[1] > self.max_num_features):
-            if self.subsample_features:
-                print('WARNING: The number of features for this classifier is restricted to ', self.max_num_features, ' and will be subsampled.')
-            else:
-                raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
+        if (X.shape[1] > self.max_num_features) and self.c['model_type'] == 'tabpfn':
+            raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
         if len(np.unique(y)) > self.max_num_classes:
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
@@ -221,12 +217,15 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
             if int(torch.isnan(X_full).sum()):
                 print('X contains nans and the gradient implementation is not designed to handel nans.')
-
         y_full = np.concatenate([self.y_, np.zeros(shape=X.shape[0])], axis=0)
         y_full = torch.tensor(y_full, device=self.device).float().unsqueeze(1)
 
         eval_pos = self.X_.shape[0]
-
+        try:
+            import pdb; pdb.set_trace()
+            extend_features = self.c['prior']['classification']['pad_zeros']
+        except KeyError:
+            extend_features = True
         prediction = transformer_predict(self.model, X_full, y_full, eval_pos,
                                          device=self.device,
                                          inference_mode=True,
@@ -240,7 +239,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          return_logits=return_logits,
                                          no_grad=self.no_grad,
                                          batch_size_inference=self.batch_size_inference, scale=self.scale,
-                                         max_features=self.max_num_features)
+                                         max_features=self.max_num_features, extend_features=extend_features)
         prediction_ = prediction.squeeze(0)
 
         return prediction_.detach().cpu().numpy() if self.no_grad else prediction_
