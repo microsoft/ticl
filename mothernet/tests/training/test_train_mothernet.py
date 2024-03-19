@@ -211,7 +211,7 @@ def test_train_low_rank():
                         '--decoder-activation', 'relu'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_minlr0_N4_n1_P64_reducelronspikeTrue_tFalse_W16_cpu")
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_minlr0_N4_n1_P64_reducelronspikeTrue_tFalse_W16_cpu_")
     assert count_parameters(results['model']) == 1067850
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 3402
