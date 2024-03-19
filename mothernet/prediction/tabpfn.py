@@ -78,7 +78,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
-                 subsample_features=False, verbose=False, scale=True, epoch=-1):
+                 verbose=False, scale=True, epoch=-1):
         """
         Initializes the classifier and loads the model.
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the
@@ -107,8 +107,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                but it is split into smaller/larger batches.
         :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test.
                For this to correctly function no_preprocessing_mode must be set to true.
-        :param subsample_features: If set to true and the number of features in the dataset exceeds self.max_features (100),
-                the features are subsampled to self.max_features.
         """
 
         self.verbose = verbose
