@@ -108,7 +108,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         if config['model_type'] not in ["additive", "baam"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
-        pad_zeros = config['prior']['classification']['pad_zeros']
+        try:
+            pad_zeros = config['prior']['classification']['pad_zeros']
+        except KeyError:
+            pad_zeros = True
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device, pad_zeros=pad_zeros)
         self.w_ = w
         self.b_ = b
