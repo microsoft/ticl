@@ -6,10 +6,12 @@ import pytest
 from mothernet.fit_model import main
 from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
 
-from mothernet.testing_utils import count_parameters
+from mothernet.prediction import TabPFNClassifier
+from mothernet.testing_utils import count_parameters, check_predict_iris
+
 
 TESTING_DEFAULTS = ['batabpfn', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200']
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200', '--save-every', '8']
 
 
 def test_train_batabpfn_basic():
@@ -26,6 +28,8 @@ def test_train_batabpfn_no_padding():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--input-embedding', 'linear'])
+        clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
     assert results['loss'] == pytest.approx(2.103300094604492, rel=1e-5)
