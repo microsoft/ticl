@@ -115,7 +115,7 @@ def get_runs(filter_string, experiment_id):
 
 
 def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1,
-                    filter_runs=("running", "reference"), mlflow_host=None, legend=False, inactive_legend=False):
+                    filter_runs=("running", "reference"), mlflow_host=None, legend=False, inactive_legend=False, filter_like=None):
     if mlflow_host is None:
         mlflow_host = os.environ.get("MLFLOW_HOSTNAME", None)
     if mlflow_host is None:
@@ -128,14 +128,20 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
     else:
         experiment_id = experiment_id or "0"
 
+    if filter_like is not None:
+        filter_string = f"attributes.run_name LIKE '{filter_like}'"
+        if filter_runs != "all":
+            filter_string += " AND "
+    else:
+        filter_string = ""
     runs = []
     if filter_runs == "all":
         runs = get_runs("", experiment_id)
     else:
         if "running" in filter_runs:
-            runs.extend(get_runs("attribute.status='RUNNING'", experiment_id))
+            runs.extend(get_runs("attribute.status='RUNNING'" + filter_string, experiment_id))
         if "reference" in filter_runs:
-            runs.extend(get_runs('tags.reference = "True"', experiment_id))
+            runs.extend(get_runs('tags.reference = "True"' + filter_string, experiment_id))
 
     losses_all = []
     already_seen = set()
