@@ -136,7 +136,7 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
         filter_string = ""
     runs = []
     if filter_runs == "all":
-        runs = get_runs("", experiment_id)
+        runs = get_runs(filter_string, experiment_id)
     else:
         if "running" in filter_runs:
             runs.extend(get_runs("attribute.status='RUNNING'" + filter_string, experiment_id))
