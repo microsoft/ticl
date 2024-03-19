@@ -52,7 +52,19 @@ def test_train_baam_no_shape_attention():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.7915395498275757, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.79153954982757572, rel=1e-5)
+
+
+def test_train_baam_fourier_features():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--fourier-features', '32'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model'].encoder.weight.shape == (16, 97)
+    assert count_parameters(results['model']) == 52176
+    assert results['loss'] == pytest.approx(0.6931385397911072, rel=1e-5)
 
 
 def test_train_baam_input_layer_norm():

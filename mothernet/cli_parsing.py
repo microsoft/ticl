@@ -124,6 +124,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--input-bin-embedding',
                               help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str)
         additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int)
+        additive.add_argument('--fourier-features', help="Number of Fourier features to add per feature. A value of 0 means off.", type=int)
         additive.add_argument('--n-bins', help="Number of bins", type=int)
         additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
         additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)

@@ -1,7 +1,14 @@
 import torch
 import torch.nn as nn
+import math
 
 from mothernet.utils import normalize_data
+
+
+def get_fourier_features(x, n_features):
+    div_term = torch.exp(torch.arange(0, n_features, 2, device=x.device) * (-math.log(10000.0) / n_features))
+    x = x.unsqueeze(-1)
+    return torch.cat([x, torch.sin(x * div_term), torch.cos(x * div_term)], -1)
 
 
 class NanHandlingEncoder(nn.Module):
