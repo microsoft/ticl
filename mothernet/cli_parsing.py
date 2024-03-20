@@ -154,6 +154,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", type=str)
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", type=int)
     classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", type=str2bool)
+    classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
 
     mlp_prior = parser.add_argument_group('prior.mlp')

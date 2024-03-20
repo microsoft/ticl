@@ -6,7 +6,7 @@ from mothernet.utils import (nan_handling_missing_for_a_reason_value, nan_handli
                              nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
                              remove_outliers)
 
-from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions
+from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions, safe_randint
 from .utils import CategoricalActivation, randomize_classes
 
 
@@ -115,8 +115,10 @@ class ClassificationAdapter:
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
-        # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
-        num_features_used = np.random.randint(1, num_features)
+        # num_features is constant for all batches, num_features_used is passed down to wrapped priors to change number of features
+        if self.h['feature_curriculum']:
+            num_features = min(num_features, epoch)
+        num_features_used = safe_randint(1, num_features)
         args = {'device': device, 'n_samples': n_samples, 'num_features': num_features_used,
                 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(**args)
