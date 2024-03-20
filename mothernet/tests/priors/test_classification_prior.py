@@ -78,10 +78,10 @@ def test_classification_adapter_curriculum():
     classification_config['pad_zeros'] = False
 
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=classification_config)
-    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features, 'epoch': 1}
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features, 'epoch': 0}
     x, y, y_ = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 1)
-    args['epoch'] = 2
+    args['epoch'] = 1
     x, y, y_ = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 1)
     args['epoch'] = 100
