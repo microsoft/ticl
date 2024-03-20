@@ -267,7 +267,7 @@ def predict(eval_xs, eval_ys, softmax_temperature, return_logits, model, eval_po
 
 
 def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, normalize_with_test, eval_position,
-                     categorical_feats, device, scale):
+                     categorical_feats, device, scale, normalize_by_used_features):
     import warnings
 
     if eval_xs.shape[1] > 1:
@@ -314,7 +314,8 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
 
     eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     # Rescale X
-    eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
+    if normalize_by_used_features:
+        eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
 
     return eval_xs.to(device)
 
@@ -364,7 +365,7 @@ def transformer_predict(
         else:
             eval_xs_ = preprocess_input(eval_xs_, eval_ys, preprocess_transform=preprocess_transform_configuration, max_features=max_features,
                                         normalize_with_test=normalize_with_test, eval_position=eval_position, categorical_feats=categorical_feats,
-                                        device=device, scale=scale)
+                                        device=device, scale=scale, normalize_by_used_features=extend_features)
             if no_grad:
                 eval_xs_ = eval_xs_.detach()
             eval_xs_transformed[preprocess_transform_configuration] = eval_xs_

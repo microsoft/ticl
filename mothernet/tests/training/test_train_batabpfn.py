@@ -32,7 +32,7 @@ def test_train_batabpfn_no_padding():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(2.103300094604492, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.106783151626587, rel=1e-5)
 
 
 def test_train_batabpfn_random_embedding():
@@ -55,7 +55,7 @@ def test_train_batabpfn_fourier_features():
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert results['model_string'].startswith("batabpfn_AFalse_e4_E8_nsamples200_N2_numfeatures20_n4_tFalse_cpu")
     assert count_parameters(results['model']) == 886
-    assert results['loss'] == pytest.approx(0.7749457061290741, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7783314734697342, rel=1e-5)
 
 
 def test_train_batabpfn_fourier_features_nans():
@@ -68,7 +68,7 @@ def test_train_batabpfn_fourier_features_nans():
                        extra_config)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 886
-    assert results['loss'] == pytest.approx(0.7936984598636627, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7951796352863312, rel=1e-5)
 
 
 def test_train_batabpfn_linear_features_nans():
@@ -81,7 +81,7 @@ def test_train_batabpfn_linear_features_nans():
                        extra_config)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(0.849937304854393, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.8524892330169678, rel=1e-5)
 
 
 def test_train_batabpfn_random_features_nans():

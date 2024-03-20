@@ -155,11 +155,10 @@ class ClassificationAdapter:
         # Cast to classification if enabled
         y = self.class_assigner(y).float()
 
-        x = normalize_by_used_features_f(
-            x, num_features_used, num_features)
-
         # Append empty features if enabled
         if self.h['pad_zeros']:
+            x = normalize_by_used_features_f(
+                x, num_features_used, num_features)
             x = torch.cat(
                 [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
