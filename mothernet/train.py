@@ -42,7 +42,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
         else:
             cm = nullcontext()
         with cm:
-            with autocast(dtype=torch.bfloat16) if scaler is not None else nullcontext():
+            with autocast(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16) if scaler is not None else nullcontext():
                 output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
                                if isinstance(data, tuple) else data.to(device), single_eval_pos=single_eval_pos)
 
