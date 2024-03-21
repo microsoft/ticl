@@ -1,5 +1,5 @@
 from mothernet.dataloader import get_dataloader
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_prior_config
 from mothernet.priors import BagPrior, ClassificationAdapterPrior
 from mothernet.distributions import LogUniformHyperparameter
 
@@ -10,10 +10,9 @@ import pytest
 
 def test_get_dataloader_base_config():
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     # config['num_causes'] = 3
     # config['num_features'] = 10
-    # num_features really doesn't work lol
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     batch_size = 16
@@ -46,25 +45,25 @@ def test_get_dataloader_base_config():
     # assert config_sample['sort_features'] == False
     # assert config_sample['noise_std'] == 0.016730402817820244
 
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 73
+    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 61
 
     x, y, y_ = dataloader.prior.get_batch(batch_size=batch_size, n_samples=n_samples, num_features=n_features, device="cpu")
-    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 74
+    assert (x[:, :, :] == 0).reshape(-1, x.shape[-1]).all(axis=0).int().argmax() == 83
     # assert config_sample['noise_std'] == 0.0004896957955177838
     # assert config_sample['sort_features'] == True
     # assert config_sample['is_causal'] == False
 
 
 @pytest.mark.parametrize("batch_size", [16, 32])
-@pytest.mark.parametrize("n_samples", [256, 512])
-@pytest.mark.parametrize("n_features", [100, 200, 311])
+@pytest.mark.parametrize("n_samples", [7, 256, 512, 2200])
+@pytest.mark.parametrize("n_features", [5, 15, 100, 200, 311])
 @pytest.mark.parametrize("prior_type", ["prior_bag", "boolean_only", "bag_boolean"])
 def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, prior_type):
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
-    dataloader_config['steps_per_epoch'] = 1
+    dataloader_config['num_steps'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
     prior_config['num_features'] = n_features
@@ -75,12 +74,24 @@ def test_get_dataloader_parameters_passed(batch_size, n_samples, n_features, pri
     assert y.shape == (n_samples, batch_size)
 
 
-def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
+def test_get_dataloader_no_nan_in_flexible():
+    # this apparently doesn't run long enough to find the occasional nan
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
-    dataloader_config['steps_per_epoch'] = 1
+    dataloader_config['num_steps'] = 100
+    dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, device="cpu")
+    for i, ((_, x, y), target_y, single_eval_pos) in enumerate(dataloader):
+        assert not x.isnan().any()
+
+
+def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features=111):
+    L.seed_everything(42)
+    config = get_prior_config()
+    prior_config = config['prior']
+    dataloader_config = config['dataloader']
+    dataloader_config['num_steps'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
     prior_config['num_features'] = n_features
@@ -99,7 +110,7 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
 
 def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_features=111):
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     dataloader_config['steps_per_epoch'] = 1

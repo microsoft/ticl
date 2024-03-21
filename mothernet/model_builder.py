@@ -2,18 +2,19 @@ import os
 import subprocess as sp
 
 import torch
+from torch import nn
 
 import mothernet.models.encoders as encoders
 from mothernet.dataloader import get_dataloader
 from mothernet.train import train
-from mothernet.model_configs import get_base_config
-from torch import nn
-
+from mothernet.model_configs import get_model_default_config
 from mothernet.models.mothernet_additive import MotherNetAdditive
 from mothernet.models.perceiver import TabPerceiver
 from mothernet.models.tabpfn import TabPFN
+from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
+from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
 from mothernet.models.mothernet import MotherNet
-
+from mothernet.config_utils import nested_dict
 
 try:
     from functools import cache
@@ -78,6 +79,8 @@ def load_model(path, device, verbose=False):
 
 
 def get_encoder(config):
+    if config['model_type'] == "batabpfn":
+        return encoders.Linear(1, config['transformer']['emsize'], replace_nan_by_zero=True)
     if ((config['prior']['classification']['nan_prob_no_reason'] > 0.0) or
         (config['prior']['classification']['nan_prob_a_reason'] > 0.0) or
             (config['prior']['classification']['nan_prob_unknown_reason'] > 0.0)):
@@ -99,6 +102,7 @@ def get_y_encoder(config):
 
 def old_config_to_new(old_config, new_config):
     # this is not for restarting learning, only inference, so it doesn't convert orchestration parameters
+    # it takes a flat config and converts it to a nested one based on the structure of new_config
     old_config['learning_rate'] = old_config.pop('lr')
     if "bptt" in old_config:
         old_config['n_samples'] = old_config.pop('bptt')
@@ -123,13 +127,16 @@ def old_config_to_new(old_config, new_config):
         old_config['max_fraction_uninformative'] = old_config.pop('boolean_max_fraction_uninformative')
     if old_config.pop("special_token", False):
         old_config['decoder_type'] = 'special_token'
-        
+
     if old_config.pop("prenorm", False):
         print("prenorm is not supported anymore")
     if not old_config.pop("output_attention", True):
         raise NotImplementedError("output_attention=False is not supported anymore")
     if old_config.pop("decoder_two_hidden_layers", False):
         old_config['decoder_hidden_layers'] = 2
+    else:
+        old_config['decoder_hidden_layers'] = 1
+
     ignored_configs = ['seq_len_used', 'verbose', 'noise_type', 'normalize_to_ranking', 'normalize_by_used_features', 'num_categorical_features_sampler_a',
                        'differentiable', 'flexible', 'bptt_extra_samples', 'dynamic_batch_size', 'new_mlp_per_example', 'batch_size_per_gp_sample',
                        'normalize_ignore_label_too', 'differentiable_hps_as_style', 'rotate_normalized_labels', 'canonical_y_encoder',
@@ -137,31 +144,48 @@ def old_config_to_new(old_config, new_config):
                        'perceiver_large_dataset', 'no_double_embedding', 'losses', 'wallclock_times', 'learning_rates', 'experiment', 'base_path',
                        'num_gpus', 'device', 'epoch_in_training', 'hid_factor', 'warm_start_from', 'continue_old_config', 'use_cpu', 'st_checkpoint_dir',
                        'no_mlflow', 'load_file', 'continue_run', 'load_strict', 'restart_scheduler', 'extra_fast_test', 'stop_after_epochs', 'shared_embedding',
-                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything', 'model-type']
+                       'n_samples_used', 'double_embedding', 'learing_rate', 'gpu_id', 'agg_gradients', 'boolean_prior', 'seed_everything', 'model-type',
+                       'num_features_used', 'max_eval_pos']
+    if old_config['model_type'] == 'tabpfn':
+        # we used to store mothernet parameters in tabpfn models, but we no longer allow that
+        ignored_configs.extend(['decoder_embed_dim', 'decoder_hidden_size', 'predicted_hidden_layer_size',
+                                'predicted_hidden_layers', 'weight_embedding_rank', 'decoder_hidden_layers'])
+    if old_config['model_type'] in ['mothernet', 'additive']:
+        ignored_configs.extend(['num_latents'])
     for k in ignored_configs:
         old_config.pop(k, None)
-
+    translated_config = nested_dict()
     for k, v in new_config.items():
         if k in old_config:
-            new_config[k] = old_config.pop(k)
+            translated_config[k] = old_config.pop(k)
         elif isinstance(v, dict):
             for k2, v2 in v.items():
                 if isinstance(v2, dict):
                     for k3, v3 in v2.items():
                         if k3 in old_config:
-                            new_config[k][k2][k3] = old_config.pop(k3)
+                            translated_config[k][k2][k3] = old_config.pop(k3)
                 elif k2 in old_config:
-                    new_config[k][k2] = old_config.pop(k2)
+                    translated_config[k][k2] = old_config.pop(k2)
     if len(old_config):
         raise ValueError(f"Unknown parameters: {old_config.keys()}")
-    return new_config
+    return translated_config
 
 
 def get_model(config, device, should_train=True, verbose=False, model_state=None, optimizer_state=None,
               scheduler=None, epoch_callback=None, load_model_strict=True):
-    # copy config. Maybe should be a deepcopy?
     passed_config = config.copy()
-    config = get_base_config()
+
+    # backwards compatibility for model names
+    if 'model_type' not in passed_config:
+        if 'model_maker' in passed_config:
+            passed_config['model_type'] = passed_config.pop('model_maker')
+        else:
+            passed_config['model_type'] = 'tabpfn'
+
+    if passed_config['model_type'] == 'mlp':
+        passed_config['model_type'] = 'mothernet'
+    config = get_model_default_config(passed_config['model_type'])
+
     if 'optimizer' not in passed_config:
         passed_config = old_config_to_new(passed_config, config)
     config.update(passed_config)
@@ -175,11 +199,15 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         config['prior']['n_samples'] = config['bptt']
     if 'y_encoder' not in passed_config['transformer']:
         config['transformer']['y_encoder'] = 'linear'
-    if 'model_type' not in passed_config:
-        if 'model_maker' in passed_config:
-            config['model_type'] = config['model_maker']
-        else:
-            config['model_type'] = 'tabpfn'
+
+    if 'mothernet' in config:
+        if 'decoder_activation' not in passed_config['mothernet']:
+            config['mothernet']['decoder_activation'] = 'relu'
+        if 'decoder_type' not in passed_config['mothernet']:
+            config['mothernet']['decoder_type'] = 'output_attention'
+        if (passed_config['mothernet'].get('weight_embedding_rank', None) is not None
+                and 'low_rank_weights' not in passed_config['mothernet']):
+            config['mothernet']['low_rank_weights'] = True
 
     dl = get_dataloader(prior_config=config['prior'], dataloader_config=config['dataloader'], device=device)
 
@@ -194,7 +222,7 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
 
     model_type = config['model_type']
 
-    if model_type in ["mothernet", "mlp"]:
+    if model_type == "mothernet":
         model = MotherNet(
             encoder, n_out=n_out,
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']
@@ -212,6 +240,20 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         model = TabPFN(
             encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
         )
+    elif model_type == "batabpfn":
+        # FIXME hack
+        config['transformer']['nhead'] = 4
+        model = BiAttentionTabPFN(
+            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer'], **config['biattention']
+        )
+    elif model_type == "baam":
+        # FIXME hack
+        config['transformer']['nhead'] = 4
+        model = BiAttentionMotherNetAdditive(
+            n_out=n_out, n_features=config['prior']['num_features'],
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive']
+        )
+
     else:
         raise ValueError(f"Unknown model type {model_type}.")
 

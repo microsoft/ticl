@@ -13,7 +13,7 @@ from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_model_default_config
 from mothernet.config_utils import flatten_dict
 
 
@@ -37,14 +37,6 @@ def get_mn_model(file_name):
 
 def get_module_path():
     return Path(__file__).parent.resolve()
-
-
-def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
-    """
-    Just sample any evaluation position with the same weight
-    :return: Sampler that can be fed to `train()` as `single_eval_pos_gen`.
-    """
-    return lambda: random.choices(range(min_len, max_len))[0]
 
 
 class SeqBN(nn.Module):
@@ -384,16 +376,16 @@ def init_device(gpu_id, use_cpu):
 
 
 def get_model_string(config, num_gpus, device, parser):
-    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
+    # get the subparser for the model type
+    subparser = parser._actions[1].choices[config['model_type']]
+    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in subparser._actions if arg.option_strings}
     mm = config['model_type']
-    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm in ["mlp", "mothernet"] else "tabpfn")
-    default_config_flat = flatten_dict(get_base_config(), only_last=True)
-    config_flat = flatten_dict(config, only_last=True)
+    model_type_string = 'mn' if mm in ["mlp", "mothernet"] else mm
+    default_config_flat = flatten_dict(get_model_default_config(config['model_type']), only_last=True)
+    config_flat = flatten_dict({k: v for k, v in config.items() if k != 'orchestration'}, only_last=True)
     config_string = ""
     for k in sorted(config_flat.keys()):
-        if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
-                 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type', 'extra_fast_test',
-                 'seed_everything', 'no_mlflow', 'num_gpus', 'device', 'nhead']:
+        if k in ['run_id', 'use_cpu', 'gpu_id', 'help', 'model_type', 'num_gpus', 'device', 'nhead']:
             continue
         v = config_flat[k]
         if k not in default_config_flat:

@@ -61,13 +61,15 @@ class MotherNet(MLPModelPredictor):
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
                  decoder_embed_dim=2048,
                  decoder_hidden_layers=1, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
-                 low_rank_weights=False, tabpfn_zero_weights=True):
+                 low_rank_weights=False, tabpfn_zero_weights=True, decoder_activation="relu"):
         super().__init__()
+        # decoder activation = "relu" is legacy behavior
         nhid = emsize * nhid_factor
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
+        self.decoder_activation = decoder_activation
         self.emsize = emsize
         self.encoder = encoder_layer
         self.y_encoder = y_encoder_layer
@@ -84,7 +86,7 @@ class MotherNet(MLPModelPredictor):
         self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=self.decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,
                                        decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, predicted_hidden_layers=predicted_hidden_layers,
-                                       weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights)
+                                       weight_embedding_rank=weight_embedding_rank, low_rank_weights=low_rank_weights, decoder_activation=decoder_activation)
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
 
@@ -101,6 +103,6 @@ class MotherNet(MLPModelPredictor):
                 for attn in attns:
                     nn.init.zeros_(attn.out_proj.weight)
                     nn.init.zeros_(attn.out_proj.bias)
-            
+
     def inner_forward(self, train_x):
         return self.transformer_encoder(train_x)

@@ -47,8 +47,8 @@ MotherNet uses the same preprocessing as the TabPFN work it builds upon, but we 
 Scaling of features is handled internally.
 
 ### Model Training
-Full model training code is provided. Training ``MotherNet`` is possible with ``python fit_model.py``. A GPU ID can be specified with ``-g GPU_ID``. See the help for more options.
-The results in the paper correspond to ``python fit_model.py -L 2``, though default values might change and no longer reflect the values in the paper.
+Full model training code is provided. Training ``MotherNet`` is possible with ``python fit_model.py mothernet``. A GPU ID can be specified with ``-g GPU_ID``. See the ``python fit_model.py mothernet -h`` and ``python fit_model.py -h`` for more options.
+The results in the paper correspond to ``python fit_model.py mothernet -L 2``, though default values might change and no longer reflect the values in the paper.
 Data-parallel Multi-GPU training is in principal supported using ``torchrun``.
 By default, experiments are tracked using MLFlow if the ``MLFLOW_HOSTNAME`` environment variable is set. Using MLFlow for a particular run can be disabled with the ``--no-mlflow`` argument.
 

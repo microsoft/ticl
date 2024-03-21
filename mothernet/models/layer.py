@@ -6,6 +6,27 @@ from torch.nn.modules.transformer import (Dropout, LayerNorm, Linear, Module, Mu
 from torch.utils.checkpoint import checkpoint
 
 
+class BiAttentionEncoderLayer(Module):
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
+                 layer_norm_eps=1e-5, batch_first=False, pre_norm=False,
+                 device=None, dtype=None, recompute_attn=False):
+        super().__init__()
+        self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
+        self.cross_sample_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
+
+    def forward(self, src: Tensor, src_mask: Optional[Tensor] = None) -> Tensor:
+        # src_mask is in with eval position, applies only to samples
+        # src comes in as samples x batch x feature x emsize
+        # reshape to features x (samples * batch) x emsize for cross-feature attention
+        post_feature_attention = self.cross_feature_attention(src.reshape(-1, *src.shape[2:]).transpose(0, 1), src_mask)
+        # from cross-feature attention, we get features x (samples * batch) x emsize
+        # reshape back to original, then reshape to samples x (batch * feature) x emsize
+        reshaped = post_feature_attention.transpose(0, 1).reshape(src.shape)
+        reshaped = reshaped.reshape(src.shape[0], -1, src.shape[-1])
+        res = self.cross_sample_attention(reshaped, src_mask)
+        return res.reshape(src.shape)
+
+
 class TransformerEncoderLayer(Module):
     r"""TransformerEncoderLayer is made up of self-attn and feedforward network.
     This standard encoder layer is based on the paper "Attention Is All You Need".
@@ -73,29 +94,7 @@ class TransformerEncoderLayer(Module):
         else:
             src_ = src
         if isinstance(src_mask, tuple):
-            # global attention setup
-            assert not self.self_attn.batch_first
-            assert src_key_padding_mask is None
-
-            global_src_mask, trainset_src_mask, valset_src_mask = src_mask
-
-            num_global_tokens = global_src_mask.shape[0]
-            num_train_tokens = trainset_src_mask.shape[0]
-
-            global_tokens_src = src_[:num_global_tokens]
-            train_tokens_src = src_[num_global_tokens:num_global_tokens+num_train_tokens]
-            global_and_train_tokens_src = src_[:num_global_tokens+num_train_tokens]
-            eval_tokens_src = src_[num_global_tokens+num_train_tokens:]
-
-            attn = partial(checkpoint, self.self_attn) if self.recompute_attn else self.self_attn
-
-            global_tokens_src2 = attn(global_tokens_src, global_and_train_tokens_src, global_and_train_tokens_src, None, True, global_src_mask)[0]
-            train_tokens_src2 = attn(train_tokens_src, global_tokens_src, global_tokens_src, None, True, trainset_src_mask)[0]
-            eval_tokens_src2 = attn(eval_tokens_src, src_, src_,
-                                    None, True, valset_src_mask)[0]
-
-            src2 = torch.cat([global_tokens_src2, train_tokens_src2, eval_tokens_src2], dim=0)
-
+            raise NotImplementedError
         elif isinstance(src_mask, int):
             assert src_key_padding_mask is None
             single_eval_position = src_mask

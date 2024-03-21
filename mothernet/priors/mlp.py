@@ -168,7 +168,6 @@ class MLP(torch.nn.Module):
         else:
             y = outputs[-1][:, :, :]
             x = causes
-
         if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()) or bool(torch.any(torch.isnan(y)).detach().cpu().numpy()):
             print('Nan caught in MLP model x:', torch.isnan(x).sum(), ' y:', torch.isnan(y).sum())
 

@@ -37,7 +37,7 @@ class Linear(nn.Linear):
 
 
 class BinEmbeddingEncoder(nn.Module):
-    def __init__(self, num_features, emsize, n_bins, rank, nonlinear=True):
+    def __init__(self, num_features, emsize, n_bins, rank, nonlinear=True, decoder_activation='relu'):
         super().__init__()
         self.num_features = num_features
         self.emsize = emsize
@@ -47,13 +47,19 @@ class BinEmbeddingEncoder(nn.Module):
         self.embedding = nn.Parameter(torch.randn(n_bins, rank))
         self.bias = nn.Parameter(torch.randn(1, 1, num_features, rank))
         self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
+        self.decoder_activation = decoder_activation
 
     def forward(self, x):
         # n samples, b batch, k feature, d bins, r rank
         embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding)
         if self.nonlinear:
             embedded = embedded + self.bias
-            embedded = torch.nn.functional.relu(embedded)
+            if self.decoder_activation == 'relu':
+                embedded = torch.nn.functional.relu(embedded)
+            elif self.decoder_activation == 'gelu':
+                embedded = torch.nn.functional.gelu(embedded)
+            else:
+                raise ValueError(f"decoder_activation {self.decoder_activation} not supported")
         # n samples, b batch, k feature, r rank, e embedding dim in transformer
         out = torch.einsum('nbkr,kre->nbe', embedded, self.weights)
         return out

@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
 
-from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
+
+from mothernet.models.layer import BiAttentionEncoderLayer
+from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
-from mothernet.models.layer import TransformerEncoderLayer
-from mothernet.models.tabpfn import TransformerEncoderDiffInit
+
 from mothernet.utils import SeqBN, get_init_method
 
 
-class MotherNetAdditive(nn.Module):
+class BiAttentionMotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
@@ -23,12 +24,10 @@ class MotherNetAdditive(nn.Module):
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
-        self.decoder_activation = decoder_activation
 
-        def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
+        def encoder_layer_creator(): return BiAttentionEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
-            if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
+        self.layers = nn.ModuleList([encoder_layer_creator() for _ in range(nlayers)])
         self.emsize = emsize
 
         if input_bin_embedding == "linear":
@@ -38,7 +37,7 @@ class MotherNetAdditive(nn.Module):
             self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True,
                                                decoder_activation=decoder_activation)
         elif input_bin_embedding in ["none", "False"] or isinstance(input_bin_embedding, bool) and not input_bin_embedding:
-            self.encoder = nn.Sequential(nn.Flatten(-2, -1), Linear(num_features=n_features*n_bins, emsize=emsize, replace_nan_by_zero=True))
+            self.encoder = Linear(num_features=n_bins, emsize=emsize, replace_nan_by_zero=True)
         else:
             raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
 
@@ -55,35 +54,39 @@ class MotherNetAdditive(nn.Module):
         self.input_layer_norm = input_layer_norm
         self.shape_attention = shape_attention
         self.tabpfn_zero_weights = tabpfn_zero_weights
+        self.decoder_activation = decoder_activation
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                           embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                           decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, rank=output_rank,
                                                           shape_attention=shape_attention, shape_attention_heads=shape_attention_heads,
-                                                          n_shape_functions=n_shape_functions, shape_init=shape_init, decoder_activation=decoder_activation,)
+                                                          n_shape_functions=n_shape_functions, shape_init=shape_init, biattention=True,
+                                                          decoder_activation=decoder_activation)
         else:
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
-                                                decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, decoder_activation=decoder_activation,)
+                                                decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, biattention=True,
+                                                decoder_activation=decoder_activation)
 
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
         if self.input_layer_norm:
-            self.input_norm = nn.LayerNorm(normalized_shape=(n_features, n_bins))
+            self.input_norm = nn.LayerNorm(normalized_shape=(n_bins))
         self.init_weights()
 
     def init_weights(self):
         if self.init_method is not None:
             self.apply(get_init_method(self.init_method))
         if self.tabpfn_zero_weights:
-            for layer in self.transformer_encoder.layers:
-                nn.init.zeros_(layer.linear2.weight)
-                nn.init.zeros_(layer.linear2.bias)
-                attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
-                for attn in attns:
-                    nn.init.zeros_(attn.out_proj.weight)
-                    nn.init.zeros_(attn.out_proj.bias)
+            for bilayer in self.layers:
+                for layer in [bilayer.cross_feature_attention, bilayer.cross_sample_attention]:
+                    nn.init.zeros_(layer.linear2.weight)
+                    nn.init.zeros_(layer.linear2.bias)
+                    attns = layer.self_attn if isinstance(layer.self_attn, nn.ModuleList) else [layer.self_attn]
+                    for attn in attns:
+                        nn.init.zeros_(attn.out_proj.weight)
+                        nn.init.zeros_(attn.out_proj.bias)
 
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
@@ -93,12 +96,12 @@ class MotherNetAdditive(nn.Module):
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
-            X_onehot_norm = self.input_norm(X_onehot)
-        else:
-            X_onehot_norm = X_onehot
-        x_src = self.encoder(X_onehot_norm)
+            X_onehot = self.input_norm(X_onehot)
+
+        x_src = self.encoder(X_onehot)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
-        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos]
+
+        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
 
         # FIXME Refactor into a function to share with mothernet
         if self.decoder_type in ["special_token", "special_token_simple"]:
@@ -109,11 +112,20 @@ class MotherNetAdditive(nn.Module):
             repeated_class_tokens = self.y_encoder.weight.T.unsqueeze(1).repeat(1, enc_train.shape[1], 1)
             enc_train = torch.cat([repeated_class_tokens, enc_train], 0)
 
-        output = self.transformer_encoder(enc_train)
+        if self.input_ln is not None:
+            enc_train = self.input_ln(enc_train)
+        output = enc_train
+        for mod in self.layers:
+            output = mod(output, src_mask=single_eval_pos)
+
         weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
+
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
-        h = h + biases
+        if self.factorized_output:
+            h += biases
+        else:
+            assert biases is None
 
         if h.isnan().all():
             print("NAN")
