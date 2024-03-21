@@ -434,6 +434,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+                mlflow.log_metric(key="epoch", value=epoch, step=epoch)
             if report is not None:
                 # synetune callback
                 report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
