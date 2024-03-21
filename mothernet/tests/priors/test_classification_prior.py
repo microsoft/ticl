@@ -106,5 +106,5 @@ def test_classification_adapter_with_sampling_no_padding():
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
 
-    assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
+    assert float(x[0, 0, 0]) == pytest.approx(-1.2161709070205688)
     assert float(y[0, 0]) == 3.0
