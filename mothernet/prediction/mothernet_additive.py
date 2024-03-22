@@ -23,6 +23,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         x_all_torch = xs
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins)
+    if model.input_layer_norm:
+        X_onehot = model.input_norm(X_onehot.float())
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     if x_src.ndim == 4:
