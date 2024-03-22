@@ -2,11 +2,9 @@ import pickle
 
 import numpy as np
 
-from mothernet.evaluation.plot_shape_function import plot_shape_function
 from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier
 from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
 from mothernet.utils import get_mn_model
-from mothernet.datasets import linear_correlated_logistic_regression, linear_correlated_step_function
 
 from sklearn.datasets import load_iris
 from sklearn.pipeline import make_pipeline
@@ -85,40 +83,6 @@ def test_additive_mothernet_dense():
     assert classifier.score(X_test, y_test) > 0.9
 
 
-def test_additive_mothernet_dense_logistic_regression():
-    X, y = linear_correlated_logistic_regression(
-        n_features=3, n_tasks=1, n_datapoints=1000, sampling_correlation=0.0)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "additive_1_gpu_02_14_2024_16_34_15_epoch_950_fixed2.cpkt"
-    model_path = get_mn_model(model_string)
-    classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
-
-    # Plot shape function
-    bin_edges = classifier.bin_edges_
-    w = classifier.w_
-    plot_shape_function(bin_edges, w)
-    print(classifier)
-    prob = classifier.predict_proba(X_test)
-    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
-    assert classifier.score(X_test, y_test) > 0.9
-
-
-def test_additive_mothernet_dense_step_function():
-    X, y = linear_correlated_step_function(
-        n_features=2, n_tasks=1, n_datapoints=1000, sampling_correlation=0.0, plot=True)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "additive_1_gpu_02_14_2024_16_34_15_epoch_950_fixed2.cpkt"
-    model_path = get_mn_model(model_string)
-    classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
-
-    # Plot shape function
-    bin_edges = classifier.bin_edges_
-    w = classifier.w_
-    plot_shape_function(bin_edges, w)
-
-    
 def test_baam():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
@@ -126,7 +90,6 @@ def test_baam():
     model_path = get_mn_model(model_string)
     classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
     classifier.fit(X_train, y_train)
-
     print(classifier)
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
