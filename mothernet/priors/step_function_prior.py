@@ -33,7 +33,7 @@ class StepFunctionPrior:
 
             # Compute the step function for the entire tensor at once
             step_function = ((x < x_gathered.permute(0, 2, 1)).int() + start) % 2
-            y = step_function.float().mean(dim=-1).round().float()
+            y = (step_function.float().sum(dim=-1) > 0).float()
 
             x = x.permute(1, 0, 2)  # (n_samples, batch_size, num_features)
             y = y.permute(1, 0)  # (n_samples, batch_size)
