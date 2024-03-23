@@ -233,6 +233,23 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
     return x, y, test_x, test_y
 
 
+def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', classifier=None):
+    from hyperfast import HyperFastClassifier
+    if classifier is None:
+        classifier = HyperFastClassifier(device=device, cat_features=cat_features)
+    tick = time.time()
+    classifier.fit(x, y)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
+
+
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
