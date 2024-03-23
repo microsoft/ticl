@@ -237,6 +237,8 @@ def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
     from hyperfast import HyperFastClassifier
     classifier = HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization)
     tick = time.time()
+    x = x.numpy()
+    y = y.numpy()
     classifier.fit(x, y)
     fit_time = time.time() - tick
     # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
