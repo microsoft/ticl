@@ -233,10 +233,9 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
     return x, y, test_x, test_y
 
 
-def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', classifier=None):
+def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize'):
     from hyperfast import HyperFastClassifier
-    if classifier is None:
-        classifier = HyperFastClassifier(device=device, cat_features=cat_features)
+    classifier = HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization)
     tick = time.time()
     classifier.fit(x, y)
     fit_time = time.time() - tick
