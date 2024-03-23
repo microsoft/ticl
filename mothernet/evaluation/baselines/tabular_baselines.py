@@ -235,10 +235,13 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
 
 def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize'):
     from hyperfast import HyperFastClassifier
+    print(f"device: {device}")
     classifier = HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization)
     tick = time.time()
     x = x.numpy()
     y = y.numpy()
+    test_x = test_x.numpy()
+    test_y = test_y.numpy()
     classifier.fit(x, y)
     fit_time = time.time() - tick
     # print('Train data shape', x.shape, ' Test data shape', test_x.shape)

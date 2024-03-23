@@ -135,7 +135,8 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
         results = []
         for (ds, max_time, split_number) in tqdm(list(itertools.product(datasets, max_times, split_numbers))):
             result = _eval_single_dataset_wrapper(
-                datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path, eval_positions=eval_positions, device=device, max_splits=1,
+                datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path, eval_positions=eval_positions,
+                device=device, max_splits=1,
                 overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
                 split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
