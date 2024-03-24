@@ -233,7 +233,7 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
     return x, y, test_x, test_y
 
 
-def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize'):
+def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize', **kwargs):
     from hyperfast import HyperFastClassifier
     print(f"device: {device}")
     classifier = HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization)
