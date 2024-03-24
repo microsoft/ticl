@@ -254,7 +254,7 @@ def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
     return metric, pred, times
 
 
-def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
+def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
 
