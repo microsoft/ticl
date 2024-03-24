@@ -1051,7 +1051,7 @@ param_grid_hyperopt['logistic'] = {
     'penalty': hp.choice('penalty', ['l1', 'l2', 'none']), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
 
 
-def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=True, impute=True, standardize=True, cat_features=cat_features)
 
     def clf_(**params):
@@ -1069,7 +1069,7 @@ param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators
                                         'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
 
 
-def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     from sklearn.ensemble import RandomForestClassifier
 
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
@@ -1127,7 +1127,7 @@ param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 6
                               }
 
 
-def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1145,7 +1145,7 @@ param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1, 16)
                               }
 
 
-def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1333,7 +1333,7 @@ param_grid_hyperopt['xgb'] = {
 }
 
 
-def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
+def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None, **kwargs):
     import xgboost as xgb
 
     # XGB Documentation:
