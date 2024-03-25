@@ -254,6 +254,30 @@ def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
     return metric, pred, times
 
 
+param_grid_hyperopt['hyperfast'] = {
+    'n_ensemble': hp.choice('n_ensemble', [1, 4, 8, 16, 32]),
+    'batch_size': hp.choice('batch_size', [1024, 2048]),
+    'nn_bias': hp.choice('nn_bias', [True, False]),
+    'stratify_sampling': hp.choice('stratify_sampling', [True, False]),
+    'optimization': hp.choice('optimization', [None, 'optimize', 'ensemble_optimize']),
+    'optimize_steps': hp.choice('optimize_steps',[1, 4, 8, 16, 32, 64, 128]),
+}
+
+
+def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize', no_tune=None, **kwargs):
+    from hyperfast import HyperFastClassifier
+    print(f"device: {device}")
+    x = x.numpy()
+    y = y.numpy()
+    test_x = test_x.numpy()
+    test_y = test_y.numpy()
+
+    def clf_(**params):
+        return HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization, **params)
+
+    return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time, no_tune)
+
+
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
