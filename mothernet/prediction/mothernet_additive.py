@@ -61,11 +61,11 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
 
 def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu", n_bins=64):
     if inference_device == "cpu":
-        # FIXME replacing nan with 0 as in TabPFN
-        X_test = np.nan_to_num(X_test, 0)
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
             binned = np.searchsorted(bins, col)
+            # Put NaN data on the last bin.
+            binned[np.isnan(col)] = n_bins - 1
             out += w[binned]
         out += biases
         if np.isnan(out).any():

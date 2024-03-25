@@ -130,9 +130,9 @@ def bin_data(data, n_bins, single_eval_pos=None):
 
     # Compute quantiles without nan data
     if single_eval_pos is None:
-        bin_edges = torch.quantile(data[~torch.isnan(data)], quantiles[1:-1], dim=0)
+        bin_edges = torch.nanquantile(data, quantiles[1:-1], dim=0)
     else:
-        bin_edges = torch.quantile(data[~torch.isnan(data)], quantiles[1:-1], dim=0)
+        bin_edges = torch.nanquantile(data[:single_eval_pos], quantiles[1:-1], dim=0)
 
     # FIXME extra data copy
     bin_edges = bin_edges.transpose(0, -1).contiguous()
