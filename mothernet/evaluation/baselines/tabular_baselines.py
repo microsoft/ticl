@@ -264,7 +264,7 @@ param_grid_hyperopt['hyperfast'] = {
 }
 
 
-def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize', no_tune=None, **kwargs):
+def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', no_tune=None, **kwargs):
     from hyperfast import HyperFastClassifier
     print(f"device: {device}")
     x = x.numpy()
@@ -273,7 +273,7 @@ def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max
     test_y = test_y.numpy()
 
     def clf_(**params):
-        return HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization, **params)
+        return HyperFastClassifier(device=device, cat_features=cat_features, **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time, no_tune)
 
