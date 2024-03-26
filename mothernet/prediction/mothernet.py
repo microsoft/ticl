@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler
 
 from mothernet.model_builder import load_model
-from mothernet.utils import normalize_by_used_features_f, normalize_data
+from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -199,6 +199,9 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         self.label_offset = label_offset
         self.inference_device = inference_device
         self.scale = scale
+        if path is None:
+            model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+        self.path = get_mn_model(model_string)
 
     def fit(self, X, y):
         self.X_train_ = X
