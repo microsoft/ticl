@@ -201,7 +201,8 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         self.scale = scale
         if path is None:
             model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
-        self.path = get_mn_model(model_string)
+            path = get_mn_model(model_string)
+        self.path = path
 
     def fit(self, X, y):
         self.X_train_ = X
