@@ -50,8 +50,8 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
 
-    ys = torch.Tensor(y_train).to(device)
-    xs = torch.Tensor(X_train).to(device)
+    ys = torch.Tensor(y_train.astype(float)).to(device)
+    xs = torch.Tensor(X_train.astype(float)).to(device)
     if scale:
         eval_xs_ = normalize_data(xs, eval_position)
     else:
@@ -149,6 +149,7 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
 
 
 def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu"):
+    X_train, X_test = np.array(X_train, dtype=float), np.array(X_test, dtype=float)
     if inference_device == "cpu":
         mean = np.nanmean(X_train, axis=0)
         std = np.nanstd(X_train, axis=0, ddof=1) + .000001
