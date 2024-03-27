@@ -209,6 +209,8 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
+        if len(le.classes_) > 10:
+            raise ValueError(f"Only 10 classes supported, found {len(le.classes_)}")
         model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
@@ -232,30 +234,6 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
-
-
-class PermutationsMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator):
-        self.base_estimator = base_estimator
-
-    def fit(self, X, y):
-        estimators = []
-        for i in range(len(np.unique(y))):
-            estimator = clone(self.base_estimator).set_params(label_offset=i)
-            estimators.append((str(i), estimator))
-        self.vc_ = VotingClassifier(estimators, voting='soft')
-        self.vc_.fit(X, y)
-        return self
-
-    def predict_proba(self, X):
-        return self.vc_.predict_proba(X)
-
-    def predict(self, X):
-        return self.vc_.predict(X)
-
-    @property
-    def classes_(self):
-        return self.vc_.classes_
 
 
 class ShiftClassifier(ClassifierMixin, BaseEstimator):
