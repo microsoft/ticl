@@ -125,8 +125,10 @@ def test_baam_with_nan():
 
 def test_baam_with_categoricals():
     X, y = load_iris(return_X_y=True)
-    X = np.random.normal(size=X.shape)
-    X = (X > 0.0).astype(np.int32)
+    X_rand = np.random.normal(size=X.shape)
+    X_rand_cat = (X_rand > 0.0).astype(np.int32)
+    # Mix Float and categorical features.
+    X = np.concatenate([X[:, :2], X_rand_cat[:, 2:]], axis=-1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
     model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
     model_path = get_mn_model(model_string)
