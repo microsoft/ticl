@@ -28,11 +28,21 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray):
 
 def eval_step_function():
     step_function_prior = StepFunctionPrior({'max_steps': 1, 'sampling': 'uniform'})
-    X, y, step_function = step_function_prior.get_batch(batch_size=1, n_samples=500, num_features=2)
+    X, y, step_function = step_function_prior._get_batch(batch_size=1, n_samples=500, num_features=2)
     X = X.squeeze().numpy()
     y = y.squeeze().numpy()
+
+    # Plot the shape function here
+    fig, ax = plt.subplots(ncols=2, sharey=True)
+    ax[0].plot(X[:, 0], step_function[0, :, 0], 'o')
+    ax[1].plot(X[:, 1], step_function[0, :, 1], 'o')
+    ax[0].set_xlabel('Feature 0')
+    ax[1].set_xlabel('Feature 1')
+    ax[0].set_ylabel('y')
+    plt.show()
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "baam_e64_inputlayernormTrue_N8_numfeatures2_priortypestep_function_03_21_2024_19_03_14_epoch_on_exit.cpkt"
+    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
     classifier.fit(X_train, y_train)

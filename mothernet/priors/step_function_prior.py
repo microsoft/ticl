@@ -8,8 +8,9 @@ class StepFunctionPrior:
     def __init__(self, config=None):
         self.config = parse_distributions(config or {})
 
-    def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None,
+    def _get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None,
                   single_eval_pos=None):
+        # small wrapper to sample from the prior but also return the individual step functions.
         with torch.no_grad():
             hypers = sample_distributions(self.config)
             if hypers['sampling'] == 'uniform':
@@ -37,4 +38,9 @@ class StepFunctionPrior:
 
             x = x.permute(1, 0, 2)  # (n_samples, batch_size, num_features)
             y = y.permute(1, 0)  # (n_samples, batch_size)
-            return x, y, y
+            return x, y, step_function
+
+    def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None,
+                  single_eval_pos=None):
+        x, y, step_function = self._get_batch(batch_size, n_samples, num_features, device, num_outputs, epoch,)
+        return x, y, y
