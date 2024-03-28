@@ -1,12 +1,7 @@
 import numpy as np
 import torch
 from mothernet.utils import default_device, normalize_data
-
-
-def safe_randint(low, high):
-    if high <= low:
-        return low
-    return np.random.randint(low, high)
+from mothernet.distributions import safe_randint
 
 
 def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):

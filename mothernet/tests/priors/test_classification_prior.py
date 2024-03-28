@@ -56,10 +56,6 @@ def test_classification_adapter_with_sampling():
     L.seed_everything(42)
     config = get_prior_config()
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=config['prior']['classification'])
-    # assert adapter.h['num_layers'] == 6
-    # assert adapter.h['num_features_used'] == 7
-    # assert adapter.h['num_classes'] == 3
-
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
     x, y, y_ = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, num_features)
@@ -68,6 +64,29 @@ def test_classification_adapter_with_sampling():
 
     assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
     assert float(y[0, 0]) == 3.0
+
+
+def test_classification_adapter_curriculum():
+    batch_size = 16
+    num_features = 100
+    n_samples = 900
+    # test the mlp prior
+    L.seed_everything(42)
+    config = get_prior_config()
+    classification_config = config['prior']['classification']
+    classification_config['feature_curriculum'] = True
+    classification_config['pad_zeros'] = False
+
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=classification_config)
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features, 'epoch': 0}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert x.shape == (n_samples, batch_size, 1)
+    args['epoch'] = 1
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert x.shape == (n_samples, batch_size, 1)
+    args['epoch'] = 100
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert x.shape == (n_samples, batch_size, 51)
 
 
 def test_classification_adapter_with_sampling_no_padding():
@@ -87,5 +106,5 @@ def test_classification_adapter_with_sampling_no_padding():
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
 
-    assert float(x[0, 0, 0]) == pytest.approx(-1.6891261339187622)
+    assert float(x[0, 0, 0]) == pytest.approx(-1.2161709070205688)
     assert float(y[0, 0]) == 3.0

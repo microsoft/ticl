@@ -78,7 +78,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
-                 subsample_features=False, verbose=False, scale=True, epoch=-1):
+                 verbose=False, scale=True, epoch=-1):
         """
         Initializes the classifier and loads the model.
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the
@@ -107,8 +107,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                but it is split into smaller/larger batches.
         :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test.
                For this to correctly function no_preprocessing_mode must be set to true.
-        :param subsample_features: If set to true and the number of features in the dataset exceeds self.max_features (100),
-                the features are subsampled to self.max_features.
         """
 
         self.verbose = verbose
@@ -122,7 +120,6 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.multiclass_decoder = multiclass_decoder
         self.seed = seed
         self.no_grad = no_grad
-        self.subsample_features = subsample_features
         self.epoch = epoch
         self.temperature = None
         self.scale = scale
@@ -161,7 +158,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             self.models_in_memory[model_key] = (model, c, results_file)
             # if len(self.models_in_memory) == 2:
             #    print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')
-        if c.get("model_type", "tabpfn") != "tabpfn":
+        if c.get("model_type", "tabpfn") not in ["tabpfn", "batabpfn"]:
             raise ValueError(f"Cannot load {c['model_type']} weights into TabPFNClassifier.")
         self.c = c
         # Support both new nested config as well as original flat config
@@ -183,11 +180,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.X_ = X
         self.y_ = y
 
-        if (X.shape[1] > self.max_num_features):
-            if self.subsample_features:
-                print('WARNING: The number of features for this classifier is restricted to ', self.max_num_features, ' and will be subsampled.')
-            else:
-                raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
+        if (X.shape[1] > self.max_num_features) and self.c['model_type'] == 'tabpfn':
+            raise ValueError("The number of features for this classifier is restricted to ", self.max_num_features)
         if len(np.unique(y)) > self.max_num_classes:
             raise ValueError("The number of classes for this classifier is restricted to ", self.max_num_classes)
         if X.shape[0] > 1024 and not overwrite_warning:
@@ -221,12 +215,14 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
 
             if int(torch.isnan(X_full).sum()):
                 print('X contains nans and the gradient implementation is not designed to handel nans.')
-
         y_full = np.concatenate([self.y_, np.zeros(shape=X.shape[0])], axis=0)
         y_full = torch.tensor(y_full, device=self.device).float().unsqueeze(1)
 
         eval_pos = self.X_.shape[0]
-
+        try:
+            extend_features = self.c['prior']['classification']['pad_zeros']
+        except KeyError:
+            extend_features = True
         prediction = transformer_predict(self.model, X_full, y_full, eval_pos,
                                          device=self.device,
                                          inference_mode=True,
@@ -240,7 +236,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                                          return_logits=return_logits,
                                          no_grad=self.no_grad,
                                          batch_size_inference=self.batch_size_inference, scale=self.scale,
-                                         max_features=self.max_num_features)
+                                         max_features=self.max_num_features, extend_features=extend_features)
         prediction_ = prediction.squeeze(0)
 
         return prediction_.detach().cpu().numpy() if self.no_grad else prediction_
@@ -271,7 +267,7 @@ def predict(eval_xs, eval_ys, softmax_temperature, return_logits, model, eval_po
 
 
 def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, normalize_with_test, eval_position,
-                     categorical_feats, device, scale):
+                     categorical_feats, device, scale, normalize_by_used_features):
     import warnings
 
     if eval_xs.shape[1] > 1:
@@ -318,7 +314,8 @@ def preprocess_input(eval_xs, eval_ys, preprocess_transform, max_features, norma
 
     eval_xs = remove_outliers(eval_xs, normalize_positions=-1 if normalize_with_test else eval_position)
     # Rescale X
-    eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
+    if normalize_by_used_features:
+        eval_xs = normalize_by_used_features_f(eval_xs, eval_xs.shape[-1], max_features)
 
     return eval_xs.to(device)
 
@@ -368,7 +365,7 @@ def transformer_predict(
         else:
             eval_xs_ = preprocess_input(eval_xs_, eval_ys, preprocess_transform=preprocess_transform_configuration, max_features=max_features,
                                         normalize_with_test=normalize_with_test, eval_position=eval_position, categorical_feats=categorical_feats,
-                                        device=device, scale=scale)
+                                        device=device, scale=scale, normalize_by_used_features=extend_features)
             if no_grad:
                 eval_xs_ = eval_xs_.detach()
             eval_xs_transformed[preprocess_transform_configuration] = eval_xs_

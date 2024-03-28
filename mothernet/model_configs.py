@@ -112,6 +112,7 @@ def get_prior_config(max_features=100, n_samples=1024+128):
         'nan_prob_a_reason': 0.0,
         'set_value_to_nan': .1,
         'pad_zeros': True,
+        'feature_curriculum': False,
     }
     prior['classification'] = classsification_prior
 
@@ -151,7 +152,9 @@ def get_additive_config():
         'shape_attention': False,
         'shape_attention_heads': 1,
         'n_shape_functions': 32,
-        'shape_init': 'constant'
+        'shape_init': 'constant',
+        'n_bins': 64,
+        'fourier_features': 0,
     }}
 
 

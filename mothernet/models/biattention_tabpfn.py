@@ -4,7 +4,7 @@ import math
 
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
-from mothernet.models.encoders import Linear
+from mothernet.models.encoders import Linear, get_fourier_features
 
 
 class BiAttentionTabPFN(nn.Module):
@@ -61,9 +61,7 @@ class BiAttentionTabPFN(nn.Module):
             x_src = x_src.unsqueeze(-1).nan_to_num(0) * proj
             x_src = self.encoder(x_src)
         elif self.input_embedding == "fourier":
-            div_term = torch.exp(torch.arange(0, self.emsize, 2, device=x_src.device) * (-math.log(10000.0) / self.emsize))
-            x_src = x_src.unsqueeze(-1)
-            x_fourier = torch.cat([x_src, torch.sin(x_src * div_term), torch.cos(x_src * div_term)], -1)
+            x_fourier = get_fourier_features(x_src, self.emsize)
             x_src = self.encoder(x_fourier)
         else:
             raise ValueError(f"input_embedding {self.input_embedding} not supported")

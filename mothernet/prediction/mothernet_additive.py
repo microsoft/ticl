@@ -5,6 +5,8 @@ from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
 from mothernet.models.mothernet_additive import bin_data
+from mothernet.models.encoders import get_fourier_features
+from mothernet.utils import normalize_data
 
 
 def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True):
@@ -25,6 +27,10 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins)
     if model.input_layer_norm:
         X_onehot = model.input_norm(X_onehot.float())
+    if getattr(model, "fourier_features", 0) > 0:
+        x_scaled = normalize_data(xs)
+        x_fourier = get_fourier_features(x_scaled, model.fourier_features)
+        X_onehot = torch.cat([X_onehot, x_fourier], -1)
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     if x_src.ndim == 4:

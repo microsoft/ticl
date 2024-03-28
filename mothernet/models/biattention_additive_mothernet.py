@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 
-
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder
-from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
+from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
+from mothernet.models.mothernet_additive import bin_data
 
 from mothernet.utils import SeqBN, get_init_method
 
@@ -18,12 +18,13 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu'):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
+        self.fourier_features = fourier_features
 
         def encoder_layer_creator(): return BiAttentionEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
                                                                     pre_norm=pre_norm, recompute_attn=recompute_attn)
@@ -37,7 +38,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
             self.encoder = BinEmbeddingEncoder(num_features=n_features, emsize=emsize, n_bins=n_bins, rank=bin_embedding_rank, nonlinear=True,
                                                decoder_activation=decoder_activation)
         elif input_bin_embedding in ["none", "False"] or isinstance(input_bin_embedding, bool) and not input_bin_embedding:
-            self.encoder = Linear(num_features=n_bins, emsize=emsize, replace_nan_by_zero=True)
+            self.encoder = Linear(num_features=n_bins + (fourier_features + 1 if fourier_features else 0), emsize=emsize, replace_nan_by_zero=True)
         else:
             raise ValueError(f"Unknown input_bin_embedding: {input_bin_embedding}")
 
@@ -95,10 +96,16 @@ class BiAttentionMotherNetAdditive(nn.Module):
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
-        if self.input_layer_norm:
-            X_onehot = self.input_norm(X_onehot)
+        if self.fourier_features > 0:
+            x_fourier = get_fourier_features(x_src_org, self.fourier_features)
+            X_features = torch.cat([X_onehot, x_fourier], -1)
+        else:
+            X_features = X_onehot
 
-        x_src = self.encoder(X_onehot)
+        if self.input_layer_norm:
+            X_features = self.input_norm(X_features)
+
+        x_src = self.encoder(X_features)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
 
         enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
@@ -133,22 +140,3 @@ class BiAttentionMotherNetAdditive(nn.Module):
             pdb.set_trace()
         return h
 
-
-def bin_data(data, n_bins, single_eval_pos=None):
-    # data is samples x batch x features
-    # FIXME treat NaN as separate bin
-    data_nona = torch.nan_to_num(data, nan=0)
-    quantiles = torch.arange(n_bins + 1, device=data.device) / n_bins
-    if single_eval_pos is None:
-        bin_edges = torch.quantile(data_nona, quantiles[1:-1], dim=0)
-    else:
-        bin_edges = torch.quantile(data_nona[:single_eval_pos], quantiles[1:-1], dim=0)
-    zero_padding = (data_nona == 0).all(axis=0)
-    # FIXME extra data copy
-    bin_edges = bin_edges.transpose(0, -1).contiguous()
-    data_nona = data_nona.transpose(0, -1).contiguous()
-    X_binned = torch.searchsorted(bin_edges, data_nona)
-    X_onehot = nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
-    # mask zero padding data
-    X_onehot[:, zero_padding, :] = 0
-    return X_onehot, bin_edges

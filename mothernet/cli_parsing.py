@@ -65,9 +65,8 @@ def make_model_level_argparser(description="Train transformer-style model on syn
 def argparser_from_config(parser, description="Train Mothernet"):
     model_type = parser.get_default('model_type')
     config = get_model_default_config(model_type)
-    # all models have general, optimiizer, dataloader and transformer parameters
+    # all models have general, optimizer, dataloader and transformer parameters
     general = parser.add_argument_group('general')
-    # general.add_argument('-m', '--model-type', type=str, help='model maker kind. mothernet, perceiver, additive, batabpfn, baam or tabpfn', default='mothernet')
     general.add_argument('-g', '--gpu-id', type=int, help='GPU id')
     general.add_argument('-C', '--use-cpu', help='whether to use cpu', action='store_true')
 
@@ -103,37 +102,39 @@ def argparser_from_config(parser, description="Train Mothernet"):
 
     if model_type in ['baam', 'batabpfn']:
         biattention = parser.add_argument_group('biattention')
-        biattention.add_argument('--input-embedding', type=str, help='input embedding type', default='linear')
+        biattention.add_argument('--input-embedding', type=str, help='input embedding type')
         biattention.set_defaults(**config['biattention'])
 
     if model_type in ['mothernet', 'additive', 'baam', 'perceiver']:
         mothernet = parser.add_argument_group('mothernet')
-        mothernet.add_argument('-d', '--decoder-embed-dim', type=int, help='decoder embedding size', default=1024)
-        mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size', default=2048)
-        mothernet.add_argument('--decoder-activation', type=str, help='decoder activation', default='relu')
+        mothernet.add_argument('-d', '--decoder-embed-dim', type=int, help='decoder embedding size')
+        mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
+        mothernet.add_argument('--decoder-activation', type=str, help='decoder activation')
         mothernet.add_argument('-D', '--decoder-type',
                                help="Decoder Type. 'output_attention', 'special_token' or 'average'.", type=str)
         mothernet.add_argument('-T', '--decoder-hidden-layers', help='How many hidden layers to use in decoder MLP', type=int)
-        mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.', default=512)
-        mothernet.add_argument('-L', '--predicted-hidden-layers', type=int, help='number of predicted hidden layers', default=2)
-        mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.', default=True)
-        mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.', default=32)
+        mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.')
+        mothernet.add_argument('-L', '--predicted-hidden-layers', type=int, help='number of predicted hidden layers')
+        mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.')
+        mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.')
         mothernet.set_defaults(**config['mothernet'])
 
     if model_type in ['additive', 'baam']:
         additive = parser.add_argument_group('additive')
         additive.add_argument('--input-bin-embedding',
-                              help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str, default="none")
-        additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int, default=16)
-        additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool, default=False)
-        additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int, default=16)
-        additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool, default=False)
-        additive.add_argument('--shape-attention', help="Whether to use attention in low rank output.", type=str2bool, default=False)
-        additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int, default=1)
-        additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int, default=32)
+                              help="'linear' for linear bin embedding, 'non-linear' for nonlinear, 'none' or False for no embedding.", type=str)
+        additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int)
+        additive.add_argument('--fourier-features', help="Number of Fourier features to add per feature. A value of 0 means off.", type=int)
+        additive.add_argument('--n-bins', help="Number of bins", type=int)
+        additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
+        additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)
+        additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool)
+        additive.add_argument('--shape-attention', help="Whether to use attention in low rank output.", type=str2bool)
+        additive.add_argument('--shape-attention-heads', help="Number of heads in shape attention.", type=int)
+        additive.add_argument('--n-shape-functions', help="Number of shape functions in shape attention.", type=int)
         additive.add_argument('--shape-init', help="How to initialize shape functions. 'constant' for unit variance, 'inverse' for 1/(n_shape_functions * n_bins), "
                               "'sqrt' for 1/sqrt(n_shape_functions * n_bins). 'inverse_bins' for 1/n_bins, 'inverse_sqrt_bins' for 1/sqrt(n_bins)",
-                              type=str, default='constant')
+                              type=str)
         additive.set_defaults(**config['additive'])
 
     if model_type in ['perceiver']:
@@ -153,6 +154,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", type=str)
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", type=int)
     classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", type=str2bool)
+    classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
 
     mlp_prior = parser.add_argument_group('prior.mlp')

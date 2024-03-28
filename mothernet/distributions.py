@@ -6,6 +6,12 @@ import numpy as np
 from scipy import stats
 
 
+def safe_randint(low, high):
+    if high <= low:
+        return low
+    return np.random.randint(low, high)
+
+
 def trunc_norm_sampler_f(mu, sigma):
     dist = stats.truncnorm((0 - mu) / sigma, (1000000 - mu) / sigma, loc=mu, scale=sigma)
 

@@ -180,3 +180,5 @@ mothernet/joblib_cache
 mothernet/catboost_info
 mothernet/mlruns
 mothernet/models_diff
+tabpfn/mlruns/
+tabpfn/results
