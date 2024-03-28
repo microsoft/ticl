@@ -233,7 +233,52 @@ def preprocess_impute(x, y, test_x, test_y, impute, one_hot, standardize, cat_fe
     return x, y, test_x, test_y
 
 
-def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False):
+def hyperfast_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', optimization='ensemble_optimize', **kwargs):
+    from hyperfast import HyperFastClassifier
+    print(f"device: {device}")
+    classifier = HyperFastClassifier(device=device, cat_features=cat_features, optimization=optimization)
+    tick = time.time()
+    x = x.numpy()
+    y = y.numpy()
+    test_x = test_x.numpy()
+    test_y = test_y.numpy()
+    classifier.fit(x, y)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
+
+
+param_grid_hyperopt['hyperfast'] = {
+    'n_ensemble': hp.choice('n_ensemble', [1, 4, 8, 16, 32]),
+    'batch_size': hp.choice('batch_size', [1024, 2048]),
+    'nn_bias': hp.choice('nn_bias', [True, False]),
+    'stratify_sampling': hp.choice('stratify_sampling', [True, False]),
+    'optimization': hp.choice('optimization', [None, 'optimize', 'ensemble_optimize']),
+    'optimize_steps': hp.choice('optimize_steps',[1, 4, 8, 16, 32, 64, 128]),
+}
+
+
+def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', no_tune=None, **kwargs):
+    from hyperfast import HyperFastClassifier
+    print(f"device: {device}")
+    x = x.numpy()
+    y = y.numpy()
+    test_x = test_x.numpy()
+    test_y = test_y.numpy()
+
+    def clf_(**params):
+        return HyperFastClassifier(device=device, cat_features=cat_features, **params)
+
+    return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time, no_tune)
+
+
+def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
 
@@ -1030,7 +1075,7 @@ param_grid_hyperopt['logistic'] = {
     'penalty': hp.choice('penalty', ['l1', 'l2', 'none']), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
 
 
-def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=True, impute=True, standardize=True, cat_features=cat_features)
 
     def clf_(**params):
@@ -1048,7 +1093,7 @@ param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators
                                         'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
 
 
-def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     from sklearn.ensemble import RandomForestClassifier
 
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
@@ -1106,7 +1151,7 @@ param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 6
                               }
 
 
-def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1124,7 +1169,7 @@ param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1, 16)
                               }
 
 
-def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1312,7 +1357,7 @@ param_grid_hyperopt['xgb'] = {
 }
 
 
-def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
+def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None, **kwargs):
     import xgboost as xgb
 
     # XGB Documentation:

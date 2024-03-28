@@ -27,7 +27,7 @@ def baseline_predict(metric_function, eval_xs, eval_ys, categorical_feats, metri
         eval_x[eval_pos:],
         eval_y[eval_pos:],
         categorical_feats,
-        metric_used=metric_used, max_time=max_time)
+        metric_used=metric_used, max_time=max_time, **kwargs)
     metrics += [metric]
     outputs += [output]
     best_configs += [best_config]

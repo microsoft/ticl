@@ -57,6 +57,18 @@ def test_mothernet_paper():
     assert classifier.score(X_test, y_test) > 0.9
 
 
+def test_mothernet_no_model_passed():
+    # this will also use the "paper" model above.
+    X, y = load_iris(return_X_y=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    classifier = MotherNetClassifier(device='cpu')
+    classifier.fit(X_train, y_train)
+    print(classifier)
+    prob = classifier.predict_proba(X_test)
+    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
+    assert classifier.score(X_test, y_test) > 0.9
+
+
 def test_mothernet_jan_2024():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
