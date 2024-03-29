@@ -129,16 +129,22 @@ class BiAttentionMotherNetAdditive(nn.Module):
         if self.input_ln is not None:
             enc_train = self.input_ln(enc_train)
         output = enc_train
-        for mod in self.layers:
-            output = mod(output, src_mask=single_eval_pos)
+        if len(self.layers):
+            for mod in self.layers:
+                output = mod(output, src_mask=single_eval_pos)
 
-        weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
+            weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
 
         if self.marginal_residual:
             class_averages = self.class_average_layer(X_onehot[:single_eval_pos], y_src_org[:single_eval_pos])
             # class averages are batch x outputs x features x bins
             # output is batch x features x bins x outputs
-            weights = weights + self.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
+            marginals = self.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
+            if len(self.layers):
+                weights = weights + marginals
+            else:
+                weights = marginals
+                biases = None
 
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)
