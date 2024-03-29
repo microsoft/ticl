@@ -287,7 +287,7 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
 
     if onehot:
         ohe = ColumnTransformer(transformers=[('cat', make_union(OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                sparse_output=False), 'passthrough'), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+                                sparse_output=False), SimpleImputer(strategy="constant", fill_value=0)), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
