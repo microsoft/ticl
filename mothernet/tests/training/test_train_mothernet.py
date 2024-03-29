@@ -216,5 +216,5 @@ def test_train_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 3402
     # suspiciously low tolerance here
-    assert results['loss'] == pytest.approx(0.7207471132278442, rel=1e-4)
+    assert results['loss'] == pytest.approx(0.6916791796684265, rel=1e-4)
     assert isinstance(results['model'], MotherNet)

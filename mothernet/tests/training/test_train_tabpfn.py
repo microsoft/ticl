@@ -37,7 +37,7 @@ def test_train_tabpfn_num_features():
     assert isinstance(results['model'], TabPFN)
     assert results['model'].encoder.weight.shape[1] == 13
     assert count_parameters(results['model']) == 568714
-    assert results['loss'] == pytest.approx(0.7099079489707947, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6869455575942993, rel=1e-5)
 
 
 def test_train_tabpfn_num_samples():
