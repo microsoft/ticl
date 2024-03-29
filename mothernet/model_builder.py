@@ -210,8 +210,8 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
             config['mothernet']['low_rank_weights'] = True
 
     y_encoder = get_y_encoder(config)
-
     encoder = get_encoder(config)
+
 
     if config['prior']['classification']['max_num_classes'] > 2:
         n_out = config['prior']['classification']['max_num_classes']
@@ -219,38 +219,32 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
         n_out = 1
 
     model_type = config['model_type']
+    n_features = config['prior']['num_features']
 
     if model_type == "mothernet":
         model = MotherNet(
-            encoder, n_out=n_out,
-            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet']
-        )
+            n_out=n_out,
+            y_encoder_layer=y_encoder, n_features=n_features, **config['transformer'], **config['mothernet'])
     elif model_type == 'perceiver':
-        model = TabPerceiver(
-            encoder_layer=encoder, n_out=n_out,
-            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['perceiver']
-        )
+        model = TabPerceiver(n_out=n_out, y_encoder_layer=y_encoder, n_features=n_features,
+                             **config['transformer'], **config['mothernet'], **config['perceiver'])
     elif model_type == "additive":
         model = MotherNetAdditive(
-            n_out=n_out, n_features=config['prior']['num_features'],
+            n_out=n_out, n_features=n_features,
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive'])
     elif model_type == "tabpfn":
-        model = TabPFN(
-            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer']
-        )
+        model = TabPFN(n_out=n_out, n_features=n_features, y_encoder_layer=y_encoder, **config['transformer'])
     elif model_type == "batabpfn":
         # FIXME hack
         config['transformer']['nhead'] = 4
         model = BiAttentionTabPFN(
-            encoder, n_out=n_out, y_encoder_layer=y_encoder, **config['transformer'], **config['biattention']
-        )
+            n_out=n_out, y_encoder_layer=y_encoder, **config['transformer'], **config['biattention'])
     elif model_type == "baam":
         # FIXME hack
         config['transformer']['nhead'] = 4
         model = BiAttentionMotherNetAdditive(
             n_out=n_out, n_features=config['prior']['num_features'],
-            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive']
-        )
+            y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive'])
 
     else:
         raise ValueError(f"Unknown model type {model_type}.")

@@ -21,7 +21,7 @@ def test_train_batabpfn_basic():
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert results['model_string'].startswith("batabpfn_AFalse_e4_E8_inputembeddinglinear_nsamples200_N2_numfeatures20_n1_padzerosTrue_tFalse_cpu")
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(2.108328342437744, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6889039278030396, rel=1e-5)
 
 
 def test_train_batabpfn_no_padding():
@@ -32,7 +32,7 @@ def test_train_batabpfn_no_padding():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(2.106783151626587, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6882094144821167, rel=1e-5)
 
 
 def test_train_batabpfn_random_embedding():
@@ -81,7 +81,7 @@ def test_train_batabpfn_linear_features_nans():
                        extra_config)
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert count_parameters(results['model']) == 870
-    assert results['loss'] == pytest.approx(0.8524892330169678, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.9768581986427307, rel=1e-5)
 
 
 def test_train_batabpfn_random_features_nans():

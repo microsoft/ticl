@@ -3,11 +3,11 @@ from math import pi
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from einops.layers.torch import Reduce
 from torch import einsum, nn
 
 from mothernet.models.decoders import MLPModelDecoder
 from mothernet.models.mothernet import MLPModelPredictor
+from mothernet.models.encoders import Linear
 
 # helpers
 
@@ -117,6 +117,7 @@ class TabPerceiver(MLPModelPredictor):
         self,
         *,
         nlayers,
+        n_features,
         emsize=512,
         input_axis=1,
         num_latents=512,
@@ -134,7 +135,6 @@ class TabPerceiver(MLPModelPredictor):
         decoder_embed_dim=512,
         decoder_hidden_layers=1,
         y_encoder_layer=None,
-        encoder_layer=None,
         predicted_hidden_layers=1,
         recompute_attn=None,  # ignored
         nhid_factor=None,  # ignored
@@ -173,7 +173,7 @@ class TabPerceiver(MLPModelPredictor):
         """
         super().__init__()
         self.y_encoder = y_encoder_layer
-        self.encoder = encoder_layer
+        self.encoder = Linear(n_features, emsize, replace_nan_by_zero=True)
         self.input_axis = input_axis
         # input_dim is the input to the transformer, which is after the first linear embedding, so it's emsize
         self.input_dim = emsize

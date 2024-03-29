@@ -26,7 +26,7 @@ def test_train_perceiver_defaults():
     assert count_parameters(model.encoder) == 12928
     assert count_parameters(model.layers) == 664576
     assert count_parameters(model) == 1744842
-    assert results['loss'] == pytest.approx(0.8764909505844116)
+    assert results['loss'] == pytest.approx(1.7291951179504395)
     assert results['model_string'].startswith("perceiver_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu")
 
 
@@ -36,7 +36,7 @@ def test_train_perceiver_two_hidden_layers():
         results = main(["perceiver", '-B', tmpdir] + TESTING_DEFAULTS + ['-L', '2'])
     assert isinstance(results['model'], TabPerceiver)
     assert count_parameters(results['model']) == 2281482
-    assert results['loss'] == pytest.approx(0.7871301770210266)
+    assert results['loss'] == pytest.approx(1.5008207559585571)
 
 
 def test_train_perceiver_low_rank():
@@ -47,4 +47,4 @@ def test_train_perceiver_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 2314
     assert count_parameters(results['model']) == 1126666
-    assert results['loss'] == pytest.approx(0.7207471132278442, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.697272777557373, rel=1e-5)

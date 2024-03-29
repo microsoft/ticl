@@ -3,9 +3,11 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder
 
 from mothernet.models.encoders import OneHotAndLinear
-from mothernet.models.decoders import LinearModelDecoder, MLPModelDecoder
+from mothernet.models.decoders import MLPModelDecoder
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
+from mothernet.models.encoders import Linear
+
 from mothernet.utils import SeqBN, get_init_method
 
 
@@ -55,7 +57,7 @@ class MLPModelPredictor(nn.Module):
 
 
 class MotherNet(MLPModelPredictor):
-    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
+    def __init__(self, *, n_out, emsize, nhead, nhid_factor, nlayers, n_features, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
@@ -71,7 +73,7 @@ class MotherNet(MLPModelPredictor):
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.decoder_activation = decoder_activation
         self.emsize = emsize
-        self.encoder = encoder_layer
+        self.encoder = Linear(n_features, emsize, replace_nan_by_zero=True)
         self.y_encoder = y_encoder_layer
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
