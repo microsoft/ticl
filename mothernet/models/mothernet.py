@@ -73,7 +73,6 @@ class MotherNet(MLPModelPredictor):
         self.emsize = emsize
         self.encoder = encoder_layer
         self.y_encoder = y_encoder_layer
-        self.decoder = LinearModelDecoder(emsize=emsize, hidden_size=nhid, n_out=n_out)
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method
         self.efficient_eval_masking = efficient_eval_masking
