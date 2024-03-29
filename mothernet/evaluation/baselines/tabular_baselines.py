@@ -280,13 +280,14 @@ def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max
 
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
+    from sklearn.pipeline import make_union
     from sklearn.impute import SimpleImputer
 
     from mothernet.prediction.tabpfn import TabPFNClassifier
 
     if onehot:
-        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe = ColumnTransformer(transformers=[('cat', make_union(OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                sparse_output=False), 'passthrough'), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
