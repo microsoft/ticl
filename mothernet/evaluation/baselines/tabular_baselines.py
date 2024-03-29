@@ -260,7 +260,7 @@ param_grid_hyperopt['hyperfast'] = {
     'nn_bias': hp.choice('nn_bias', [True, False]),
     'stratify_sampling': hp.choice('stratify_sampling', [True, False]),
     'optimization': hp.choice('optimization', [None, 'optimize', 'ensemble_optimize']),
-    'optimize_steps': hp.choice('optimize_steps',[1, 4, 8, 16, 32, 64, 128]),
+    'optimize_steps': hp.choice('optimize_steps', [1, 4, 8, 16, 32, 64, 128]),
 }
 
 
