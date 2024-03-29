@@ -10,6 +10,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
+from sklearn.feature_selection import SelectKBest
 from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
@@ -311,7 +312,8 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
                 ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
                                     sparse_output=False)
                 ct = make_column_transformer((ohe, self.cat_features), remainder=cont_processing)
-                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)), ('shift_classifier', estimator)])
+                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
+                                      ('select', SelectKBest(k=100)), ('shift_classifier', estimator)])
             else:
                 estimator = Pipeline([('cont_processing', cont_processing), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
                                       ('shift_classifier', estimator)])

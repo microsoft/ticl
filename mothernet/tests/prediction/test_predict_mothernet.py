@@ -59,3 +59,23 @@ def test_mothernet_preprocessing_ensemble(categorical):
     assert pipeline.score(X_test, y_test) > 0.9
 
     assert len(classifier.vc_.estimators_) == 32
+
+
+def test_mothernet_preprocessing_categorical_pruning():
+    X = np.random.rand(100, 99)
+    X[:, 2] = np.random.randint(0, 10, 100)
+    X[:, 4] = np.random.randint(0, 10, 100)
+    y = X[:, 8] > 0.5
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+    model_path = get_mn_model(model_string)
+    cat_features = [2, 4]
+    classifier = EnsembleMeta(MotherNetClassifier(device='cpu', path=model_path), n_estimators=32,
+                              onehot=True, cat_features=cat_features)
+    pipeline = make_pipeline(StandardScaler(), classifier)
+    pipeline.fit(X_train, y_train)
+    prob = pipeline.predict_proba(X_test)
+    assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
+    assert pipeline.score(X_test, y_test) > 0.9
+
+    assert len(classifier.vc_.estimators_) == 32
