@@ -20,7 +20,8 @@ class LinearModelDecoder(nn.Module):
 
 class AdditiveModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_features=100, n_bins=64, n_out=10, hidden_size=1024, predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, weight_embedding_rank=None, decoder_type="output_attention", biattention=False, decoder_activation='relu'):
+                 decoder_hidden_layers=1, nhead=4, weight_embedding_rank=None, decoder_type="output_attention", biattention=False, decoder_activation='relu',
+                 shape_init=None):
         super().__init__()
         self.emsize = emsize
         self.n_features = n_features
@@ -45,6 +46,10 @@ class AdditiveModelDecoder(nn.Module):
             self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
 
         self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
+        if shape_init == "zero":
+            with torch.no_grad():
+                self.mlp[2].weight.data.fill_(0)
+                self.mlp[2].bias.data.fill_(0)
 
     def forward(self, x, y_src):
         batch_size = x.shape[1]
