@@ -12,6 +12,7 @@ from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler
 
 from mothernet.model_builder import load_model
 from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
+from mothernet.evaluation.baselines.distill_mlp import TorchMLP
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -231,6 +232,50 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
+
+    def predict(self, X):
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
+
+
+class DestroyEverythingAppeaseReviewersClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None, device="cuda", inference_device=None, learning_rate=1e-3, n_epochs=10, verbose=0, weight_decay=0):
+        self.path = path
+        self.device = device
+        self.inference_device = inference_device or device
+        if path is None:
+            model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+            path = get_mn_model(model_string)
+        self.path = path
+        self.learning_rate = learning_rate
+        self.n_epochs = n_epochs
+        self.verbose = verbose
+        self.weight_decay = weight_decay
+
+    def fit(self, X, y):
+        self.X_train_ = X
+        le = LabelEncoder()
+        y = le.fit_transform(y)
+        if len(le.classes_) > 10:
+            raise ValueError(f"Only 10 classes supported, found {len(le.classes_)}")
+        model, config = load_model(self.path, device=self.device)
+        if "model_type" not in config:
+            config['model_type'] = config.get("model_maker", 'tabpfn')
+        if config['model_type'] not in ["mlp", "mothernet"]:
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
+        model.to(self.device)
+        layers = extract_mlp_model(model, X, y, device=self.device,
+                                   inference_device=self.inference_device, scale=True)
+        import pdb; pdb.set_trace()
+        hidden_size = config['predicted_hidden_size']
+        n_layers = config['predicted_layers']
+        self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose)
+        self.parameters_ = layers
+        self.classes_ = le.classes_
+        return self
+
+    def predict_proba(self, X):
+        return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=True, inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
