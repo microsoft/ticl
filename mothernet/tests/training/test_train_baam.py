@@ -26,7 +26,7 @@ def test_train_baam_shape_attention():
     assert results['model_string'].startswith("baam_AFalse_decoderactivationrelu_e16_E8_factorizedoutputTrue_nsamples200_nshapefunctions16_N2_numfeatures20"
                                               "_n1_outputrank8_shapeattentionTrue_shapeattentionheads2_tFalse_cpu_")
     assert count_parameters(results['model']) == 24340
-    assert results['loss'] == pytest.approx(1.5674822330474854, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6722398400306702, rel=1e-5)
 
 
 def test_train_baam_nbins():
@@ -41,7 +41,7 @@ def test_train_baam_nbins():
     assert results['model_string'].startswith("baam_AFalse_decoderactivationrelu_e16_E8_nbins512_nsamples200_N2_numfeatures20_n1_tFalse_cpu_")
     assert count_parameters(results['model']) == 288640
     assert results['model'].decoder.mlp[2].weight.shape == (512, 512)
-    assert results['loss'] == pytest.approx(0.5595921874046326, rel=1e-5)
+    assert results['loss'] == pytest.approx(1.5397337675094604, rel=1e-5)
 
 
 def test_train_baam_no_shape_attention():
@@ -52,7 +52,7 @@ def test_train_baam_no_shape_attention():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.79153954982757572, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.71629798412323, rel=1e-5)
 
 
 def test_train_baam_fourier_features():
@@ -64,7 +64,7 @@ def test_train_baam_fourier_features():
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert results['model'].encoder.weight.shape == (16, 97)
     assert count_parameters(results['model']) == 52176
-    assert results['loss'] == pytest.approx(0.6955295205116272, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6272056102752686, rel=1e-5)
 
 
 def test_train_baam_input_layer_norm():
@@ -73,4 +73,4 @@ def test_train_baam_input_layer_norm():
         results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--input-layer-norm', 'True'])
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51776
-    assert results['loss'] == pytest.approx(0.735449492931366, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.6908526420593262, rel=1e-5)

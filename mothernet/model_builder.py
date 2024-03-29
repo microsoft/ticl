@@ -78,18 +78,6 @@ def load_model(path, device, verbose=False):
     return model, config_sample
 
 
-def get_encoder(config):
-    if config['model_type'] == "batabpfn":
-        return encoders.Linear(1, config['transformer']['emsize'], replace_nan_by_zero=True)
-    if ((config['prior']['classification']['nan_prob_no_reason'] > 0.0) or
-        (config['prior']['classification']['nan_prob_a_reason'] > 0.0) or
-            (config['prior']['classification']['nan_prob_unknown_reason'] > 0.0)):
-        encoder = encoders.NanHandlingEncoder(config['prior']['num_features'], config['transformer']['emsize'])
-    else:
-        encoder = encoders.Linear(config['prior']['num_features'], config['transformer']['emsize'], replace_nan_by_zero=True)
-    return encoder
-
-
 def get_y_encoder(config):
     if config['transformer']['y_encoder'] == 'one_hot':
         y_encoder = encoders.OneHotAndLinear(config['prior']['classification']['max_num_classes'], emsize=config['transformer']['emsize'])
@@ -210,8 +198,6 @@ def get_model(config, device, should_train=True, verbose=False, model_state=None
             config['mothernet']['low_rank_weights'] = True
 
     y_encoder = get_y_encoder(config)
-    encoder = get_encoder(config)
-
 
     if config['prior']['classification']['max_num_classes'] > 2:
         n_out = config['prior']['classification']['max_num_classes']
