@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from mothernet.models.layer import BiAttentionEncoderLayer
-from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder
+from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder, SummaryLayer
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
 from mothernet.models.utils import bin_data
 
@@ -18,7 +18,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu', fourier_features=0):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -56,6 +56,11 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.shape_attention = shape_attention
         self.tabpfn_zero_weights = tabpfn_zero_weights
         self.decoder_activation = decoder_activation
+        self.marginal_residual = marginal_residual
+        if marginal_residual:
+            self.marginal_residual_layer = nn.Linear(n_bins, n_bins, bias=False)
+            self.marginal_residual_layer.weight.data = torch.eye(n_bins)
+            self.class_average_layer = SummaryLayer(decoder_type="class_average", emsize=n_bins, n_out=n_out)
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -128,6 +133,12 @@ class BiAttentionMotherNetAdditive(nn.Module):
             output = mod(output, src_mask=single_eval_pos)
 
         weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
+
+        if self.marginal_residual:
+            class_averages = self.class_average_layer(X_onehot[:single_eval_pos], y_src_org[:single_eval_pos])
+            # class averages are batch x outputs x features x bins
+            # output is batch x features x bins x outputs
+            weights = weights + self.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
 
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)

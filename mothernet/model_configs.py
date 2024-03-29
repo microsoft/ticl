@@ -150,6 +150,7 @@ def get_additive_config():
         'shape_init': 'constant',
         'n_bins': 64,
         'fourier_features': 0,
+        'marginal_residual': False,
     }}
 
 

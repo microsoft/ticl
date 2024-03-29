@@ -55,6 +55,17 @@ def test_train_baam_no_shape_attention():
     assert results['loss'] == pytest.approx(0.71629798412323, rel=1e-5)
 
 
+def test_train_baam_marginal_residual():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'True'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 55744
+    assert results['loss'] == pytest.approx(0.8485490083694458, rel=1e-5)
+
+
 def test_train_baam_fourier_features():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
