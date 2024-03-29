@@ -44,19 +44,6 @@ def test_our_tabpfn():
     assert classifier.score(X_test, y_test) > 0.9
 
 
-def test_mothernet_paper():
-    X, y = load_iris(return_X_y=True)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
-    model_path = get_mn_model(model_string)
-    classifier = MotherNetClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
-    print(classifier)
-    prob = classifier.predict_proba(X_test)
-    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
-    assert classifier.score(X_test, y_test) > 0.9
-
-
 def test_mothernet_no_model_passed():
     # this will also use the "paper" model above.
     X, y = load_iris(return_X_y=True)

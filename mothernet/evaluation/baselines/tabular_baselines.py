@@ -286,13 +286,15 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
     from mothernet.prediction.tabpfn import TabPFNClassifier
 
     if onehot:
-        ohe = ColumnTransformer(transformers=[('cat', make_union(OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                sparse_output=False), SimpleImputer(strategy="constant", fill_value=0)), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
             skb = SelectKBest(k=100).fit(x, y)
             x, test_x = skb.transform(x), skb.transform(test_x)
+    elif classifier is not None:
+        classifier.cat_features = cat_features
 
     if classifier is None:
         classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
