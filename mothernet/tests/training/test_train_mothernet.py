@@ -138,6 +138,20 @@ def test_train_class_average():
     assert results['loss'] == pytest.approx(0.7590433359146118)
 
 
+def test_train_class_average_no_y_encoder():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'class_average', '--y-encoder', 'None'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "class_average"
+    assert count_parameters(results['model']) == 1624522
+    assert results['model'].y_encoder is None
+    assert results['model'].decoder.mlp[0].in_features == 1280
+    assert results['loss'] == pytest.approx(1.4500211477279663)
+
+
 def test_train_simple_special_token():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

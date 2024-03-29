@@ -20,8 +20,11 @@ class MLPModelPredictor(nn.Module):
 
         _, x, y = src
         x_enc = self.encoder(x)
-        y_enc = self.y_encoder(y.unsqueeze(-1) if len(y.shape) < len(x.shape) else y)
-        enc_train = x_enc[:single_eval_pos] + y_enc[:single_eval_pos]
+        if self.y_encoder is None:
+            enc_train = x_enc[:single_eval_pos]
+        else:
+            y_enc = self.y_encoder(y.unsqueeze(-1) if len(y.shape) < len(x.shape) else y)
+            enc_train = x_enc[:single_eval_pos] + y_enc[:single_eval_pos]
         if self.decoder_type in ["special_token", "special_token_simple"]:
             enc_train = torch.cat([self.token_embedding.repeat(1, enc_train.shape[1], 1), enc_train], 0)
         elif self.decoder_type == "class_tokens":

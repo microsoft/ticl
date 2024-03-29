@@ -96,6 +96,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     transformer.add_argument('-e', '--emsize', type=int, help='embedding size')
     transformer.add_argument('-N', '--nlayers', type=int, help='number of transformer layers')
     transformer.add_argument('--init-method', help='Weight initialization method.')
+    transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
     transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
     transformer.add_argument('--pre-norm', action='store_true')
     transformer.set_defaults(**config['transformer'])

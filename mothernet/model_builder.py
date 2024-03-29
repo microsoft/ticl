@@ -83,6 +83,8 @@ def get_y_encoder(config):
         y_encoder = encoders.OneHotAndLinear(config['prior']['classification']['max_num_classes'], emsize=config['transformer']['emsize'])
     elif config['transformer']['y_encoder'] == 'linear':
         y_encoder = encoders.Linear(1, emsize=config['transformer']['emsize'])
+    elif config['transformer']['y_encoder'] in ['none', 'None', None]:
+        y_encoder = None
     else:
         raise ValueError(f"Unknown y_encoder: {config['transformer']['y_encoder']}")
     return y_encoder
