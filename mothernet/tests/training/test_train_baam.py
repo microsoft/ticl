@@ -74,3 +74,17 @@ def test_train_baam_input_layer_norm():
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51776
     assert results['loss'] == pytest.approx(0.6908526420593262, rel=1e-5)
+
+
+def test_train_baam_class_average_no_y_encoder():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '-D', 'class_average', '--y-encoder', 'None'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model'].decoder_type == "class_average"
+    assert count_parameters(results['model']) == 51472
+    assert results['model'].y_encoder is None
+    assert results['model'].decoder.mlp[0].in_features == 16
+    assert results['loss'] == pytest.approx(1.2202619314193726)

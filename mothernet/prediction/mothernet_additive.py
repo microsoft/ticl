@@ -30,11 +30,15 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         x_fourier = get_fourier_features(x_scaled, model.fourier_features)
         X_onehot = torch.cat([X_onehot, x_fourier], -1)
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
-    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-    if x_src.ndim == 4:
-        # baam model, per feature
-        y_src = y_src.unsqueeze(-2)
-    train_x = x_src + y_src
+
+    if model.y_encoder is None:
+        train_x = x_src
+    else:
+        y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+        if x_src.ndim == 4:
+            # baam model, per feature
+            y_src = y_src.unsqueeze(-2)
+        train_x = x_src + y_src
     assert train_x.shape == x_src.shape
     if hasattr(model, "layers"):
         # baam model

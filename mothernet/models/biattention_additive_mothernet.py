@@ -106,9 +106,11 @@ class BiAttentionMotherNetAdditive(nn.Module):
             X_features = self.input_norm(X_features)
 
         x_src = self.encoder(X_features)
-        y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
-
-        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
+        if self.y_encoder is None:
+            enc_train = x_src[:single_eval_pos]
+        else:
+            y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
+            enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
 
         # FIXME Refactor into a function to share with mothernet
         if self.decoder_type in ["special_token", "special_token_simple"]:
