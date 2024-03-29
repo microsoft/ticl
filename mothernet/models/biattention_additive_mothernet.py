@@ -4,7 +4,7 @@ import torch.nn as nn
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
-from mothernet.models.mothernet_additive import bin_data
+from mothernet.models.utils import bin_data
 
 from mothernet.utils import SeqBN, get_init_method
 
