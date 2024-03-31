@@ -126,7 +126,7 @@ class MotherNetAdditive(nn.Module):
 
 def bin_data(data, n_bins, single_eval_pos=None):
     # data is samples x batch x features
-    quantiles = torch.arange(n_bins - 1, device=data.device) / (n_bins - 2)
+    quantiles = torch.arange(n_bins, device=data.device) / (n_bins - 1)
 
     # Compute quantiles without nan data
     if single_eval_pos is None:
