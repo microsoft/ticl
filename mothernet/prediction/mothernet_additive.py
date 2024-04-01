@@ -110,16 +110,27 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
 
 
 class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", inference_device="cpu"):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device
         self.inference_device = inference_device
+        if model is None and path is None:
+            raise ValueError("Either path or model must be provided")
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
 
     def fit(self, X, y):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model, config = load_model(self.path, device=self.device)
+        if self.model is not None:
+            model, config = self.model, self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["additive", "baam"]:

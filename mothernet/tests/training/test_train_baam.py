@@ -44,12 +44,14 @@ def test_train_baam_nbins():
     assert results['loss'] == pytest.approx(1.5397337675094604, rel=1e-5)
 
 
-def test_train_baam_no_shape_attention():
+def test_train_baam_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS + ['-B', tmpdir])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
+        clf_no_file = MotherNetAdditiveClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf_no_file)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
     assert results['loss'] == pytest.approx(0.71629798412323, rel=1e-5)

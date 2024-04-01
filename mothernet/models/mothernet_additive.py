@@ -18,13 +18,15 @@ class MotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu', fourier_features=0):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         self.decoder_activation = decoder_activation
+
+        assert not marginal_residual, "Marginal residual is not supported in this model yet"
 
         assert fourier_features == 0, "Fourier features are not supported in this model yet"
 

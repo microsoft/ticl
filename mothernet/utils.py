@@ -434,6 +434,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+                mlflow.log_metric(key="val_score", value=model.val_scores[-1], step=epoch)
                 mlflow.log_metric(key="epoch", value=epoch, step=epoch)
             if report is not None:
                 # synetune callback
@@ -460,6 +461,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 config['learning_rates'] = model.learning_rates
                 config['losses'] = model.losses
                 config['wallclock_times'] = model.wallclock_times
+                config['val_scores'] = model.val_scores
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config)
                 # remove checkpoints that are worse than current
@@ -520,3 +522,15 @@ def get_init_method(init_method):
             method(layer.weight)
             nn.init.zeros_(layer.bias)
     return init_weights_inner
+
+
+def validate_model(model):
+    from mothernet.datasets import load_openml_list, open_cc_valid_dids
+    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
+        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
+    from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
+    from mothernet.prediction import MotherNetAdditiveClassifier
+    if isinstance(model, BiAttentionMotherNetAdditive):
+        pass
+    else:
+        raise ValueError(f"Model {model} not supported for validation")
