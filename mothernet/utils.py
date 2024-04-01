@@ -409,7 +409,7 @@ def get_model_string(config, num_gpus, device, parser):
     return model_string
 
 
-def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir):
+def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir, validate):
     from mothernet.model_builder import save_model
     config = config.copy()
 
@@ -434,7 +434,6 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
-                mlflow.log_metric(key="val_score", value=model.val_scores[-1], step=epoch)
                 mlflow.log_metric(key="epoch", value=epoch, step=epoch)
             if report is not None:
                 # synetune callback
@@ -461,11 +460,17 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 config['learning_rates'] = model.learning_rates
                 config['losses'] = model.losses
                 config['wallclock_times'] = model.wallclock_times
-                config['val_scores'] = model.val_scores
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config)
-                # remove checkpoints that are worse than current
                 if epoch != "on_exit" and epoch - save_every > 0:
+                    if validate:
+                        try:
+                            validation_score = validate_model(model, config)
+                            mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
+                            print(f"Validation score: {validation_score}")
+                        except Exception as e:
+                            print(f"Validation failed: {e}")
+                    # remove checkpoints that are worse than current
                     this_loss = model.losses[-1]
                     for i in range(epoch // save_every):
                         loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
@@ -524,13 +529,14 @@ def get_init_method(init_method):
     return init_weights_inner
 
 
-def validate_model(model):
+def validate_model(model, config):
     from mothernet.datasets import load_openml_list, open_cc_valid_dids
     cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
         open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
     from mothernet.prediction import MotherNetAdditiveClassifier
     if isinstance(model, BiAttentionMotherNetAdditive):
-        pass
+        clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
     else:
         raise ValueError(f"Model {model} not supported for validation")
+    return 0

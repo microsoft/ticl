@@ -3,10 +3,10 @@ from torch.utils.data import DataLoader
 
 import mothernet.priors as priors
 from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior
-from mothernet.utils import validate_model
+
 
 class PriorDataLoader(DataLoader):
-    def __init__(self, prior, num_steps, batch_size, min_eval_pos, n_samples, device, num_features, validation):
+    def __init__(self, prior, num_steps, batch_size, min_eval_pos, n_samples, device, num_features):
         self.prior = prior
         self.num_steps = num_steps
         self.batch_size = batch_size
@@ -14,7 +14,6 @@ class PriorDataLoader(DataLoader):
         self.n_samples = n_samples
         self.device = device
         self.num_features = num_features
-        self.validation = validation
         self.epoch_count = 0
 
     def gbm(self, epoch=None):
@@ -36,11 +35,6 @@ class PriorDataLoader(DataLoader):
     def __iter__(self):
         self.epoch_count += 1
         return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
-    
-    def validate(self, model):
-        if not self.validation:
-            return None
-        return validate_model(model)
 
 
 def get_dataloader(prior_config, dataloader_config, device):

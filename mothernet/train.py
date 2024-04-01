@@ -71,7 +71,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, stop_after_epochs=None, learning_rate=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
-          save_every=10, device='cuda:0',
+          device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
           spike_tolerance=4
@@ -99,7 +99,6 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
         model.learning_rates = getattr(model, 'learning_rates', [])
         model.losses = getattr(model, 'losses', [])
         model.wallclock_times = getattr(model, 'wallclock_times', [])
-        model.val_scores = getattr(model, 'val_scores', [])
         model.start_time = time.time()
         if len(model.wallclock_times):
             model.start_time -= model.wallclock_times[-1]
@@ -151,11 +150,6 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
 
             total_loss = new_loss
-            if hasattr(dl, 'validate') and epoch % save_every == 0:
-                with torch.no_grad():
-                    val_score = dl.validate(model)
-            else:
-                val_score = None
             if spike_scheduler is not None:
                 last_lr = spike_scheduler.get_last_lr()[0]
             else:
@@ -168,8 +162,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
                 print(
                     f' lr {last_lr}'
-                    f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
-                    + (f'val score {val_score}' if val_score is not None else ''))
+                    f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}')
                 print('-' * 89)
             if new_loss > 1.5 * total_loss:
                 print("LOSS DIVERGED")
@@ -198,7 +191,6 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             if epoch_callback is not None and rank == 0:
                 model.learning_rates.append(last_lr)
                 model.losses.append(total_loss)
-                model.val_scores.append(val_score)
                 model.wallclock_times.append(time.time() - model.start_time)
                 epoch_callback(model, optimizer, scheduler, epoch)
 
