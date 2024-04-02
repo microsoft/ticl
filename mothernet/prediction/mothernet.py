@@ -45,10 +45,13 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
-def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
+def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
-    max_features = 100
+    try:
+        max_features = config['prior']['num_features']
+    except KeyError:
+        max_features = 100
     eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
@@ -62,9 +65,9 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features)
-    if X_train.shape[1] > 100:
-        raise ValueError("Cannot run inference on data with more than 100 features")
-    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
+    if X_train.shape[1] > max_features:
+        raise ValueError(f"Cannot run inference on data with more than {max_features} features")
+    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
     x_src = model.encoder(x_all_torch.unsqueeze(1))
 
     if model.y_encoder is not None:
@@ -225,7 +228,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device,
+        layers = extract_mlp_model(model, config, X, np.mod(y + self.label_offset, n_classes), device=self.device,
                                    inference_device=self.inference_device, scale=self.scale)
         if self.label_offset == 0:
             self.parameters_ = layers

@@ -32,6 +32,19 @@ def test_train_defaults():
     assert count_parameters(results['model'].decoder) == 1000394
 
 
+def test_train_mothernet_less_features():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--num-features', '15'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert results['loss'] == 0.6780109405517578
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_numfeatures15_n1_P64_L1_tFalse_cpu_")
+    assert count_parameters(results['model']) == 832010
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 298634
+
+
 def test_train_gelu_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

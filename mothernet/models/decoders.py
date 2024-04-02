@@ -259,7 +259,8 @@ def make_decoder_mlp(in_size, hidden_size, out_size, n_layers=1, activation='rel
 
 class MLPModelDecoder(nn.Module):
     def __init__(self, emsize=512, n_out=10, hidden_size=1024, decoder_type='output_attention', predicted_hidden_layer_size=None, embed_dim=2048,
-                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False, decoder_activation='relu'):
+                 decoder_hidden_layers=1, nhead=4, predicted_hidden_layers=1, weight_embedding_rank=None, low_rank_weights=False, decoder_activation='relu',
+                 in_size=100):
         super().__init__()
         self.emsize = emsize
         self.embed_dim = embed_dim
@@ -267,7 +268,7 @@ class MLPModelDecoder(nn.Module):
         self.hidden_size = hidden_size
         self.decoder_type = decoder_type
         self.predicted_hidden_layer_size = predicted_hidden_layer_size or emsize
-        self.in_size = 100
+        self.in_size = in_size
         self.nhead = nhead
         self.weight_embedding_rank = weight_embedding_rank if low_rank_weights else None
 
