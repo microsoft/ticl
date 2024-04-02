@@ -28,7 +28,7 @@ class StepFunctionPrior:
             mask = torch.ones_like(step, dtype=torch.bool, device=device)
             mask.scatter_(1, feature_indices, False)
 
-            # Use the mask to set the corresponding features in step to zero
+            # Use the mask to set the corresponding features in step to -inf
             step[mask] = -torch.inf
 
             # Compute the step function for the entire tensor at once
