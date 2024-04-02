@@ -149,13 +149,15 @@ def get_additive_config():
         'n_shape_functions': 32,
         'shape_init': 'constant',
         'n_bins': 64,
+        'nan_bin': False,
         'fourier_features': 0,
     }}
 
 
 def get_biattention_config():
     return {'biattention': {
-        'input_embedding': 'linear'
+        'input_embedding': 'linear',
+        'categorical_embedding': False
     }}
 
 

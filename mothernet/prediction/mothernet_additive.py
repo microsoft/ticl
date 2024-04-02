@@ -27,12 +27,15 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
     else:
         x_all_torch = xs
-    X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins)
+    X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
     if getattr(model, "fourier_features", 0) > 0:
         x_scaled = normalize_data(xs)
         x_fourier = get_fourier_features(x_scaled, model.fourier_features)
         X_onehot = torch.cat([X_onehot, x_fourier], -1)
-    x_src = model.encoder(X_onehot.unsqueeze(1).float()) + model.is_categorical_encoder(is_categorical)
+
+    x_src = model.encoder(X_onehot.unsqueeze(1).float())
+    if hasattr(model, 'categorical_embedding'):
+        x_src += model.is_categorical_encoder(is_categorical)
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     if x_src.ndim == 4:
         # baam model, per feature
@@ -64,14 +67,15 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu", n_bins=64,
-                                is_categorical: List[bool] = None):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu",
+                                n_bins=64, nan_bin=False, is_categorical: List[bool] = None):
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
             binned = np.searchsorted(bins, col)
-            # Put NaN data on the last bin.
-            binned[np.isnan(col)] = n_bins - 1
+            if nan_bin:
+                # Put NaN data on the last bin.
+                binned[np.isnan(col)] = n_bins - 1
             out += w[binned]
         out += biases
         if np.isnan(out).any():
@@ -138,7 +142,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_,
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device, is_categorical=self.is_categorical)
 
     def predict(self, X):

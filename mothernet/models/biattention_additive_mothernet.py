@@ -12,9 +12,9 @@ from mothernet.utils import SeqBN, get_init_method
 class BiAttentionMotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
-                 activation='gelu', recompute_attn=False,
+                 activation='gelu', recompute_attn=False, categorical_embedding=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
-                 decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
+                 decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, nan_bin=False, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
@@ -22,7 +22,8 @@ class BiAttentionMotherNetAdditive(nn.Module):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
-        self.is_categorical_encoder = OneHotAndLinear(num_classes=2, emsize=emsize)
+        if categorical_embedding:
+            self.categorical_embedding = OneHotAndLinear(num_classes=2, emsize=emsize)
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         self.fourier_features = fourier_features
@@ -47,6 +48,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.init_method = init_method
         self.efficient_eval_masking = efficient_eval_masking
         self.n_bins = n_bins
+        self.nan_bin = nan_bin
         self.n_out = n_out
         self.nhid = nhid
         self.input_bin_embedding = input_bin_embedding
@@ -90,15 +92,47 @@ class BiAttentionMotherNetAdditive(nn.Module):
                         nn.init.zeros_(attn.out_proj.weight)
                         nn.init.zeros_(attn.out_proj.bias)
 
+    def _determine_is_categorical(self, x_src_org: torch.Tensor) -> torch.Tensor:
+        MAX_NUM_CATEGORIES = 100
+        sequence_length, batch_size, num_features = x_src_org.shape
+
+        # Preallocate the is_categorical tensor with the correct shape
+        is_categorical = torch.zeros((1, batch_size, num_features), device=x_src_org.device)
+
+        # Loop over features, but vectorize over batches
+        for feature_i in range(num_features):
+            # Extract all values for the current feature across all sequences and batches
+            feature_values = x_src_org[:, :, feature_i]
+
+            # Use broadcasting to compare each element with each other element
+            # This creates a mask of shape (sequence_length, sequence_length, batch_size)
+            # where each slice along the last dimension indicates unique values
+            unique_mask = feature_values.unsqueeze(0) != feature_values.unsqueeze(1)
+
+            # Sum over the sequence_length dimension to count unique values
+            # The result has shape (sequence_length, batch_size)
+            unique_counts = unique_mask.sum(dim=0)
+
+            # Since we are counting non-equalities, the diagonal will be all False
+            # We need to add 1 to each count to account for the diagonal
+            unique_counts += 1
+
+            # Determine if the feature is categorical for each batch element
+            # The result has shape (batch_size,)
+            is_categorical_feature = unique_counts.max(dim=0).values < MAX_NUM_CATEGORIES
+
+            # Assign the result to the appropriate slice of the is_categorical tensor
+            is_categorical[0, :, feature_i] = is_categorical_feature
+
+        # Now is_categorical indicates for each feature and batch element whether it is categorical
+        return is_categorical.to(torch.float32)
+
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
 
-        # FixMe: Handle categoricals and non-categoricals --> How to know based on the data sampled by the prior?
-        sequence_length, batch_size, num_features = x_src_org.shape
-        is_categorical = torch.zeros(size=(1, batch_size, num_features)).to(x_src_org.device)
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins,
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.fourier_features > 0:
@@ -111,7 +145,10 @@ class BiAttentionMotherNetAdditive(nn.Module):
             X_features = self.input_norm(X_features)
 
         x_src = self.encoder(X_features)
-        x_src += self.is_categorical_encoder(is_categorical)
+        if hasattr(self, 'categorical_embedding'):
+            # Determine which feature in each batch is categorical
+            is_categorical = self._determine_is_categorical(x_src_org)
+            x_src += self.categorical_embedding(is_categorical)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
 
         enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
