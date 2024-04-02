@@ -25,6 +25,7 @@ class MotherNetAdditive(nn.Module):
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         self.decoder_activation = decoder_activation
+        self.marginal_residual = marginal_residual
 
         assert not marginal_residual, "Marginal residual is not supported in this model yet"
 
