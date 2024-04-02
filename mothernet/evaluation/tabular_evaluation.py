@@ -119,7 +119,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto'):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False, append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto', save=True):
     if callable(model):
         model_callable = model
         if device == 'auto':
@@ -137,7 +137,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
             result = _eval_single_dataset_wrapper(
                 datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path, eval_positions=eval_positions,
                 device=device, max_splits=1,
-                overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
+                overwrite=overwrite, save=save, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
                 split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
             results.append(result)
@@ -145,7 +145,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
         results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(
             datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path,
             eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
-            save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
+            save=save, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
             verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
     return results
 

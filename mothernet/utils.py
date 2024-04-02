@@ -549,5 +549,6 @@ def validate_model(model, config):
     base_path = 'models_diff/validation'
     results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
                                metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
-                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=-1, device=config['device'])
+                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=-1, device=config['device'],
+                               save=False)
     return np.array([r['mean_metric'] for r in results]).mean()
