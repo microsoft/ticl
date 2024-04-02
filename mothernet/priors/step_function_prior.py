@@ -19,7 +19,7 @@ class StepFunctionPrior:
                 x = torch.randn(batch_size, n_samples, num_features, device=device)
 
             # Per element in batch create a random step function per feature and add them across samples.
-            step = (x.max(dim=1).values - x.min(dim=1).values) * 0.8 * torch.rand((batch_size, num_features)) + x.min(dim=1).values
+            step = (x.max(dim=1).values - x.min(dim=1).values) * 0.8 * torch.rand((batch_size, num_features), device=device) + x.min(dim=1).values
 
             # Randomly sample up two features
             feature_indices = torch.randint(0, num_features, (batch_size, 2), device=device)
