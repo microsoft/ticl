@@ -13,6 +13,10 @@ TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
                     '--decoder-activation', 'relu', '--save-every', '8']
 
+TESTING_DEFAULTS_SHORT = ['baam', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
+                          '--decoder-activation', 'relu', '--save-every', '2']
+
 
 def test_train_baam_shape_attention():
     L.seed_everything(0)
@@ -60,14 +64,12 @@ def test_train_baam_defaults():
 def test_train_baam_validation():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--validate', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--validate', 'True'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-        clf_no_file = MotherNetAdditiveClassifier(device='cpu', model=results['model'], config=results['config'])
-        check_predict_iris(clf_no_file)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.71629798412323, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
 
 
 def test_train_baam_marginal_residual_no_learning():

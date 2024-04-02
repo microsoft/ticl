@@ -462,7 +462,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 config['wallclock_times'] = model.wallclock_times
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config)
-                if epoch != "on_exit" and epoch - save_every > 0:
+                if epoch != "on_exit":
                     if validate:
                         try:
                             validation_score = validate_model(model, config)
@@ -471,19 +471,20 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                         except Exception as e:
                             print(f"Validation failed: {e}")
                     # remove checkpoints that are worse than current
-                    this_loss = model.losses[-1]
-                    for i in range(epoch // save_every):
-                        loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
-                        old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
-                        if os.path.exists(old_file_name):
-                            if loss > this_loss:
-                                try:
-                                    print(f"Removing old model file {old_file_name}")
-                                    os.remove(old_file_name)
-                                except Exception as e:
-                                    print(f"Failed to remove old model file {old_file_name}: {e}")
-                            else:
-                                print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+                    if epoch - save_every > 0:
+                        this_loss = model.losses[-1]
+                        for i in range(epoch // save_every):
+                            loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
+                            old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
+                            if os.path.exists(old_file_name):
+                                if loss > this_loss:
+                                    try:
+                                        print(f"Removing old model file {old_file_name}")
+                                        os.remove(old_file_name)
+                                    except Exception as e:
+                                        print(f"Failed to remove old model file {old_file_name}: {e}")
+                                else:
+                                    print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
 
         except Exception as e:
             print("WRITING TO MODEL FILE FAILED")
@@ -531,12 +532,22 @@ def get_init_method(init_method):
 
 def validate_model(model, config):
     from mothernet.datasets import load_openml_list, open_cc_valid_dids
-    cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(
-        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
+
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
     from mothernet.prediction import MotherNetAdditiveClassifier
+    from mothernet.evaluation.tabular_evaluation import eval_on_datasets
+    from mothernet.evaluation import tabular_metrics
+    from uuid import uuid4
+
+    cc_valid_datasets_multiclass, _ = load_openml_list(
+        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
+    
     if isinstance(model, BiAttentionMotherNetAdditive):
         clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
     else:
         raise ValueError(f"Model {model} not supported for validation")
-    return 0
+    base_path = 'models_diff/validation'
+    results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
+                               metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
+                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=-1, device=config['device'])
+    return np.array([r['mean_metric'] for r in results]).mean()
