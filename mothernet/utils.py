@@ -465,9 +465,12 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 if epoch != "on_exit":
                     if validate:
                         try:
-                            validation_score = validate_model(model, config)
-                            mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
+                            validation_score, per_dataset_score = validate_model(model, config)
                             print(f"Validation score: {validation_score}")
+                            if not no_mlflow:
+                                mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
+                                for dataset, score in per_dataset_score.items():
+                                    mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
                         except Exception as e:
                             print(f"Validation failed: {e}")
                     # remove checkpoints that are worse than current
@@ -551,4 +554,6 @@ def validate_model(model, config):
                                metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
                                max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=-1, device=config['device'],
                                save=False)
-    return np.array([r['mean_metric'] for r in results]).mean()
+    mean_auc = np.array([r['mean_metric'] for r in results]).mean()
+    per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
+    return mean_auc, per_dataset_scores

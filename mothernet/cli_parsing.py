@@ -168,7 +168,6 @@ def argparser_from_config(parser, description="Train Mothernet"):
                          type=float)
     boolean.add_argument('--max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior",
                          type=float)
-    boolean.add_argument('--sort-features', help="Whether to sort features by index in MLP prior.")
     boolean.set_defaults(**config['prior']['boolean'])
 
     # serialization, loading, logging
