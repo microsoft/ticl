@@ -151,7 +151,6 @@ def bin_data(data, n_bins, nan_bin, single_eval_pos=None):
         X_onehot = nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
     else:
         # data is samples x batch x features
-        # FIXME treat NaN as separate bin
         data_nona = torch.nan_to_num(data, nan=0)
         quantiles = torch.arange(n_bins + 1, device=data.device) / n_bins
         if single_eval_pos is None:

@@ -93,7 +93,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                         nn.init.zeros_(attn.out_proj.bias)
 
     def _determine_is_categorical(self, x_src_org: torch.Tensor) -> torch.Tensor:
-        MAX_NUM_CATEGORIES = 100
+        MAX_NUM_CATEGORIES = 100  # --> Categorical prior
         sequence_length, batch_size, num_features = x_src_org.shape
 
         # Preallocate the is_categorical tensor with the correct shape
@@ -147,7 +147,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         x_src = self.encoder(X_features)
         if hasattr(self, 'categorical_embedding'):
             # Determine which feature in each batch is categorical
-            is_categorical = self._determine_is_categorical(x_src_org)
+            is_categorical = self._determine_is_categorical(x_src_org)  # (1, batch_size, num_features)
             x_src += self.categorical_embedding(is_categorical)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
 
