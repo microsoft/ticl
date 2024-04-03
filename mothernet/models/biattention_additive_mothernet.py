@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 from mothernet.models.layer import BiAttentionEncoderLayer
-from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder
+from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder, SummaryLayer
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
-from mothernet.models.mothernet_additive import bin_data
+from mothernet.models.utils import bin_data
 
 from mothernet.utils import SeqBN, get_init_method
 
@@ -18,7 +18,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu', fourier_features=0):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
@@ -59,6 +59,11 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.shape_attention = shape_attention
         self.tabpfn_zero_weights = tabpfn_zero_weights
         self.decoder_activation = decoder_activation
+        self.marginal_residual = marginal_residual
+        if marginal_residual:
+            self.marginal_residual_layer = nn.Linear(n_bins, n_bins, bias=False)
+            self.marginal_residual_layer.weight.data = torch.eye(n_bins)
+            self.class_average_layer = SummaryLayer(decoder_type="class_average", emsize=n_bins, n_out=n_out)
 
         if factorized_output:
             self.decoder = FactorizedAdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
@@ -71,7 +76,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
             self.decoder = AdditiveModelDecoder(n_features=n_features, n_bins=n_bins, emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out,
                                                 embed_dim=decoder_embed_dim, decoder_type=decoder_type,
                                                 decoder_hidden_layers=decoder_hidden_layers, nhead=nhead, biattention=True,
-                                                decoder_activation=decoder_activation)
+                                                decoder_activation=decoder_activation, shape_init=shape_init)
 
         if decoder_type in ["special_token", "special_token_simple"]:
             self.token_embedding = nn.Parameter(torch.randn(1, 1, emsize))
@@ -145,13 +150,17 @@ class BiAttentionMotherNetAdditive(nn.Module):
             X_features = self.input_norm(X_features)
 
         x_src = self.encoder(X_features)
+        
         if hasattr(self, 'categorical_embedding'):
             # Determine which feature in each batch is categorical
             is_categorical = self._determine_is_categorical(x_src_org)  # (1, batch_size, num_features)
             x_src += self.categorical_embedding(is_categorical)
         y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
-
-        enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
+        if self.y_encoder is None:
+            enc_train = x_src[:single_eval_pos]
+        else:
+            y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
+            enc_train = x_src[:single_eval_pos] + y_src[:single_eval_pos].unsqueeze(-2)
 
         # FIXME Refactor into a function to share with mothernet
         if self.decoder_type in ["special_token", "special_token_simple"]:
@@ -165,10 +174,22 @@ class BiAttentionMotherNetAdditive(nn.Module):
         if self.input_ln is not None:
             enc_train = self.input_ln(enc_train)
         output = enc_train
-        for mod in self.layers:
-            output = mod(output, src_mask=single_eval_pos)
+        if len(self.layers):
+            for mod in self.layers:
+                output = mod(output, src_mask=single_eval_pos)
 
-        weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
+            weights, biases = self.decoder(output, y_src_org[:single_eval_pos])
+
+        if self.marginal_residual:
+            class_averages = self.class_average_layer(X_onehot[:single_eval_pos], y_src_org[:single_eval_pos])
+            # class averages are batch x outputs x features x bins
+            # output is batch x features x bins x outputs
+            marginals = self.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
+            if len(self.layers):
+                weights = weights + marginals
+            else:
+                weights = marginals
+                biases = None
 
         # n samples, b batch, k feature, d bins, o outputs
         h = torch.einsum("nbkd,bkdo->nbo", X_onehot[single_eval_pos:], weights)

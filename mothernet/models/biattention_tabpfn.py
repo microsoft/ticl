@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import math
 
 from mothernet.models.layer import BiAttentionEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
@@ -8,7 +7,7 @@ from mothernet.models.encoders import Linear, get_fourier_features
 
 
 class BiAttentionTabPFN(nn.Module):
-    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
+    def __init__(self, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False, efficient_eval_masking=True,
                  all_layers_same_init=False,  y_encoder=None, tabpfn_zero_weights=False, input_embedding='linear'):
@@ -22,7 +21,7 @@ class BiAttentionTabPFN(nn.Module):
         self.emsize = emsize
         self.input_embedding = input_embedding
         if input_embedding == "linear":
-            self.encoder = encoder_layer
+            self.encoder = Linear(1, emsize, replace_nan_by_zero=True)
         elif input_embedding == "random":
             self.encoder = nn.LayerNorm(normalized_shape=[emsize])
         elif input_embedding == "fourier":

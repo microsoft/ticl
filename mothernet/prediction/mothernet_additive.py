@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
-from mothernet.models.mothernet_additive import bin_data
+from mothernet.models.utils import bin_data
 from mothernet.models.encoders import get_fourier_features
 from mothernet.utils import normalize_data
 
@@ -28,6 +28,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         x_all_torch = xs
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
+    if model.input_layer_norm:
+        X_onehot = model.input_norm(X_onehot.float())
     if getattr(model, "fourier_features", 0) > 0:
         x_scaled = normalize_data(xs)
         x_fourier = get_fourier_features(x_scaled, model.fourier_features)
@@ -36,11 +38,15 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     if hasattr(model, 'categorical_embedding'):
         x_src += model.is_categorical_encoder(is_categorical)
-    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-    if x_src.ndim == 4:
-        # baam model, per feature
-        y_src = y_src.unsqueeze(-2)
-    train_x = x_src + y_src
+
+    if model.y_encoder is None:
+        train_x = x_src
+    else:
+        y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+        if x_src.ndim == 4:
+            # baam model, per feature
+            y_src = y_src.unsqueeze(-2)
+        train_x = x_src + y_src
     assert train_x.shape == x_src.shape
     if hasattr(model, "layers"):
         # baam model
@@ -50,6 +56,13 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         output = model.transformer_encoder(train_x)
     weights, biases = model.decoder(output, ys)
+
+    if model.marginal_residual:
+        class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
+        # class averages are batch x outputs x features x bins
+        # output is batch x features x bins x outputs
+        weights = weights + model.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
+
     w = weights.squeeze()[:n_features, :, :n_classes]
     if biases is None:
         b = torch.zeros(n_classes, device=device)
@@ -67,8 +80,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu",
-                                n_bins=64, nan_bin=False, is_categorical: List[bool] = None):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu", n_bins=64):
+    additive_components = []
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
@@ -77,13 +90,14 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
                 # Put NaN data on the last bin.
                 binned[np.isnan(col)] = n_bins - 1
             out += w[binned]
+            additive_components.append(w[binned])
         out += biases
         if np.isnan(out).any():
             print("NAN")
             import pdb
             pdb.set_trace()
         from scipy.special import softmax
-        return softmax(out / .8, axis=1)
+        return softmax(out / .8, axis=1), additive_components
     elif "cuda" in inference_device:
         mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
         std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
@@ -107,10 +121,18 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
 
 
 class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", inference_device="cpu"):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device
         self.inference_device = inference_device
+        if model is None and path is None:
+            raise ValueError("Either path or model must be provided")
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
 
     def fit(self, X, y, is_categorical: List[bool] = None):
         if is_categorical is None:
@@ -122,7 +144,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model, config = load_model(self.path, device=self.device)
+        if self.model is not None:
+            model, config = self.model, self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["additive", "baam"]:
@@ -144,6 +169,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device, is_categorical=self.is_categorical)
+
+    def predict_proba_with_additive_components(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_,
+                                           inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]

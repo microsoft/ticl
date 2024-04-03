@@ -7,10 +7,11 @@ from torch.nn import Module, TransformerEncoder
 
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.utils import SeqBN, get_init_method
+from mothernet.models.encoders import Linear
 
 
 class TabPFN(nn.Module):
-    def __init__(self, encoder_layer, *, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0,  y_encoder_layer=None,
+    def __init__(self, *, n_out, emsize, nhead, nhid_factor, nlayers, n_features, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None, tabpfn_zero_weights=False):
@@ -23,7 +24,7 @@ class TabPFN(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.emsize = emsize
-        self.encoder = encoder_layer
+        self.encoder = Linear(n_features, emsize, replace_nan_by_zero=True)
         self.decoder = decoder(emsize, nhid, n_out) if decoder is not None else nn.Sequential(nn.Linear(emsize, nhid), nn.GELU(), nn.Linear(nhid, n_out))
         self.input_ln = SeqBN(emsize) if input_normalization else None
         self.init_method = init_method

@@ -97,7 +97,8 @@ def main(argv, extra_config=None):
         torch.autograd.set_detect_anomaly(True)
 
     model_string = get_model_string(config, num_gpus, device, parser)
-    save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow, orchestration.st_checkpoint_dir)
+    save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow,
+                                           orchestration.st_checkpoint_dir, orchestration.validate)
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
     if orchestration.no_mlflow or mlflow_hostname is None:

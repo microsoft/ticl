@@ -8,7 +8,10 @@ from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.feature_selection import SelectKBest
+from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
 from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
@@ -42,10 +45,13 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
-def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
+def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
-    max_features = 100
+    try:
+        max_features = config['prior']['num_features']
+    except KeyError:
+        max_features = 100
     eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
@@ -59,13 +65,16 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features)
-    if X_train.shape[1] > 100:
-        raise ValueError("Cannot run inference on data with more than 100 features")
-    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
-
+    if X_train.shape[1] > max_features:
+        raise ValueError(f"Cannot run inference on data with more than {max_features} features")
+    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
     x_src = model.encoder(x_all_torch.unsqueeze(1))
-    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-    train_x = x_src + y_src
+
+    if model.y_encoder is not None:
+        y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+        train_x = x_src + y_src
+    else:
+        train_x = x_src
     if hasattr(model, "transformer_encoder"):
         # tabpfn mlp model maker
         output = model.transformer_encoder(train_x)
@@ -219,7 +228,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device,
+        layers = extract_mlp_model(model, config, X, np.mod(y + self.label_offset, n_classes), device=self.device,
                                    inference_device=self.inference_device, scale=self.scale)
         if self.label_offset == 0:
             self.parameters_ = layers
@@ -271,7 +280,8 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
 
 
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator, n_estimators=32, random_state=None, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
+    def __init__(self, base_estimator, n_estimators=32, cat_features=None, random_state=None, power=True,
+                 label_shift=True, feature_shift=True, onehot=False, n_jobs=-1):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
@@ -279,27 +289,41 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.label_shift = label_shift
         self.feature_shift = feature_shift
         self.n_jobs = n_jobs
+        self.cat_features = cat_features
+        self.onehot = onehot
 
     def fit(self, X, y):
         X = np.array(X)
         self.n_features_ = X.shape[1]
         self.n_classes_ = len(np.unique(y))
         use_power_transformer = [True, False] if self.power else [False]
+        use_onehot = [True, False] if self.onehot else [False]
         feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
         label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
-        shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer))
+        shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer, use_onehot))
         rng = random.Random(self.random_state)
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
         n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
 
-        for label_shift, feature_shift, use_power_transformer in shifts:
+        for label_shift, feature_shift, power_transformer, onehot in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
-            if use_power_transformer:
+            if power_transformer:
                 # remove zero-variance features to avoid division by zero
-                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
-                                     ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
-            estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
+                cont_processing = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
+                                            ('power_transformer', PowerTransformer())])
+            else:
+                cont_processing = "passthrough"
+            if onehot and self.cat_features is not None:
+                ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                    sparse_output=False)
+                ct = make_column_transformer((ohe, self.cat_features), remainder=cont_processing)
+                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
+                                      ('select', SelectKBest(k=100)), ('shift_classifier', estimator)])
+            else:
+                estimator = Pipeline([('cont_processing', cont_processing), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
+                                      ('shift_classifier', estimator)])
+            estimators.append((str((label_shift, feature_shift, power_transformer, onehot)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
         self.vc_.fit(X, y)
         return self

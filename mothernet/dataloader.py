@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 import mothernet.priors as priors
-from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior
+from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, StepFunctionPrior
 
 
 class PriorDataLoader(DataLoader):
@@ -47,6 +47,8 @@ def get_dataloader(prior_config, dataloader_config, device):
         # Prior bag combines priors
         prior = BagPrior(base_priors={'gp': gp_flexible, 'mlp': mlp_flexible},
                          prior_weights={'mlp': 0.961, 'gp': 0.039})
+    elif prior_type == "step_function":
+        prior = priors.StepFunctionPrior(prior_config['step_function'])
     elif prior_type == "boolean_only":
         prior = BooleanConjunctionPrior(hyperparameters=prior_config['boolean'])
     elif prior_type == "bag_boolean":
@@ -56,6 +58,5 @@ def get_dataloader(prior_config, dataloader_config, device):
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
 
-    return PriorDataLoader(prior=prior, num_steps=dataloader_config['num_steps'], batch_size=dataloader_config['batch_size'],
-                           n_samples=prior_config['n_samples'], min_eval_pos=dataloader_config['min_eval_pos'],
-                           device=device, num_features=prior_config['num_features'])
+    return PriorDataLoader(prior=prior, n_samples=prior_config['n_samples'],
+                           device=device, num_features=prior_config['num_features'], **dataloader_config)

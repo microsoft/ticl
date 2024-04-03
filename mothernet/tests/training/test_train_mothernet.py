@@ -13,7 +13,7 @@ from mothernet.prediction import MotherNetClassifier
 
 from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
 
-DEFAULT_LOSS = pytest.approx(0.7113393545150757)
+DEFAULT_LOSS = pytest.approx(0.696098268032074)
 
 TESTING_DEFAULTS_MOTHERNET = ['mothernet'] + TESTING_DEFAULTS
 TESTING_DEFAULTS_MOTHERNET_SHORT = ['mothernet'] + TESTING_DEFAULTS_SHORT
@@ -32,13 +32,26 @@ def test_train_defaults():
     assert count_parameters(results['model'].decoder) == 1000394
 
 
+def test_train_mothernet_less_features():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--num-features', '15'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert results['loss'] == 0.6780109405517578
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_numfeatures15_n1_P64_L1_tFalse_cpu_")
+    assert count_parameters(results['model']) == 832010
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 298634
+
+
 def test_train_gelu_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--decoder-activation', 'gelu'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == 0.7392604351043701
+    assert results['loss'] == 0.6897920370101929
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
@@ -63,7 +76,7 @@ def test_train_reload():
         results = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '--save-every', '1'])
         prev_file_name = f'{results["base_path"]}/models_diff/{results["model_string"]}_epoch_2.cpkt'
         assert results['epoch'] == 2
-        assert results['loss'] == pytest.approx(1.1220229864120483)
+        assert results['loss'] == pytest.approx(0.7084088921546936)
         assert count_parameters(results['model']) == 1544650
         # "continue" training - will stop immediately since we already reached max epochs
         results_new = main(TESTING_DEFAULTS_MOTHERNET_SHORT + ['-B', tmpdir, '-f', prev_file_name, '-c', '-R'])
@@ -102,7 +115,7 @@ def test_train_special_token():
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'special_token'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == pytest.approx(0.7064052820205688)
+    assert results['loss'] == pytest.approx(0.6808353066444397)
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert results['model'].decoder_type == "special_token"
@@ -121,7 +134,7 @@ def test_train_class_tokens():
     assert count_parameters(results['model']) == 1625930
     assert count_parameters(results['model'].decoder) == 1081674
     assert results['model'].decoder.mlp[0].in_features == 1280
-    assert results['loss'] == pytest.approx(6.256896018981934)
+    assert results['loss'] == pytest.approx(1.974905014038086)
 
 
 def test_train_class_average():
@@ -135,7 +148,21 @@ def test_train_class_average():
     assert count_parameters(results['model']) == 1625930
     assert count_parameters(results['model'].decoder) == 1081674
     assert results['model'].decoder.mlp[0].in_features == 1280
-    assert results['loss'] == pytest.approx(2.4960875511169434)
+    assert results['loss'] == pytest.approx(0.7590433359146118)
+
+
+def test_train_class_average_no_y_encoder():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-D', 'class_average', '--y-encoder', 'None'])
+        clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNet)
+    assert results['model'].decoder_type == "class_average"
+    assert count_parameters(results['model']) == 1624522
+    assert results['model'].y_encoder is None
+    assert results['model'].decoder.mlp[0].in_features == 1280
+    assert results['loss'] == pytest.approx(1.4500211477279663)
 
 
 def test_train_simple_special_token():
@@ -149,7 +176,7 @@ def test_train_simple_special_token():
     assert count_parameters(results['model']) == 1478602
     assert count_parameters(results['model'].decoder) == 934218
     assert results['model'].token_embedding.shape == (1, 1, 128)
-    assert results['loss'] == pytest.approx(2.1438148021698)
+    assert results['loss'] == pytest.approx( 4.234837532043457)
 
 
 def test_train_average_decoder():
@@ -162,7 +189,7 @@ def test_train_average_decoder():
     assert results['model'].decoder_type == "average"
     assert count_parameters(results['model']) == 1478474
     assert count_parameters(results['model'].decoder) == 934218
-    assert results['loss'] == pytest.approx(0.6834083795547485)
+    assert results['loss'] == pytest.approx(1.298040509223938)
 
 
 def test_train_reduce_on_spike():
@@ -178,7 +205,7 @@ def test_train_two_hidden_layers():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-L', '2'])
-    assert results['loss'] == pytest.approx(1.6209605932235718)
+    assert results['loss'] == pytest.approx(0.6612737774848938)
     assert count_parameters(results['model']) == 2081290
     assert isinstance(results['model'], MotherNet)
 
@@ -189,7 +216,7 @@ def test_train_two_decoder_layers():
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '-T', '2'])
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model']) == 1561162
-    assert results['loss'] == pytest.approx(0.6974108815193176)
+    assert results['loss'] == pytest.approx(0.9806529879570007)
 
 
 def test_train_low_rank_ignored():
@@ -216,5 +243,5 @@ def test_train_low_rank():
     assert results['model'].decoder.shared_weights[0].shape == (16, 64)
     assert results['model'].decoder.mlp[2].out_features == 3402
     # suspiciously low tolerance here
-    assert results['loss'] == pytest.approx(0.6940062046051025, rel=1e-4)
+    assert results['loss'] == pytest.approx(0.6916791796684265, rel=1e-4)
     assert isinstance(results['model'], MotherNet)

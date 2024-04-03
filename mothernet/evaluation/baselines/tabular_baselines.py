@@ -260,7 +260,7 @@ param_grid_hyperopt['hyperfast'] = {
     'nn_bias': hp.choice('nn_bias', [True, False]),
     'stratify_sampling': hp.choice('stratify_sampling', [True, False]),
     'optimization': hp.choice('optimization', [None, 'optimize', 'ensemble_optimize']),
-    'optimize_steps': hp.choice('optimize_steps',[1, 4, 8, 16, 32, 64, 128]),
+    'optimize_steps': hp.choice('optimize_steps', [1, 4, 8, 16, 32, 64, 128]),
 }
 
 
@@ -280,6 +280,7 @@ def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max
 
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
+    from sklearn.pipeline import make_union
     from sklearn.impute import SimpleImputer
 
     from mothernet.prediction.tabpfn import TabPFNClassifier
@@ -292,6 +293,8 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
         if x.shape[1] > 100:
             skb = SelectKBest(k=100).fit(x, y)
             x, test_x = skb.transform(x), skb.transform(test_x)
+    elif classifier is not None:
+        classifier.cat_features = cat_features
 
     if classifier is None:
         classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)

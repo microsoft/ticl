@@ -16,7 +16,6 @@ def test_get_dataloader_base_config():
     prior_config = config['prior']
     dataloader_config = config['dataloader']
     batch_size = 16
-    dataloader_config['steps_per_epoch'] = 1
     dataloader_config['batch_size'] = batch_size
     n_samples = 1024
     prior_config['n_samples'] = n_samples
@@ -113,7 +112,6 @@ def test_get_dataloader_uninformative_mlp(batch_size=16, n_samples=256, n_featur
     config = get_prior_config()
     prior_config = config['prior']
     dataloader_config = config['dataloader']
-    dataloader_config['steps_per_epoch'] = 1
     dataloader_config['batch_size'] = batch_size
     prior_config['n_samples'] = n_samples
     prior_config['num_features'] = n_features
