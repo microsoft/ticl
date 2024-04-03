@@ -55,9 +55,15 @@ def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_d
     eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
+    if torch.is_tensor(X_train):
+        xs = X_train.to(device)
+    else:
+        xs = torch.Tensor(X_train.astype(float)).to(device)
+    if torch.is_tensor(y_train):
+        ys = y_train.to(device)
+    else:
+        ys = torch.Tensor(y_train.astype(float)).to(device)
 
-    ys = torch.Tensor(y_train.astype(float)).to(device)
-    xs = torch.Tensor(X_train.astype(float)).to(device)
     if scale:
         eval_xs_ = normalize_data(xs, eval_position)
     else:
@@ -203,13 +209,20 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
 
 
 class MotherNetClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu"):
+    def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device
         self.scale = scale
-        if path is None:
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
+
+        if path is None and model is None:
             model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
             path = get_mn_model(model_string)
         self.path = path
@@ -220,7 +233,11 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         y = le.fit_transform(y)
         if len(le.classes_) > 10:
             raise ValueError(f"Only 10 classes supported, found {len(le.classes_)}")
-        model, config = load_model(self.path, device=self.device)
+        if self.model is not None:
+            model = self.model
+            config = self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["mlp", "mothernet"]:

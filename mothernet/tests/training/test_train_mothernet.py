@@ -32,6 +32,20 @@ def test_train_defaults():
     assert count_parameters(results['model'].decoder) == 1000394
 
 
+def test_train_mothernet_validation():
+    # FIXME not actually testing that validation worked
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--validate', 'True'])
+        clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf)
+    assert results['loss'] == DEFAULT_LOSS
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu_")
+    assert count_parameters(results['model']) == 1544650
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 1000394
+
+
 def test_train_mothernet_less_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:

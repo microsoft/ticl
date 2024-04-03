@@ -62,6 +62,7 @@ def test_train_baam_defaults():
 
 
 def test_train_baam_validation():
+    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--validate', 'True'])

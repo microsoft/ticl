@@ -439,14 +439,14 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 # synetune callback
                 report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
-        try:
-            if (epoch == "on_exit") or epoch % save_every == 0:
-                if checkpoint_dir is not None:
-                    if epoch == "on_exit":
-                        return
-                    file_name = f'{base_path}/checkpoint.mothernet'
-                else:
-                    file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+        if (epoch == "on_exit") or epoch % save_every == 0:
+            if checkpoint_dir is not None:
+                if epoch == "on_exit":
+                    return
+                file_name = f'{base_path}/checkpoint.mothernet'
+            else:
+                file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+            try:
                 os.makedirs(f"{base_path}/models_diff", exist_ok=True)
                 disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
                 if disk_usage.free < 1024 * 1024 * 1024 * 2:
@@ -462,36 +462,35 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 config['wallclock_times'] = model.wallclock_times
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config)
-                if epoch != "on_exit":
-                    if validate:
-                        try:
-                            validation_score, per_dataset_score = validate_model(model, config)
-                            print(f"Validation score: {validation_score}")
-                            if not no_mlflow:
-                                mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
-                                for dataset, score in per_dataset_score.items():
-                                    mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
-                        except Exception as e:
-                            print(f"Validation failed: {e}")
-                    # remove checkpoints that are worse than current
-                    if epoch - save_every > 0:
-                        this_loss = model.losses[-1]
-                        for i in range(epoch // save_every):
-                            loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
-                            old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
-                            if os.path.exists(old_file_name):
-                                if loss > this_loss:
-                                    try:
-                                        print(f"Removing old model file {old_file_name}")
-                                        os.remove(old_file_name)
-                                    except Exception as e:
-                                        print(f"Failed to remove old model file {old_file_name}: {e}")
-                                else:
-                                    print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+            
+            except Exception as e:
+                print("WRITING TO MODEL FILE FAILED")
+                print(e)
 
-        except Exception as e:
-            print("WRITING TO MODEL FILE FAILED")
-            print(e)
+            if epoch != "on_exit":
+                if validate:
+                    validation_score, per_dataset_score = validate_model(model, config)
+                    print(f"Validation score: {validation_score}")
+                    if not no_mlflow:
+                        mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
+                        for dataset, score in per_dataset_score.items():
+                            mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
+                # remove checkpoints that are worse than current
+                if epoch - save_every > 0:
+                    this_loss = model.losses[-1]
+                    for i in range(epoch // save_every):
+                        loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
+                        old_file_name = f'{base_path}/models_diff/{model_string}_epoch_{i * save_every}.cpkt'
+                        if os.path.exists(old_file_name):
+                            if loss > this_loss:
+                                try:
+                                    print(f"Removing old model file {old_file_name}")
+                                    os.remove(old_file_name)
+                                except Exception as e:
+                                    print(f"Failed to remove old model file {old_file_name}: {e}")
+                            else:
+                                print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+
     return save_callback
 
 
@@ -537,7 +536,9 @@ def validate_model(model, config):
     from mothernet.datasets import load_openml_list, open_cc_valid_dids
 
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-    from mothernet.prediction import MotherNetAdditiveClassifier
+    from mothernet.models.mothernet_additive import MotherNetAdditive
+    from mothernet.models.mothernet import MotherNet
+    from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier
     from mothernet.evaluation.tabular_evaluation import eval_on_datasets
     from mothernet.evaluation import tabular_metrics
     from uuid import uuid4
@@ -545,14 +546,16 @@ def validate_model(model, config):
     cc_valid_datasets_multiclass, _ = load_openml_list(
         open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
     
-    if isinstance(model, BiAttentionMotherNetAdditive):
+    if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
         clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
+    elif isinstance(model, MotherNet):
+        clf = MotherNetClassifier(device=config['device'], model=model, config=config)
     else:
         raise ValueError(f"Model {model} not supported for validation")
     base_path = 'models_diff/validation'
     results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
                                metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
-                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=-1, device=config['device'],
+                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=1, device=config['device'],
                                save=False)
     mean_auc = np.array([r['mean_metric'] for r in results]).mean()
     per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
