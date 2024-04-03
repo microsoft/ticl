@@ -155,7 +155,6 @@ class BiAttentionMotherNetAdditive(nn.Module):
             # Determine which feature in each batch is categorical
             is_categorical = self._determine_is_categorical(x_src_org)  # (1, batch_size, num_features)
             x_src += self.categorical_embedding(is_categorical)
-        y_src = self.y_encoder(y_src_org.unsqueeze(-1) if len(y_src_org.shape) < len(x_src.shape) else y_src_org)
         if self.y_encoder is None:
             enc_train = x_src[:single_eval_pos]
         else:

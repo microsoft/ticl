@@ -80,7 +80,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inference_device="cpu", n_bins=64):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
     additive_components = []
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
@@ -99,6 +99,7 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, inf
         from scipy.special import softmax
         return softmax(out / .8, axis=1), additive_components
     elif "cuda" in inference_device:
+        raise NotImplementedError('CUDA inference not working')
         mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
         std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
         # FIXME replacing nan with 0 as in TabPFN
@@ -133,6 +134,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             raise ValueError("config must be provided if model is provided")
         self.model = model
         self.config = config
+        if hasattr(model, "nan_bin"):
+            self.nan_bin = model.nan_bin
+        else:
+            self.nan_bin = False
 
     def fit(self, X, y, is_categorical: List[bool] = None):
         if is_categorical is None:
@@ -168,10 +173,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device, is_categorical=self.is_categorical)
+                                           inference_device=self.inference_device)[0]
 
     def predict_proba_with_additive_components(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_,
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device)
 
     def predict(self, X):
