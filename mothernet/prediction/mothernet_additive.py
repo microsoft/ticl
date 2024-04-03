@@ -11,8 +11,7 @@ from mothernet.models.encoders import get_fourier_features
 from mothernet.utils import normalize_data
 
 
-def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True,
-                           is_categorical: List[bool] = None):
+def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     n_classes = len(np.unique(y_train))
@@ -37,6 +36,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
 
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     if hasattr(model, 'categorical_embedding'):
+        is_categorical = model._determine_is_categorical(x_src)  # (1, batch_size, num_features)
         x_src += model.is_categorical_encoder(is_categorical)
 
     if model.y_encoder is None:
@@ -140,12 +140,6 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             self.nan_bin = False
 
     def fit(self, X, y, is_categorical: List[bool] = None):
-        if is_categorical is None:
-            # Assume all features are continuous if not otherwise specified
-            is_categorical = [False] * X.shape[1]
-        assert X.shape[1] == len(is_categorical), 'Is_categorical must have the same length as the number of features in X.'
-        self.is_categorical = is_categorical
-
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
@@ -163,7 +157,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         except KeyError:
             pad_zeros = True
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
-                                                 pad_zeros=pad_zeros, is_categorical=self.is_categorical)
+                                                 pad_zeros=pad_zeros)
         self.w_ = w
         self.b_ = b
         self.bin_edges_ = bin_edges
