@@ -35,7 +35,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
-    if hasattr(model, 'categorical_embedding'):
+    if getattr(model, 'categorical_embedding', False):
         is_categorical = model._determine_is_categorical(x_src)  # (1, batch_size, num_features)
         x_src += model.is_categorical_encoder(is_categorical)
 

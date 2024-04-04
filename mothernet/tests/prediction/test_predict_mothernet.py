@@ -39,11 +39,12 @@ def test_mothernet_ensemble():
 
 @pytest.mark.parametrize("categorical", [True, False])
 def test_mothernet_preprocessing_ensemble(categorical):
-    X = np.random.rand(100, 10)
+    rng = np.random.RandomState(42)
+    X = rng.rand(100, 10)
     X[:, 0] = np.NAN
     X[0, 1] = np.NAN
-    X[:, 2] = np.random.randint(0, 10, 100)
-    X[:, 3] = np.random.randint(0, 3, 100)
+    X[:, 2] = rng.randint(0, 10, 100)
+    X[:, 3] = rng.randint(0, 3, 100)
     X[0, 3] = np.NAN
     y = X[:, 8] > 0.5
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
@@ -62,9 +63,10 @@ def test_mothernet_preprocessing_ensemble(categorical):
 
 
 def test_mothernet_preprocessing_categorical_pruning():
-    X = np.random.rand(100, 99)
-    X[:, 2] = np.random.randint(0, 10, 100)
-    X[:, 4] = np.random.randint(0, 10, 100)
+    rng = np.random.RandomState(42)
+    X = rng.rand(100, 99)
+    X[:, 2] = rng.randint(0, 10, 100)
+    X[:, 4] = rng.randint(0, 10, 100)
     y = X[:, 8] > 0.5
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
     model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"

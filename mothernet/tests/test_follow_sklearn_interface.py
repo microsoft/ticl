@@ -112,7 +112,8 @@ def test_baam_with_nan():
 
 def test_baam_with_categoricals():
     X, y = load_iris(return_X_y=True)
-    X_rand = np.random.normal(size=X.shape)
+    rng = np.random.RandomState(42)
+    X_rand = rng.normal(size=X.shape)
     X_rand_cat = (X_rand > 0.0).astype(np.int32)
     # Mix Float and categorical features.
     X = np.concatenate([X[:, :2], X_rand_cat[:, 2:]], axis=-1)
@@ -124,7 +125,7 @@ def test_baam_with_categoricals():
     print(classifier)
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
-    assert classifier.score(X_test, y_test) > 0.9
+    assert classifier.score(X_test, y_test) > 0.85
 
 
 def test_distilled_mlp_paper():

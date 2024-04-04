@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-def bin_data(data, n_bins, nan_bin, single_eval_pos=None):
+def bin_data(data, n_bins, nan_bin=False, single_eval_pos=None):
     if nan_bin:
         # data is samples x batch x features
         quantiles = torch.arange(n_bins, device=data.device) / (n_bins - 1)

@@ -157,13 +157,14 @@ def get_additive_config():
         'nan_bin': False,
         'fourier_features': 0,
         'marginal_residual': False,
+        'categorical_embedding': False
+
     }}
 
 
 def get_biattention_config():
     return {'biattention': {
         'input_embedding': 'linear',
-        'categorical_embedding': False
     }}
 
 
