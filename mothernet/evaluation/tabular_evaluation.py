@@ -13,10 +13,43 @@ from tqdm import tqdm
 from sklearn.base import BaseEstimator
 
 from mothernet.evaluation import tabular_metrics
-from mothernet.evaluation.baselines.tabular_baselines import get_scoring_string, transformer_metric
+from mothernet.evaluation.baselines.tabular_baselines import get_scoring_string
 from mothernet.utils import torch_nanmean
 from mothernet.prediction.tabpfn import transformer_predict
 from mothernet.evaluation.baselines.baseline_prediction_interface import baseline_predict
+
+
+def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
+    from sklearn.feature_selection import SelectKBest
+    from sklearn.impute import SimpleImputer
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import OneHotEncoder
+    from mothernet.prediction.tabpfn import TabPFNClassifier
+
+    if onehot:
+        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe.fit(x)
+        x, test_x = ohe.transform(x), ohe.transform(test_x)
+        if x.shape[1] > 100:
+            skb = SelectKBest(k=100).fit(x, y)
+            x, test_x = skb.transform(x), skb.transform(test_x)
+    elif classifier is not None:
+        classifier.cat_features = cat_features
+
+    if classifier is None:
+        classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
+    tick = time.time()
+    classifier.fit(x, y)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
 
 
 def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):

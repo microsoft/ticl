@@ -116,7 +116,7 @@ dependencies:
     - s3fs==0.4.2
     - s3transfer==0.7.0
     - schema==0.7.5
-    - scikit-learn==1.3.2
+    - scikit-learn
     - smdebug-rulesconfig==1.0.1
     - smmap==5.0.1
     - snakeviz==2.1.1
