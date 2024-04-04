@@ -29,7 +29,7 @@ class MotherNetAdditive(nn.Module):
         self.categorical_embedding = categorical_embedding
 
         assert not categorical_embedding, "Categorical embedding is not supported in this model yet"
-        assert not marginal_residual, "Marginal residual is not supported in this model yet"
+        assert marginal_residual in [None, 'none', False, 'False'], "Marginal residual is not supported in this model yet"
         assert fourier_features == 0, "Fourier features are not supported in this model yet"
 
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,

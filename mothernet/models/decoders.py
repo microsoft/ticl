@@ -149,7 +149,8 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers, activation=decoder_activation)
         self.output_biases = nn.Parameter(torch.randn(n_out))
 
-    def forward(self, x, y_src):
+    def forward(self, x, y_src, marginals=None):
+        assert marginals is None
         summary = self.summary_layer(x, y_src)
         res = self.mlp(summary)
         if self.decoder_type in ["class_tokens", "class_average"]:
