@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
   
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
     - run: |
         echo "Installing Miniconda..."
         wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
