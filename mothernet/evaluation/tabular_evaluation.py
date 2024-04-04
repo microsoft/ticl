@@ -203,10 +203,11 @@ def generate_valid_split(X, y, n_samples, eval_position, is_classification, spli
     :return:
     """
     done, seed = False, 13
-
-    torch.manual_seed(split_number)
-    perm = torch.randperm(X.shape[0]) if split_number > 1 else torch.arange(0, X.shape[0])
+    generator = torch.Generator(device=X.device)
+    generator.manual_seed(split_number)
+    perm = torch.randperm(X.shape[0], generator=generator) if split_number > 1 else torch.arange(0, X.shape[0])
     X, y = X[perm], y[perm]
+    old_random_state = random.getstate()
     while not done:
         if seed > 20:
             return None, None  # No split could be generated in 7 passes, return None
@@ -225,13 +226,15 @@ def generate_valid_split(X, y, n_samples, eval_position, is_classification, spli
         else:
             done = True
 
+    random.setstate(old_random_state)
     eval_xs = torch.stack([X[i:i + n_samples].clone()], 1)
     eval_ys = torch.stack([y[i:i + n_samples].clone()], 1)
 
     return eval_xs, eval_ys
 
 
-def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False, max_time=300, split_number=1, metric_used=None, device='cpu', per_step_normalization=False, verbose=0, **kwargs):
+def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False,
+                      max_time=300, split_number=1, metric_used=None, device='cpu', verbose=0, **kwargs):
     """
     Evaluates a dataset with a 'n_samples' number of training samples.
 
@@ -248,7 +251,6 @@ def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, 
     :param method: Model name.
     :param ds_name: Datset name.
     :param fetch_only: Wheater to calculate or only fetch results.
-    :param per_step_normalization:
     :param kwargs:
     :return:
     """
@@ -268,7 +270,8 @@ def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, 
 
     # Generate data splits
     eval_xs, eval_ys = generate_valid_split(
-        X, y, n_samples, eval_position, is_classification=tabular_metrics.is_classification(metric_used), split_number=split_number)
+        X, y, n_samples, eval_position, is_classification=tabular_metrics.is_classification(metric_used),
+        split_number=split_number)
     if eval_xs is None:
         print(f"No dataset could be generated {ds_name} {n_samples}")
         return None
