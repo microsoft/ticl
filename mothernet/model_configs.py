@@ -156,7 +156,7 @@ def get_additive_config():
         'n_bins': 64,
         'nan_bin': False,
         'fourier_features': 0,
-        'marginal_residual': False,
+        'marginal_residual': "none",
         'categorical_embedding': False
 
     }}

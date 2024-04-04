@@ -129,7 +129,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--n-bins', help="Number of bins", type=int)
         additive.add_argument('--nan-bin', help="Whether to use the last bin to denote a nan value.", type=bool)
         additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=bool)
-        additive.add_argument('--marginal-residual', help="Whether to learn the residual of the marginals.", type=str2bool)
+        additive.add_argument('--marginal-residual', help="Whether to learn the residual of the marginals. 'output', 'decoder' or 'none'.", type=str)
         additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
         additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)
         additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool)

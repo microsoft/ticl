@@ -55,14 +55,23 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
             output = mod(output)
     else:
         output = model.transformer_encoder(train_x)
-    weights, biases = model.decoder(output, ys)
 
-    if model.marginal_residual:
+    if model.marginal_residual in [True, 'True', 'output', 'decoder']:
         class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
         # class averages are batch x outputs x features x bins
         # output is batch x features x bins x outputs
-        weights = weights + model.marginal_residual_layer(class_averages).permute(0, 2, 3, 1)
+        marginals = model.marginal_residual_layer(class_averages)
 
+    if model.marginal_residual == 'decoder':
+        weights, biases = model.decoder(output, ys, marginals)
+    else:
+        weights, biases = model.decoder(output, ys)
+
+    if model.marginal_residual in [True, 'True', 'output', 'decoder']:
+        if hasattr(model, "layers") and len(model.layers) == 0:
+            weights = marginals.permute(0, 2, 3, 1)
+        else:
+            weights = weights + marginals.permute(0, 2, 3, 1)
     w = weights.squeeze()[:n_features, :, :n_classes]
     if biases is None:
         b = torch.zeros(n_classes, device=device)

@@ -73,10 +73,22 @@ def test_train_baam_validation():
     assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
 
 
+def test_train_baam_marginal_residual_decoder():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'decoder', '--shape-init', 'zero'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf, check_accuracy=True)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 88512
+    assert results['model'].decoder.mlp[0].weight.shape == (512, 16 + 64)
+    assert results['loss'] == pytest.approx(1.019360899925232, rel=1e-5)
+
+
 def test_train_baam_marginal_residual_no_learning():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'True', '-l', '0', '--shape-init', 'zero', '-E', '1', '--save-every', '1'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'output', '-l', '0', '--shape-init', 'zero', '-E', '1', '--save-every', '1'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf, check_accuracy=True)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
@@ -87,7 +99,7 @@ def test_train_baam_marginal_residual_no_learning():
 def test_train_baam_marginal_residual_no_transformer():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'True', '--shape-init', 'zero', '-E', '1', '--save-every', '1', '-N', '0'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--marginal-residual', 'output', '--shape-init', 'zero', '-E', '1', '--save-every', '1', '-N', '0'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf, check_accuracy=True)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
