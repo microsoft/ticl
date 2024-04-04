@@ -1,0 +1,27 @@
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+  
+    steps:
+    - run: |
+        echo "Installing Miniconda..."
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+        bash miniconda.sh -b -p $HOME/miniconda
+    
+    - run: |
+        echo "Creating Conda environment..."
+        $HOME/miniconda/bin/conda env create -f environment.yml
+    
+    - run: |
+        echo "Activating Conda environment..."
+        source $HOME/miniconda/bin/activate
+        conda activate mothernet
+        echo "Running tests..."
+        pytest -sv mothernet/tests/
