@@ -5,6 +5,7 @@ from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveMo
 from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
 from mothernet.models.layer import TransformerEncoderLayer
 from mothernet.models.tabpfn import TransformerEncoderDiffInit
+from mothernet.models.utils import bin_data
 from mothernet.utils import SeqBN, get_init_method
 
 
@@ -13,18 +14,22 @@ class MotherNetAdditive(nn.Module):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
-                 decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, input_bin_embedding=False,
+                 decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, nan_bin=False, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu', fourier_features=0):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False, categorical_embedding=False,):
         super().__init__()
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
         self.weight_embedding_rank = weight_embedding_rank  # ignored for now
         self.decoder_activation = decoder_activation
+        self.marginal_residual = marginal_residual
+        self.categorical_embedding = categorical_embedding
 
+        assert not categorical_embedding, "Categorical embedding is not supported in this model yet"
+        assert marginal_residual in [None, 'none', False, 'False'], "Marginal residual is not supported in this model yet"
         assert fourier_features == 0, "Fourier features are not supported in this model yet"
 
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
@@ -48,6 +53,7 @@ class MotherNetAdditive(nn.Module):
         self.init_method = init_method
         self.efficient_eval_masking = efficient_eval_masking
         self.n_bins = n_bins
+        self.nan_bin = nan_bin
         self.n_out = n_out
         self.nhid = nhid
         self.input_bin_embedding = input_bin_embedding
@@ -91,7 +97,7 @@ class MotherNetAdditive(nn.Module):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins,
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
@@ -122,23 +128,3 @@ class MotherNetAdditive(nn.Module):
             import pdb
             pdb.set_trace()
         return h
-
-
-def bin_data(data, n_bins, single_eval_pos=None):
-    # data is samples x batch x features
-    # FIXME treat NaN as separate bin
-    data_nona = torch.nan_to_num(data, nan=0)
-    quantiles = torch.arange(n_bins + 1, device=data.device) / n_bins
-    if single_eval_pos is None:
-        bin_edges = torch.quantile(data_nona, quantiles[1:-1], dim=0)
-    else:
-        bin_edges = torch.quantile(data_nona[:single_eval_pos], quantiles[1:-1], dim=0)
-    zero_padding = (data_nona == 0).all(axis=0)
-    # FIXME extra data copy
-    bin_edges = bin_edges.transpose(0, -1).contiguous()
-    data_nona = data_nona.transpose(0, -1).contiguous()
-    X_binned = torch.searchsorted(bin_edges, data_nona)
-    X_onehot = nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
-    # mask zero padding data
-    X_onehot[:, zero_padding, :] = 0
-    return X_onehot, bin_edges

@@ -51,101 +51,10 @@ def is_classification(metric_used):
     elif metric_used.__name__ == tabular_metrics.auc_metric.__name__:
         return -1
 
-# Loss
-
-
-def get_scoring_string(metric_used, multiclass=True, usage="sklearn_cv"):
-    if metric_used.__name__ == tabular_metrics.auc_metric.__name__:
-        if usage == 'sklearn_cv':
-            return 'roc_auc_ovo'
-        elif usage == 'autogluon':
-            # return 'log_loss' # Autogluon crashes when using 'roc_auc' with some datasets usning logloss gives better scores;
-            # We might be able to fix this, but doesn't work out of box.
-            # File bug report? Error happens with dataset robert and fabert
-            if multiclass:
-                return 'roc_auc_ovo_macro'
-            else:
-                return 'roc_auc'
-        elif usage == 'tabnet':
-            return 'logloss' if multiclass else 'auc'
-        elif usage == 'autosklearn':
-            import autosklearn.classification
-            if multiclass:
-                return autosklearn.metrics.log_loss  # roc_auc only works for binary, use logloss instead
-            else:
-                return autosklearn.metrics.roc_auc
-        elif usage == 'catboost':
-            return 'MultiClass'  # Effectively LogLoss, ROC not available
-        elif usage == 'xgb':
-            return 'logloss'
-        elif usage == 'lightgbm':
-            if multiclass:
-                return 'auc'
-            else:
-                return 'binary'
-        return 'roc_auc'
-    elif metric_used.__name__ == tabular_metrics.cross_entropy.__name__:
-        if usage == 'sklearn_cv':
-            return 'neg_log_loss'
-        elif usage == 'autogluon':
-            return 'log_loss'
-        elif usage == 'tabnet':
-            return 'logloss'
-        elif usage == 'autosklearn':
-            import autosklearn.classification
-            return autosklearn.metrics.log_loss
-        elif usage == 'catboost':
-            return 'MultiClass'  # Effectively LogLoss
-        return 'logloss'
-    elif metric_used.__name__ == tabular_metrics.r2_metric.__name__:
-        if usage == 'autosklearn':
-            import autosklearn.classification
-            return autosklearn.metrics.r2
-        elif usage == 'sklearn_cv':
-            return 'r2'  # tabular_metrics.neg_r2
-        elif usage == 'autogluon':
-            return 'r2'
-        elif usage == 'xgb':  # XGB cannot directly optimize r2
-            return 'rmse'
-        elif usage == 'catboost':  # Catboost cannot directly optimize r2 ("Can't be used for optimization." - docu)
-            return 'RMSE'
-        else:
-            return 'r2'
-    elif metric_used.__name__ == tabular_metrics.root_mean_squared_error_metric.__name__:
-        if usage == 'autosklearn':
-            import autosklearn.classification
-            return autosklearn.metrics.root_mean_squared_error
-        elif usage == 'sklearn_cv':
-            return 'neg_root_mean_squared_error'  # tabular_metrics.neg_r2
-        elif usage == 'autogluon':
-            return 'rmse'
-        elif usage == 'xgb':
-            return 'rmse'
-        elif usage == 'catboost':
-            return 'RMSE'
-        else:
-            return 'neg_root_mean_squared_error'
-    elif metric_used.__name__ == tabular_metrics.mean_absolute_error_metric.__name__:
-        if usage == 'autosklearn':
-            import autosklearn.classification
-            return autosklearn.metrics.mean_absolute_error
-        elif usage == 'sklearn_cv':
-            return 'neg_mean_absolute_error'  # tabular_metrics.neg_r2
-        elif usage == 'autogluon':
-            return 'mae'
-        elif usage == 'xgb':
-            return 'mae'
-        elif usage == 'catboost':
-            return 'MAE'
-        else:
-            return 'neg_mean_absolute_error'
-    else:
-        raise Exception('No scoring string found for metric')
-
 
 def eval_f(params, clf_, x, y, metric_used):
-    scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=get_scoring_string(metric_used, usage='sklearn_cv'))
-    if get_scoring_string(metric_used, usage='sklearn_cv') == 'r2' or get_scoring_string(metric_used, usage='sklearn_cv') == 'neg_log_loss':
+    scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv'))
+    if tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv') == 'r2' or tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv') == 'neg_log_loss':
         return np.nanmean(scores)
 
     return -np.nanmean(scores)
@@ -260,7 +169,7 @@ param_grid_hyperopt['hyperfast'] = {
     'nn_bias': hp.choice('nn_bias', [True, False]),
     'stratify_sampling': hp.choice('stratify_sampling', [True, False]),
     'optimization': hp.choice('optimization', [None, 'optimize', 'ensemble_optimize']),
-    'optimize_steps': hp.choice('optimize_steps',[1, 4, 8, 16, 32, 64, 128]),
+    'optimize_steps': hp.choice('optimize_steps', [1, 4, 8, 16, 32, 64, 128]),
 }
 
 
@@ -276,36 +185,6 @@ def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max
         return HyperFastClassifier(device=device, cat_features=cat_features, **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time, no_tune)
-
-
-def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
-    from sklearn.feature_selection import SelectKBest
-    from sklearn.impute import SimpleImputer
-
-    from mothernet.prediction.tabpfn import TabPFNClassifier
-
-    if onehot:
-        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
-        ohe.fit(x)
-        x, test_x = ohe.transform(x), ohe.transform(test_x)
-        if x.shape[1] > 100:
-            skb = SelectKBest(k=100).fit(x, y)
-            x, test_x = skb.transform(x), skb.transform(test_x)
-
-    if classifier is None:
-        classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
-    tick = time.time()
-    classifier.fit(x, y)
-    fit_time = time.time() - tick
-    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
-    tick = time.time()
-    pred = classifier.predict_proba(test_x)
-    inference_time = time.time() - tick
-    times = {'fit_time': fit_time, 'inference_time': inference_time}
-    metric = metric_used(test_y, pred)
-
-    return metric, pred, times
 
 # Auto Gluon
 # WARNING: Crashes for some predictors for regression
@@ -1409,6 +1288,6 @@ def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=
     return metric, pred, times
 
 
-clf_dict = {'gp': gp_metric, 'transformer': transformer_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric,
+clf_dict = {'gp': gp_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric,
             'xgb': xgb_metric, 'lightgbm': lightgbm_metric, 'ridge': ridge_metric, 'logistic': logistic_metric, 'autosklearn': autosklearn_metric, 'autosklearn2': autosklearn2_metric,
             'autogluon': autogluon_metric, 'cocktail': well_tuned_simple_nets_metric}

@@ -3,6 +3,7 @@ from contextlib import nullcontext
 
 import torch
 from torch import nn
+from tqdm import tqdm
 from torch.cuda.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
@@ -35,13 +36,13 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
     ignore_steps = 0
     steps_per_epoch = len(dl)
     assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
-    for batch, (data, targets, single_eval_pos) in enumerate(dl):
+    for batch, (data, targets, single_eval_pos) in enumerate(tqdm(dl)):
         if using_dist and not (batch % aggregate_k_gradients == aggregate_k_gradients - 1):
             cm = model.no_sync()
         else:
             cm = nullcontext()
         with cm:
-            with autocast(dtype=torch.bfloat16) if scaler is not None else nullcontext():
+            with autocast(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16) if scaler is not None else nullcontext():
                 output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
                                if isinstance(data, tuple) else data.to(device), single_eval_pos=single_eval_pos)
 
@@ -71,7 +72,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
 def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           epochs=10, stop_after_epochs=None, learning_rate=None, min_lr=None, weight_decay=0.0, warmup_epochs=10,
-          validation_period=10, device='cuda:0',
+          device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
           spike_tolerance=4
@@ -150,11 +151,6 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
 
             total_loss = new_loss
-            if hasattr(dl, 'validate') and epoch % validation_period == 0:
-                with torch.no_grad():
-                    val_score = dl.validate(model)
-            else:
-                val_score = None
             if spike_scheduler is not None:
                 last_lr = spike_scheduler.get_last_lr()[0]
             else:
@@ -167,8 +163,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
 
                 print(
                     f' lr {last_lr}'
-                    f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}'
-                    + (f'val score {val_score}' if val_score is not None else ''))
+                    f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}')
                 print('-' * 89)
             if new_loss > 1.5 * total_loss:
                 print("LOSS DIVERGED")

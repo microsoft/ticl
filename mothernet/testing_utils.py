@@ -21,10 +21,12 @@ def get_model_path(results):
     return f"{results['base_path']}/models_diff/{results['model_string']}_epoch_{results['epoch']}.cpkt"
 
 
-def check_predict_iris(clf):
+def check_predict_iris(clf, check_accuracy=False):
     # smoke test for predict, models aren't trained enough to check for accuracy
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=42)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     assert y_pred.shape[0] == X_test.shape[0]
+    if check_accuracy:
+        assert clf.score(X_test, y_test) > 0.9

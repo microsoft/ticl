@@ -96,6 +96,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     transformer.add_argument('-e', '--emsize', type=int, help='embedding size')
     transformer.add_argument('-N', '--nlayers', type=int, help='number of transformer layers')
     transformer.add_argument('--init-method', help='Weight initialization method.')
+    transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
     transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
     transformer.add_argument('--pre-norm', action='store_true')
     transformer.set_defaults(**config['transformer'])
@@ -126,6 +127,9 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int)
         additive.add_argument('--fourier-features', help="Number of Fourier features to add per feature. A value of 0 means off.", type=int)
         additive.add_argument('--n-bins', help="Number of bins", type=int)
+        additive.add_argument('--nan-bin', help="Whether to use the last bin to denote a nan value.", type=bool)
+        additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=bool)
+        additive.add_argument('--marginal-residual', help="Whether to learn the residual of the marginals. 'output', 'decoder' or 'none'.", type=str)
         additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
         additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)
         additive.add_argument('--input-layer-norm', help="Whether to use layer norm on one-hot encoded data.", type=str2bool)
@@ -147,7 +151,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     prior = parser.add_argument_group('prior')
     prior.add_argument('--num-features', help="Maximum number of features in prior", type=int)
     prior.add_argument('--n-samples', help="Maximum Number of samples in prior", type=int)
-    prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean'].", type=str)
+    prior.add_argument('--prior-type', help="Which prior to use, available ['prior_bag', 'boolean_only', 'bag_boolean', 'step_function'].", type=str)
     prior.set_defaults(**config['prior'])
 
     classification_prior = parser.add_argument_group('prior.classification')
@@ -166,7 +170,6 @@ def argparser_from_config(parser, description="Train Mothernet"):
                          type=float)
     boolean.add_argument('--max-fraction-uninformative', help="Maximum fraction opf uninformative features in boolean prior",
                          type=float)
-    boolean.add_argument('--sort-features', help="Whether to sort features by index in MLP prior.")
     boolean.set_defaults(**config['prior']['boolean'])
 
     # serialization, loading, logging
@@ -185,5 +188,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     orchestration.add_argument('--detect-anomaly', help='Whether enable anomaly detection in pytorch. For debugging only.', action='store_true')
+    orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.')
+
     # orchestration options are not part of the default config
     return parser

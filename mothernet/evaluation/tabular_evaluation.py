@@ -13,10 +13,42 @@ from tqdm import tqdm
 from sklearn.base import BaseEstimator
 
 from mothernet.evaluation import tabular_metrics
-from mothernet.evaluation.baselines.tabular_baselines import get_scoring_string, transformer_metric
 from mothernet.utils import torch_nanmean
 from mothernet.prediction.tabpfn import transformer_predict
 from mothernet.evaluation.baselines.baseline_prediction_interface import baseline_predict
+
+
+def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
+    from sklearn.feature_selection import SelectKBest
+    from sklearn.impute import SimpleImputer
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import OneHotEncoder
+    from mothernet.prediction.tabpfn import TabPFNClassifier
+
+    if onehot:
+        ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+        ohe.fit(x)
+        x, test_x = ohe.transform(x), ohe.transform(test_x)
+        if x.shape[1] > 100:
+            skb = SelectKBest(k=100).fit(x, y)
+            x, test_x = skb.transform(x), skb.transform(test_x)
+    elif classifier is not None:
+        classifier.cat_features = cat_features
+
+    if classifier is None:
+        classifier = TabPFNClassifier(device=device, N_ensemble_configurations=N_ensemble_configurations)
+    tick = time.time()
+    classifier.fit(x, y)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
 
 
 def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cpu', verbose=False, return_tensor=False, **kwargs):
@@ -32,7 +64,7 @@ def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cp
     :param kwargs:
     :return:
     """
-    overall_result = {'metric_used': get_scoring_string(metric_used), 'n_samples': n_samples, 'eval_positions': eval_positions}
+    overall_result = {'metric_used': tabular_metrics.get_scoring_string(metric_used), 'n_samples': n_samples, 'eval_positions': eval_positions}
 
     aggregated_metric_datasets, num_datasets = torch.tensor(0.0), 0
 
@@ -110,7 +142,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     max_time = kwargs['max_time']
     metric_used = kwargs['metric_used']
     time_string = '_time_'+str(max_time) if max_time else ''
-    metric_used_string = '_'+get_scoring_string(metric_used, usage='') if kwargs['append_metric'] else ''
+    metric_used_string = '_' + tabular_metrics.get_scoring_string(metric_used, usage='') if kwargs['append_metric'] else ''
     result = evaluate(method=kwargs['model_name']+time_string+metric_used_string, **kwargs)
     result['model'] = kwargs['model_name']
     result['dataset'] = kwargs['datasets'][0][0]
@@ -119,7 +151,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False,  append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto'):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False, append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto', save=True):
     if callable(model):
         model_callable = model
         if device == 'auto':
@@ -137,7 +169,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
             result = _eval_single_dataset_wrapper(
                 datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path, eval_positions=eval_positions,
                 device=device, max_splits=1,
-                overwrite=overwrite, save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
+                overwrite=overwrite, save=save, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only,
                 split_number=split_number, verbose=verbose, max_time=max_time, append_metric=append_metric)
 
             results.append(result)
@@ -145,7 +177,7 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
         results = Parallel(n_jobs=n_jobs, verbose=2)(delayed(_eval_single_dataset_wrapper)(
             datasets=[ds], model=model_callable, model_name=model_name, n_samples=n_samples, base_path=base_path,
             eval_positions=eval_positions, device=device, max_splits=1, overwrite=overwrite,
-            save=True, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
+            save=save, metric_used=metric_used, path_interfix=task_type, fetch_only=fetch_only, split_number=split_number,
             verbose=verbose, max_time=max_time, append_metric=append_metric) for ds in datasets for max_time in max_times for split_number in split_numbers)
     return results
 
@@ -171,10 +203,11 @@ def generate_valid_split(X, y, n_samples, eval_position, is_classification, spli
     :return:
     """
     done, seed = False, 13
-
-    torch.manual_seed(split_number)
-    perm = torch.randperm(X.shape[0]) if split_number > 1 else torch.arange(0, X.shape[0])
+    generator = torch.Generator(device=X.device)
+    generator.manual_seed(split_number)
+    perm = torch.randperm(X.shape[0], generator=generator) if split_number > 1 else torch.arange(0, X.shape[0])
     X, y = X[perm], y[perm]
+    old_random_state = random.getstate()
     while not done:
         if seed > 20:
             return None, None  # No split could be generated in 7 passes, return None
@@ -193,13 +226,15 @@ def generate_valid_split(X, y, n_samples, eval_position, is_classification, spli
         else:
             done = True
 
+    random.setstate(old_random_state)
     eval_xs = torch.stack([X[i:i + n_samples].clone()], 1)
     eval_ys = torch.stack([y[i:i + n_samples].clone()], 1)
 
     return eval_xs, eval_ys
 
 
-def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False, max_time=300, split_number=1, metric_used=None, device='cpu', per_step_normalization=False, verbose=0, **kwargs):
+def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, overwrite, save, base_path, path_interfix, method, ds_name, fetch_only=False,
+                      max_time=300, split_number=1, metric_used=None, device='cpu', verbose=0, **kwargs):
     """
     Evaluates a dataset with a 'n_samples' number of training samples.
 
@@ -216,7 +251,6 @@ def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, 
     :param method: Model name.
     :param ds_name: Datset name.
     :param fetch_only: Wheater to calculate or only fetch results.
-    :param per_step_normalization:
     :param kwargs:
     :return:
     """
@@ -236,7 +270,8 @@ def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, 
 
     # Generate data splits
     eval_xs, eval_ys = generate_valid_split(
-        X, y, n_samples, eval_position, is_classification=tabular_metrics.is_classification(metric_used), split_number=split_number)
+        X, y, n_samples, eval_position, is_classification=tabular_metrics.is_classification(metric_used),
+        split_number=split_number)
     if eval_xs is None:
         print(f"No dataset could be generated {ds_name} {n_samples}")
         return None

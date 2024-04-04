@@ -91,6 +91,11 @@ def get_prior_config(max_features=100, n_samples=1024+128):
 
     prior['gp'] = gp_prior_config
 
+    prior['step_function'] = {
+        'max_steps': 1,
+        'sampling': 'uniform',
+    }
+
     max_num_classes = 10
     classsification_prior = {
         "nan_prob_unknown_reason_reason_prior": 0.5,
@@ -149,13 +154,17 @@ def get_additive_config():
         'n_shape_functions': 32,
         'shape_init': 'constant',
         'n_bins': 64,
+        'nan_bin': False,
         'fourier_features': 0,
+        'marginal_residual': "none",
+        'categorical_embedding': False
+
     }}
 
 
 def get_biattention_config():
     return {'biattention': {
-        'input_embedding': 'linear'
+        'input_embedding': 'linear',
     }}
 
 
