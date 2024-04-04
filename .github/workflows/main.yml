@@ -17,6 +17,8 @@ jobs:
     
     - run: |
         echo "Creating Conda environment..."
+        ls
+        pwd
         $HOME/miniconda/bin/conda env create -f environment.yml
     
     - run: |
