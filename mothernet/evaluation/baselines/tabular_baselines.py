@@ -1379,6 +1379,6 @@ def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=
     return metric, pred, times
 
 
-clf_dict = {'gp': gp_metric, 'transformer': transformer_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric,
+clf_dict = {'gp': gp_metric, 'random_forest': random_forest_metric, 'knn': knn_metric, 'catboost': catboost_metric, 'tabnet': tabnet_metric,
             'xgb': xgb_metric, 'lightgbm': lightgbm_metric, 'ridge': ridge_metric, 'logistic': logistic_metric, 'autosklearn': autosklearn_metric, 'autosklearn2': autosklearn2_metric,
             'autogluon': autogluon_metric, 'cocktail': well_tuned_simple_nets_metric}
