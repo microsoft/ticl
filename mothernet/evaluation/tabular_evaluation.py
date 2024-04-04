@@ -13,7 +13,6 @@ from tqdm import tqdm
 from sklearn.base import BaseEstimator
 
 from mothernet.evaluation import tabular_metrics
-from mothernet.evaluation.baselines.tabular_baselines import get_scoring_string
 from mothernet.utils import torch_nanmean
 from mothernet.prediction.tabpfn import transformer_predict
 from mothernet.evaluation.baselines.baseline_prediction_interface import baseline_predict
@@ -65,7 +64,7 @@ def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cp
     :param kwargs:
     :return:
     """
-    overall_result = {'metric_used': get_scoring_string(metric_used), 'n_samples': n_samples, 'eval_positions': eval_positions}
+    overall_result = {'metric_used': tabular_metrics.get_scoring_string(metric_used), 'n_samples': n_samples, 'eval_positions': eval_positions}
 
     aggregated_metric_datasets, num_datasets = torch.tensor(0.0), 0
 
@@ -143,7 +142,7 @@ def _eval_single_dataset_wrapper(**kwargs):
     max_time = kwargs['max_time']
     metric_used = kwargs['metric_used']
     time_string = '_time_'+str(max_time) if max_time else ''
-    metric_used_string = '_'+get_scoring_string(metric_used, usage='') if kwargs['append_metric'] else ''
+    metric_used_string = '_' + tabular_metrics.get_scoring_string(metric_used, usage='') if kwargs['append_metric'] else ''
     result = evaluate(method=kwargs['model_name']+time_string+metric_used_string, **kwargs)
     result['model'] = kwargs['model_name']
     result['dataset'] = kwargs['datasets'][0][0]
