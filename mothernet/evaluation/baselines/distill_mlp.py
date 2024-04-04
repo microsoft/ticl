@@ -6,6 +6,7 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from mothernet.prediction.tabpfn import TabPFNClassifier
+from collections import OrderedDict
 
 
 class NeuralNetwork(nn.Module):
@@ -24,19 +25,22 @@ class NeuralNetwork(nn.Module):
         else:
             raise ValueError(f"Unknown nonlinearity {self.nonlinearity}")
         # create a list of linear and activation layers
-        layers = [nn.Linear(n_features, hidden_size), nl()]
+        layers = OrderedDict()
+        layers['linear0'] = nn.Linear(n_features, hidden_size)
+        layers['activation0'] = nl()
         # add more hidden layers with optional dropout
 
-        for _ in range(n_layers - 1):
+        for i in range(1, n_layers):
             if dropout_rate > 0:
-                layers.append(nn.Dropout(dropout_rate))
-            layers.extend([nn.Linear(hidden_size, hidden_size), nl()])
+                layers[f'dropout{i-1}'] = nn.Dropout(dropout_rate)
+            layers[f'linear{i}'] = nn.Linear(hidden_size, hidden_size)
+            layers[f'activation{i}'] = nl()
             if layernorm:
-                layers.append(nn.LayerNorm(hidden_size))
+                layers[f'norm{i}'] = nn.LayerNorm(hidden_size)
         # add the output layer
-        layers.append(nn.Linear(hidden_size, n_classes))
+        layers[f'linear{n_layers}'] = nn.Linear(hidden_size, n_classes)
         # create a sequential model
-        self.model = nn.Sequential(*layers)
+        self.model = nn.Sequential(layers)
 
     def forward(self, x):
         # pass the input through the model
@@ -58,7 +62,8 @@ def _encode_y(y):
 
 class TorchMLP(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None, nonlinearity='relu'):
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None,
+                 nonlinearity='relu', nn=None):
         self.hidden_size = hidden_size
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
@@ -71,11 +76,14 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
         self.batch_size = batch_size
         self.epoch_callback = epoch_callback
         self.nonlinearity = nonlinearity
+        self.nn = nn
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
         model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
                               hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm,
                               nonlinearity=self.nonlinearity)
+        # loading the state dict seems the easiest way to ensure all the configs actually match
+        model.load_state_dict(self.nn.state_dict())
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)

@@ -15,7 +15,7 @@ from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
 from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
-from mothernet.evaluation.baselines.distill_mlp import TorchMLP
+from mothernet.evaluation.baselines.distill_mlp import TorchMLP, NeuralNetwork
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -263,11 +263,10 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-class DestroyEverythingAppeaseReviewersClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cuda", inference_device=None, learning_rate=1e-3, n_epochs=10, verbose=0, weight_decay=0):
+class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=10, verbose=0, weight_decay=0):
         self.path = path
         self.device = device
-        self.inference_device = inference_device or device
         if path is None:
             model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
             path = get_mn_model(model_string)
@@ -289,19 +288,28 @@ class DestroyEverythingAppeaseReviewersClassifier(ClassifierMixin, BaseEstimator
         if config['model_type'] not in ["mlp", "mothernet"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
-        layers = extract_mlp_model(model, X, y, device=self.device,
-                                   inference_device=self.inference_device, scale=True)
-        import pdb; pdb.set_trace()
-        hidden_size = config['predicted_hidden_size']
-        n_layers = config['predicted_layers']
+        layers = extract_mlp_model(model, config, X, y, device=self.device,
+                                   inference_device=self.device, scale=True)
+        hidden_size = config['predicted_hidden_layer_size']
+        n_layers = config['predicted_hidden_layers']
+        assert len(layers) == n_layers + 1  # n_layers counts number of hidden layers
+        nn = NeuralNetwork(n_features=X.shape[1], n_classes=len(le.classes_), hidden_size=hidden_size, n_layers=n_layers)
+        state_dict = {}
+        for i, layer in enumerate(layers):
+            state_dict[f"model.linear{i}.weight"] = torch.Tensor(layer[1]).T
+            state_dict[f"model.linear{i}.bias"] = torch.Tensor(layer[0])
+        nn.load_state_dict(state_dict)
         self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
-                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose)
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, nn=nn)
+        self.scaler = StandardScaler().fit(X)
+        self.mlp.fit(X, y)
         self.parameters_ = layers
         self.classes_ = le.classes_
         return self
 
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=True, inference_device=self.inference_device)
+        X_scaled = self.scaler.transform(X)
+        return self.mlp.predict_proba(X_scaled)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
