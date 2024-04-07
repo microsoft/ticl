@@ -9,6 +9,28 @@ from mothernet.models.utils import bin_data
 from mothernet.utils import SeqBN, get_init_method
 
 
+def _determine_is_categorical(x_src_org: torch.Tensor, info: dict) -> torch.Tensor:
+    sequence_length, batch_size, num_features = x_src_org.shape
+
+    # Preallocate the is_categorical tensor with the correct shape
+    is_categorical = torch.zeros((1, batch_size, num_features), device=x_src_org.device)
+
+    # Get the categorical feature list from the info dict
+    categorical_features = info.get('categorical_features', []) if info is not None else None
+
+    if categorical_features is None:
+        return is_categorical.to(torch.float32)
+    else:
+        # Convert the categorical_features list to a tensor
+        categorical_features_tensor = torch.tensor(categorical_features, device=x_src_org.device, dtype=torch.int)
+
+        # Use the categorical_features_tensor to index into the is_categorical tensor and set those elements to 1
+        is_categorical[0, :, categorical_features_tensor] = 1
+
+        # Now is_categorical indicates for each feature and batch element whether it is categorical
+        return is_categorical.to(torch.float32)
+
+
 class BiAttentionMotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
@@ -100,45 +122,10 @@ class BiAttentionMotherNetAdditive(nn.Module):
                         nn.init.zeros_(attn.out_proj.weight)
                         nn.init.zeros_(attn.out_proj.bias)
 
-    def _determine_is_categorical(self, x_src_org: torch.Tensor) -> torch.Tensor:
-        MAX_NUM_CATEGORIES = 100  # --> Categorical prior
-        sequence_length, batch_size, num_features = x_src_org.shape
-
-        # Preallocate the is_categorical tensor with the correct shape
-        is_categorical = torch.zeros((1, batch_size, num_features), device=x_src_org.device)
-
-        # Loop over features, but vectorize over batches
-        for feature_i in range(num_features):
-            # Extract all values for the current feature across all sequences and batches
-            feature_values = x_src_org[:, :, feature_i]
-
-            # Use broadcasting to compare each element with each other element
-            # This creates a mask of shape (sequence_length, sequence_length, batch_size)
-            # where each slice along the last dimension indicates unique values
-            unique_mask = feature_values.unsqueeze(0) != feature_values.unsqueeze(1)
-
-            # Sum over the sequence_length dimension to count unique values
-            # The result has shape (sequence_length, batch_size)
-            unique_counts = unique_mask.sum(dim=0)
-
-            # Since we are counting non-equalities, the diagonal will be all False
-            # We need to add 1 to each count to account for the diagonal
-            unique_counts += 1
-
-            # Determine if the feature is categorical for each batch element
-            # The result has shape (batch_size,)
-            is_categorical_feature = unique_counts.max(dim=0).values < MAX_NUM_CATEGORIES
-
-            # Assign the result to the appropriate slice of the is_categorical tensor
-            is_categorical[0, :, feature_i] = is_categorical_feature
-
-        # Now is_categorical indicates for each feature and batch element whether it is categorical
-        return is_categorical.to(torch.float32)
-
     def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
-        _, x_src_org, y_src_org = src
+        info, x_src_org, y_src_org = src
 
         X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin,
                                single_eval_pos=single_eval_pos)
@@ -156,7 +143,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         
         if hasattr(self, 'categorical_embedding'):
             # Determine which feature in each batch is categorical
-            is_categorical = self._determine_is_categorical(x_src_org)  # (1, batch_size, num_features)
+            is_categorical = _determine_is_categorical(x_src_org, info)  # (1, batch_size, num_features)
             x_src += self.categorical_embedding(is_categorical)
         if self.y_encoder is None:
             enc_train = x_src[:single_eval_pos]

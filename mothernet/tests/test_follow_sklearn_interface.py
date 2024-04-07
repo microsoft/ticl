@@ -118,7 +118,7 @@ def test_baam_with_categoricals():
     # Mix Float and categorical features.
     X = np.concatenate([X[:, :2], X_rand_cat[:, 2:]], axis=-1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
+    model_string = "baam_categoricalembeddingTrue_e8_N4_numfeatures4_04_07_2024_11_18_57_epoch_on_exit.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
     classifier.fit(X_train, y_train)
@@ -143,3 +143,5 @@ def test_distilled_mlp_paper():
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
+
+test_baam_with_categoricals()

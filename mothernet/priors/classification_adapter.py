@@ -115,6 +115,7 @@ class ClassificationAdapter:
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
+        info = {}
         # num_features is constant for all batches, num_features_used is passed down to wrapped priors to change number of features
         if self.h['feature_curriculum']:
             num_features = min(num_features, epoch + 1)
@@ -148,7 +149,7 @@ class ClassificationAdapter:
                 if random.random() < p:
                     categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
-
+        info['categorical_features'] = categorical_features
         x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
@@ -194,7 +195,7 @@ class ClassificationAdapter:
                 random_shift = torch.randint(0, num_classes, (1,), device=device)
                 y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
-        return x, y, y  # x.shape = (T,B,H)
+        return x, y, y_, info  # x.shape = (T,B,H)
 
 
 class ClassificationAdapterPrior:
@@ -205,7 +206,7 @@ class ClassificationAdapterPrior:
     def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_ = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
+            x, y, y_, info = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
-        return x, y, y_
+        return x, y, y_, info
