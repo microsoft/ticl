@@ -195,7 +195,7 @@ class ClassificationAdapter:
                 random_shift = torch.randint(0, num_classes, (1,), device=device)
                 y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
-        return x, y, y_, info  # x.shape = (T,B,H)
+        return x, y, y, info  # x.shape = (T,B,H)
 
 
 class ClassificationAdapterPrior:

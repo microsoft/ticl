@@ -18,7 +18,7 @@ def _determine_is_categorical(x_src_org: torch.Tensor, info: dict) -> torch.Tens
     # Get the categorical feature list from the info dict
     categorical_features = info.get('categorical_features', []) if info is not None else None
 
-    if categorical_features is None:
+    if categorical_features is None or len(categorical_features) == 0:
         return is_categorical.to(torch.float32)
     else:
         # Convert the categorical_features list to a tensor
