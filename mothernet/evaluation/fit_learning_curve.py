@@ -150,7 +150,7 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", y="loss
             continue
         already_seen.add(run.info.run_id)
         try:
-            losses = MlflowClient().get_metric_history(run.info.run_id, key="loss")
+            losses = MlflowClient().get_metric_history(run.info.run_id, key=y)
             if not len(losses):
                 continue
             adjusted_wallclock = MlflowClient().get_metric_history(run.info.run_id, key="wallclock_time")
