@@ -121,7 +121,7 @@ def test_baam_with_categoricals():
     model_string = "baam_categoricalembeddingTrue_e8_N4_numfeatures4_04_07_2024_11_18_57_epoch_on_exit.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
+    classifier.fit(X_train, y_train, is_categorical=[2, 3])
     print(classifier)
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
@@ -143,5 +143,3 @@ def test_distilled_mlp_paper():
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
-
-test_baam_with_categoricals()

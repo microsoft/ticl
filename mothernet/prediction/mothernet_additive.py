@@ -12,7 +12,7 @@ from mothernet.models.utils import bin_data
 from mothernet.utils import normalize_data
 
 
-def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True):
+def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, is_categorical=None):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     n_classes = len(np.unique(y_train))
@@ -39,8 +39,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     if getattr(model, 'categorical_embedding', False):
         # --> # (1, batch_size, num_features, 1)
-        is_categorical = _determine_is_categorical(x_src, info={'categorical_features': []})
-        x_src = x_src + model.categorical_embedding(is_categorical)
+        is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
+        x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
     if model.y_encoder is None:
         train_x = x_src
     else:
@@ -150,7 +150,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         else:
             self.nan_bin = False
 
-    def fit(self, X, y, is_categorical: List[bool] = None):
+    def fit(self, X, y, is_categorical: List[int] = None):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
@@ -168,7 +168,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         except KeyError:
             pad_zeros = True
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
-                                                 pad_zeros=pad_zeros)
+                                                 pad_zeros=pad_zeros, is_categorical=is_categorical)
         self.w_ = w
         self.b_ = b
         self.bin_edges_ = bin_edges
