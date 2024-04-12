@@ -6,8 +6,9 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
-from mothernet.models.utils import bin_data
+from mothernet.models.biattention_additive_mothernet import _determine_is_categorical
 from mothernet.models.encoders import get_fourier_features
+from mothernet.models.utils import bin_data
 from mothernet.utils import normalize_data
 
 
@@ -27,18 +28,19 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         x_all_torch = xs
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
-    if model.input_layer_norm:
-        X_onehot = model.input_norm(X_onehot.float())
     if getattr(model, "fourier_features", 0) > 0:
         x_scaled = normalize_data(xs)
         x_fourier = get_fourier_features(x_scaled, model.fourier_features)
         X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
+    if model.input_layer_norm:
+        X_onehot = model.input_norm(X_onehot.float())
+
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     if getattr(model, 'categorical_embedding', False):
-        is_categorical = model._determine_is_categorical(x_src)  # (1, batch_size, num_features)
-        x_src += model.is_categorical_encoder(is_categorical)
-
+        # --> # (1, batch_size, num_features, 1)
+        is_categorical = _determine_is_categorical(x_src, info={'categorical_features': []})
+        x_src = x_src + model.categorical_embedding(is_categorical)
     if model.y_encoder is None:
         train_x = x_src
     else:

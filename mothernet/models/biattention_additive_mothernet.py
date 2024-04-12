@@ -9,11 +9,11 @@ from mothernet.models.utils import bin_data
 from mothernet.utils import SeqBN, get_init_method
 
 
-def _determine_is_categorical(x_src_org: torch.Tensor, info: dict) -> torch.Tensor:
-    sequence_length, batch_size, num_features = x_src_org.shape
+def _determine_is_categorical(x_src: torch.Tensor, info: dict) -> torch.Tensor:
+    sequence_length, batch_size, num_features, embd_size = x_src.shape
 
     # Preallocate the is_categorical tensor with the correct shape
-    is_categorical = torch.zeros((1, batch_size, num_features), device=x_src_org.device)
+    is_categorical = torch.zeros((1, batch_size, num_features, 1), device=x_src.device)
 
     # Get the categorical feature list from the info dict
     categorical_features = info.get('categorical_features', []) if info is not None else None
@@ -22,10 +22,10 @@ def _determine_is_categorical(x_src_org: torch.Tensor, info: dict) -> torch.Tens
         return is_categorical.to(torch.float32)
     else:
         # Convert the categorical_features list to a tensor
-        categorical_features_tensor = torch.tensor(categorical_features, device=x_src_org.device, dtype=torch.int)
+        categorical_features_tensor = torch.tensor(categorical_features, device=x_src.device, dtype=torch.int)
 
         # Use the categorical_features_tensor to index into the is_categorical tensor and set those elements to 1
-        is_categorical[0, :, categorical_features_tensor] = 1
+        is_categorical[0, :, categorical_features_tensor, 0] = 1
 
         # Now is_categorical indicates for each feature and batch element whether it is categorical
         return is_categorical.to(torch.float32)
@@ -143,7 +143,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         
         if hasattr(self, 'categorical_embedding'):
             # Determine which feature in each batch is categorical
-            is_categorical = _determine_is_categorical(x_src_org, info)  # (1, batch_size, num_features)
+            is_categorical = _determine_is_categorical(x_src, info)  # (1, batch_size, num_features, 1)
             x_src += self.categorical_embedding(is_categorical)
         if self.y_encoder is None:
             enc_train = x_src[:single_eval_pos]
