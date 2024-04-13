@@ -78,7 +78,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, device='cpu', base_path=pathlib.Path(__file__).parent.parent.resolve(), model_string='download',
                  N_ensemble_configurations=3, no_preprocess_mode=False, multiclass_decoder='permutation',
                  feature_shift_decoder=True, seed=0, no_grad=True, batch_size_inference=32,
-                 verbose=False, scale=True, epoch=-1):
+                 verbose=False, scale=True, epoch=-1, model=None, config=None):
         """
         Initializes the classifier and loads the model.
         Depending on the arguments, the model is either loaded from memory, from a file, or downloaded from the
@@ -108,7 +108,10 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         :param no_grad: If set to false, allows for the computation of gradients with respect to X_train and X_test.
                For this to correctly function no_preprocessing_mode must be set to true.
         """
-
+        if model is not None and model_string != "download":
+            raise ValueError("Only one of model_string or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
         self.verbose = verbose
         self.device = device
         self.N_ensemble_configurations = N_ensemble_configurations
@@ -123,6 +126,8 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.epoch = epoch
         self.temperature = None
         self.scale = scale
+        self.model = model
+        self.config = config
 
         assert self.no_preprocess_mode if not self.no_grad else True, \
             "If no_grad is false, no_preprocess_mode must be true, because otherwise no gradient can be computed."
@@ -153,8 +158,11 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
                 print(f"using model {model_key}")
             model, c, results_file = self.models_in_memory[model_key]
         else:
-            model, c, results_file = load_model_workflow(self.epoch, add_name=self.model_string, base_path=self.base_path, device=self.device,
-                                                         eval_addition='')
+            if self.model is not None:
+                model, c, results_file = self.model, self.config, None
+            else:
+                model, c, results_file = load_model_workflow(self.epoch, add_name=self.model_string, base_path=self.base_path, device=self.device,
+                                                             eval_addition='')
             self.models_in_memory[model_key] = (model, c, results_file)
             # if len(self.models_in_memory) == 2:
             #    print('Multiple models in memory. This might lead to memory issues. Consider calling remove_models_from_memory()')

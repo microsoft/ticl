@@ -17,7 +17,10 @@ TESTING_DEFAULTS = ['batabpfn', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e',
 def test_train_batabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--pad-zeros', 'True', '--input-embedding', 'linear'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--pad-zeros', 'True', '--input-embedding', 'linear', '--validate', 'True'])
+        clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
+        check_predict_iris(clf)
+
     assert isinstance(results['model'], BiAttentionTabPFN)
     assert results['model_string'].startswith("batabpfn_AFalse_e4_E8_inputembeddinglinear_nsamples200_N2_numfeatures20_n1_padzerosTrue_tFalse_cpu")
     assert count_parameters(results['model']) == 870
