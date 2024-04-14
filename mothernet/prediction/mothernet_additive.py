@@ -92,6 +92,10 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
 
 def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
     additive_components = []
+    assert X_train.shape[1] == X_test.shape[1]
+    assert X_test.shape[1] == len(weights)
+    assert weights.shape[:2] == (X_train.shape[1], n_bins)
+    assert bin_edges.shape == (X_train.shape[1], n_bins - 1)
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
