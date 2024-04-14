@@ -553,7 +553,7 @@ def validate_model(model, config):
     elif isinstance(model, MotherNet):
         clf = MotherNetClassifier(device=config['device'], model=model, config=config)
     elif isinstance(model, (TabPFN, BiAttentionTabPFN)):
-        clf = TabPFNClassifier(device=config['device'], model=model, config=config)
+        clf = TabPFNClassifier(device=config['device'], model=model, config=config, N_ensemble_configurations=1)
     else:
         raise ValueError(f"Model {model} not supported for validation")
     base_path = 'models_diff/validation'
