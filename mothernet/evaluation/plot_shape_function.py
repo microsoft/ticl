@@ -9,8 +9,13 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray):
                             sharex=True, sharey=True)
     for class_idx in range(num_classes):
         for feature_idx in range(num_features):
-            axs[class_idx][feature_idx].plot(
-                bin_edges[feature_idx], w[feature_idx][0:-1][:, class_idx] - w[feature_idx][0:-1][:, class_idx].mean())
+            # Add one more edge to the beginning
+            bin_edge = np.concatenate(
+                [[bin_edges[feature_idx][0] - (bin_edges[feature_idx][1] - bin_edges[feature_idx][0])],
+                 bin_edges[feature_idx]])
+            # Compute the midpoints of the bin edges
+            axs[class_idx][feature_idx].step(
+                bin_edge, w[feature_idx][:, class_idx] - w[feature_idx][:, class_idx].mean(), where='pre')
             if class_idx == 0:
                 axs[class_idx][feature_idx].set_title(f'Feature {feature_idx}')
             if feature_idx == 0:
