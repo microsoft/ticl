@@ -12,7 +12,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
         class_range = [0]
         columns = min(int(np.sqrt(num_features)), 6)
         rows = int(np.ceil(num_features / columns))
-    fig, axs = plt.subplots(rows, columns, figsize=(2*rows, 2*columns),
+    fig, axs = plt.subplots(columns, rows, figsize=(2*rows, 2*columns),
                             sharey=True)
     for class_idx in class_range:
         for feature_idx in range(num_features):
@@ -26,7 +26,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
                  bin_edges[feature_idx]])
             # Compute the midpoints of the bin edges
             ax.step(
-                bin_edge, w[feature_idx][:, class_idx] - w[feature_idx][:, class_idx].mean(), where='pre')>>>>>>> develop
+                bin_edge, w[feature_idx][:, class_idx] - w[feature_idx][:, class_idx].mean(), where='pre')
             if class_idx == 0:
                 if feature_names is None:
                     ax.set_title(f'Feature {feature_idx}')
