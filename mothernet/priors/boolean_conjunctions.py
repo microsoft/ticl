@@ -72,4 +72,4 @@ class BooleanConjunctionPrior:
         y = torch.cat(y, 1).detach().squeeze(2)
         x = torch.cat(x, 1).detach()
 
-        return x, y, y
+        return x, y, y, {}
