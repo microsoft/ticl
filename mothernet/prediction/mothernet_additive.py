@@ -15,11 +15,12 @@ from mothernet.utils import normalize_data
 def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, is_categorical=None):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
-    n_classes = len(np.unique(y_train))
-    n_features = X_train.shape[1]
+    with torch.no_grad():
+        n_classes = len(np.unique(y_train))
+        n_features = X_train.shape[1]
 
-    ys = torch.Tensor(y_train).to(device)
-    xs = torch.Tensor(X_train).to(device)
+        ys = torch.Tensor(y_train).to(device)
+        xs = torch.Tensor(X_train).to(device)
 
     if X_train.shape[1] > 100:
         raise ValueError("Cannot run inference on data with more than 100 features")
@@ -28,13 +29,13 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         x_all_torch = xs
     X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
+    if model.input_layer_norm:
+        X_onehot = model.input_norm(X_onehot.float())
+        
     if getattr(model, "fourier_features", 0) > 0:
         x_scaled = normalize_data(xs)
         x_fourier = get_fourier_features(x_scaled, model.fourier_features)
         X_onehot = torch.cat([X_onehot, x_fourier], -1)
-
-    if model.input_layer_norm:
-        X_onehot = model.input_norm(X_onehot.float())
 
     x_src = model.encoder(X_onehot.unsqueeze(1).float())
     if getattr(model, 'categorical_embedding', False):
@@ -57,7 +58,6 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
             output = mod(output)
     else:
         output = model.transformer_encoder(train_x)
-
     if model.marginal_residual in [True, 'True', 'output', 'decoder']:
         class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
         # class averages are batch x outputs x features x bins
@@ -93,6 +93,10 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
 
 def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
     additive_components = []
+    assert X_train.shape[1] == X_test.shape[1]
+    assert X_test.shape[1] == len(weights)
+    assert weights.shape[:2] == (X_train.shape[1], n_bins)
+    assert bin_edges.shape == (X_train.shape[1], n_bins - 1)
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):

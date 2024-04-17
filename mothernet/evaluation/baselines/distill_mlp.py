@@ -83,7 +83,8 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
                               hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm,
                               nonlinearity=self.nonlinearity)
         # loading the state dict seems the easiest way to ensure all the configs actually match
-        model.load_state_dict(self.nn.state_dict())
+        if self.nn is not None:
+            model.load_state_dict(self.nn.state_dict())
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
