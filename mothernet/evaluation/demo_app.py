@@ -17,6 +17,7 @@ from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
 
 import torch
 from sklearn.feature_selection import f_classif, SelectKBest, VarianceThreshold
+from sklearn.metrics import roc_auc_score
 torch.set_num_threads(1)
 from sklearn.pipeline import make_pipeline
 import numpy as np
@@ -60,6 +61,10 @@ df_train['is_attack'] = df_train.attack != "normal"
 
 X_train = df_train.drop(columns=["attack", "level", 'is_attack'])
 y_train = df_train['is_attack']
+
+df_test = pd.read_csv("https://raw.githubusercontent.com/jmnwong/NSL-KDD-Dataset/master/KDDTest%2B.txt", names=columns, header=None)
+X_test = df_test.drop(columns=["attack", "level"])
+y_test = df_test['attack'] != "normal"
 
 
 drop_cols = []
@@ -138,8 +143,10 @@ def plot_with_val(value_item):
     vals.label = value_item
     if value_item == "None":
         mask = np.ones(X_train.shape[0], dtype="bool")
+        mask_test = np.ones(X_test.shape[0], dtype="bool")
     else:
         mask = X_train[cats.label] == value_item
+        mask_test = X_test[cats.label] == value_item
     some_output.text = "fitting..."
     X_train_masked = X_train[mask]
     y_train_masked = y_train[mask]
@@ -153,9 +160,14 @@ def plot_with_val(value_item):
             success = True
     tick = time.time()
     pipe.fit(X_train_masked.iloc[subsample], y_train_masked.iloc[subsample])
-    tock = time.time()
-    some_output.text = f"fitting time: {tock - tick:.2f}s"
-    print(f"fitting time: {tock - tick:.2f}s")
+    fitting_time = time.time() - tick
+    tick = time.time()
+    X_test_masked = X_test[mask_test]
+    y_test_masked = y_test[mask_test]
+    auc = roc_auc_score(y_test_masked, pipe.predict_proba(X_test_masked)[:, 1])
+    scoring_time = time.time() - tick
+    some_output.text = f"fitting time: {fitting_time:.2f}s, AUC: {auc:.2f}"
+    print(f"fitting time: {fitting_time:.2f}s")
     feature_names = pipe[:-1].get_feature_names_out()
     selected_features = [list(feature_names).index(col) for col in cont_cols if col in feature_names]
     additive = pipe[-1]
