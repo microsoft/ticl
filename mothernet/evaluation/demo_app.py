@@ -45,7 +45,8 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
         grid_figures[title] = (p, my_step)
         figures.append(p)
     grid = gridplot(zip(*([iter(figures)] * columns)), width=250, height=250, toolbar_location=None)
-    return grid
+    print("finshed gridplot")
+    col.children[1] = grid
 
 
 
@@ -89,13 +90,13 @@ def fit_predict_gamma_net(filter_feature=None, filter_value=None):
     pipe = make_pipeline(ct, VarianceThreshold(), additive)
 
     subsample = np.random.permutation(X_train.shape[0])[:100]
-    vals.label = value_item
+    vals.label = filter_value
     if filter_value == "None":
         mask = np.ones(X_train.shape[0], dtype="bool")
         mask_test = np.ones(X_test.shape[0], dtype="bool")
     else:
-        mask = X_train[filter_feature] == value_item
-        mask_test = X_test[filter_feature] == value_item
+        mask = X_train[filter_feature] == filter_value
+        mask_test = X_test[filter_feature] == filter_value
     some_output.text = "fitting..."
     X_train_masked = X_train[mask]
     y_train_masked = y_train[mask]
@@ -165,6 +166,7 @@ def select_val(event):
     print(event)
     value_item = event.item
     print(f"selected value: {value_item}")
+    vals.label = value_item
     fit_predict_with_model()
 
 def update_plot(bin_edges, w, feature_names):
@@ -198,13 +200,14 @@ def fit_predict_with_model():
         update_plot(bin_edges, w, feature_names)
     
 
-
 def checkbox_event(attr, old, new):
     if len(new) == 2:
         new_val = [x for x in new if x not in old]
         print(f"setting to {new_val}")
         checkbox_button_group.active = new_val
-    if new_val != old[0]:
+    else:
+        new_val = new[0]
+    if not len(old) or new_val != old[0]:
         fit_predict_with_model()
                 
 
@@ -212,7 +215,7 @@ def checkbox_event(attr, old, new):
 cats.on_click(pick_feature)
 vals.on_click(select_val)
 checkbox_button_group.on_change("active", checkbox_event)
-col = layout([[checkbox_button_group, slice_label, cats, value_label, vals, some_output], [axes]])
+col = layout([[checkbox_button_group, slice_label, cats, value_label, vals, some_output], [Div()]])
 print("prestart")
 curdoc().add_root(col)
 print("starting")
