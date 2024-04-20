@@ -27,7 +27,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
                 if feature_names is None:
                     ax.set_title(f'Feature {feature_idx}')
                 else:
-                    ax.set_title(f'{feature_idx}: {feature_names[feature_idx]}')
+                    ax.set_title(f'{feature_names[feature_idx]}')
 
             if feature_idx == 0:
                 ax.set_ylabel(f'Class {class_idx}')
