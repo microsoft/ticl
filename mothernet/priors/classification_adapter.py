@@ -138,14 +138,26 @@ class ClassificationAdapter:
                 else:
                     x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
 
-        # Categorical features
-        categorical_features = []
-        if random.random() < self.h['categorical_feature_p']:
+        # Categorical features (random.gammavariate equivalent is torch Gamma but with inverse scale)
+        per_dataset_cat_features = torch.distributions.Gamma(
+            1, 1.0 / 10).sample(sample_shape=(x.shape[1], x.shape[2])).round().clamp(min=2).to(x.device)
+        # Mask out categorical features randomly as before
+        per_dataset_cat_features *= (torch.rand(size=(x.shape[1], x.shape[2]), device=x.device) < self.h['categorical_feature_p']).to(torch.float)
+
+        class_boundaries = torch.randint(
+            0, x.shape[0], (x.shape[1], x.shape[2], int(per_dataset_cat_features.max())))
+        classes = torch.searchsorted(class_boundaries, x.permute(1, 2, 0))
+        class_assignment = torch.remainder(
+            classes, torch.where(per_dataset_cat_features == 0, torch.inf, per_dataset_cat_features).unsqueeze(-1))
+
+        # Only overwrite the categorical features.
+        x[:, per_dataset_cat_features > 0] = class_assignment.permute(2, 0, 1)[:, per_dataset_cat_features > 0]
+        if True:
             p = random.random()
             for col in range(x.shape[2]):
                 num_unique_features = max(round(random.gammavariate(1, 10)), 2)
                 m = MulticlassRank(num_unique_features, ordered_p=0.3)
-                if random.random() < p:
+                if True:
                     categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
 

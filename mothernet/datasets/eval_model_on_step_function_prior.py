@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from lightning import seed_everything
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import log_loss
 
 from mothernet.evaluation.concurvity import pairwise
 from mothernet.prediction import MotherNetAdditiveClassifier
@@ -27,15 +29,16 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray):
 
 
 def eval_step_function():
+    seed_everything(42)
     step_function_prior = StepFunctionPrior({'max_steps': 1, 'sampling': 'uniform'})
-    X, y, step_function = step_function_prior._get_batch(batch_size=1, n_samples=500, num_features=2)
-    X = X.squeeze().numpy()
+    X, y, step_function, step, mask = step_function_prior._get_batch(batch_size=1, n_samples=500, num_features=2)
+    X = X.squeeze(1).numpy()
     y = y.squeeze().numpy()
 
     # Plot the shape function here
     fig, ax = plt.subplots(ncols=2, sharey=True)
     ax[0].plot(X[:, 0], step_function[0, :, 0], 'o')
-    ax[1].plot(X[:, 1], step_function[0, :, 1], 'o')
+    # ax[1].plot(X[:, 1], step_function[0, :, 1], 'o')
     ax[0].set_xlabel('Feature 0')
     ax[1].set_xlabel('Feature 1')
     ax[0].set_ylabel('y')
@@ -57,7 +60,9 @@ def eval_step_function():
     conc = pairwise(torch.from_numpy(np.stack([additive_comp[0][:, 1], additive_comp[1][:, 1]])), kind='corr',
                     eps=1e-12)
     print(f'Concurvity: {conc:.3f}')
+    print('Model', model_string)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
+    print('Cross Entropy:', log_loss(classifier.predict(X_test), y_test))
     assert classifier.score(X_test, y_test) > 0.9
 
 
