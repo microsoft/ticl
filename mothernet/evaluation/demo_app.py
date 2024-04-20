@@ -14,12 +14,14 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import make_column_transformer
 from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from interpret.glassbox import ExplainableBoostingClassifier
+
 
 import torch
 from sklearn.feature_selection import f_classif, SelectKBest, VarianceThreshold
 from sklearn.metrics import roc_auc_score
 torch.set_num_threads(1)
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 import numpy as np
 from bokeh.models import Div, CheckboxButtonGroup
 
@@ -35,19 +37,17 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
     feature_range = feature_subset if feature_subset is not None else range(num_features)
     figures = []
     for ax_idx, feature_idx in enumerate(feature_range):
-        weights_normalized = w[feature_idx][0:-1][:, 1] - w[feature_idx][0:-1].mean(axis=-1)
         if feature_names is None:
             title = f'Feature {feature_idx}'
         else:
             title = f'{feature_names[feature_idx]}'
         p = figure(width=200, height=100, title=title)
-        my_step = p.step(bin_edges[feature_idx], weights_normalized)
+        my_step = p.step(bin_edges[feature_idx], w[feature_idx])
         grid_figures[title] = (p, my_step)
         figures.append(p)
     grid = gridplot(zip(*([iter(figures)] * columns)), width=250, height=250, toolbar_location=None)
     print("finshed gridplot")
     col.children[1] = grid
-
 
 
 columns = (['duration','protocol_type','service','flag','src_bytes','dst_bytes','land','wrong_fragment','urgent','hot'
@@ -78,18 +78,7 @@ cat_cols = X_train.dtypes.index[X_train.dtypes == "object"]
 cont_cols = X_train.dtypes.index[X_train.dtypes != "object"]
 
 
-def fit_predict_gamma_net(filter_feature=None, filter_value=None):
-    device = "cpu"
-    #additive = MotherNetAdditiveClassifier(path="../models_diff/baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt", device=device)
-    ct = make_column_transformer((OneHotEncoder(sparse_output=False, max_categories=10, handle_unknown='ignore'), X_train.dtypes == object), remainder="passthrough", verbose_feature_names_out=False)
-
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt"
-    model_path = get_mn_model(model_string)
-
-    additive = MotherNetAdditiveClassifier(path=model_path, device="cpu")
-    pipe = make_pipeline(ct, VarianceThreshold(), additive)
-
-    subsample = np.random.permutation(X_train.shape[0])[:100]
+def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     vals.label = filter_value
     if filter_value == "None":
         mask = np.ones(X_train.shape[0], dtype="bool")
@@ -103,34 +92,64 @@ def fit_predict_gamma_net(filter_feature=None, filter_value=None):
     if len(uniques := np.unique(y_train_masked)) == 1:
         some_output.text = f"only one class: {uniques[0]}"
         return
-    success = False
-    while not success:
-        subsample = np.random.permutation(X_train_masked.shape[0])[:100]
-        if y_train_masked.iloc[subsample].nunique() > 1:
-            success = True
+    if subsample:
+        success = False
+        while not success:
+            subsample = np.random.permutation(X_train_masked.shape[0])[:1000]
+            if y_train_masked.iloc[subsample].nunique() > 1:
+                success = True
+    else:
+        subsample = slice(None)
     tick = time.time()
-    pipe.fit(X_train_masked.iloc[subsample], y_train_masked.iloc[subsample])
+    model.fit(X_train_masked.iloc[subsample], y_train_masked.iloc[subsample])
     fitting_time = time.time() - tick
     tick = time.time()
     X_test_masked = X_test[mask_test]
     y_test_masked = y_test[mask_test]
-    auc = roc_auc_score(y_test_masked, pipe.predict_proba(X_test_masked)[:, 1])
+    auc = roc_auc_score(y_test_masked, model.predict_proba(X_test_masked)[:, 1])
     scoring_time = time.time() - tick
     some_output.text = f"fitting time: {fitting_time:.2f}s, AUC: {auc:.2f}"
     print(f"fitting time: {fitting_time:.2f}s")
-    feature_names = pipe[:-1].get_feature_names_out()
+    if isinstance(model, Pipeline):
+        feature_names = model[:-1].get_feature_names_out()
+    else:
+        feature_names = model.feature_names_in_
     selected_features = [list(feature_names).index(col) for col in cont_cols if col in feature_names]
-    additive = pipe[-1]
-    return pipe, additive.bin_edges_, additive.w_, feature_names, selected_features
+    return model, feature_names, selected_features
 
-# axes = plot_shape_function(additive.bin_edges_, additive.w_, feature_names=feature_names, feature_subset=selected_features)
+def fit_predict_gamma_net(filter_feature=None, filter_value=None):
+    device = "cpu"
+    ct = make_column_transformer((OneHotEncoder(sparse_output=False, max_categories=10, handle_unknown='ignore'), X_train.dtypes == object), remainder="passthrough", verbose_feature_names_out=False)
+
+    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt"
+    model_path = get_mn_model(model_string)
+
+    additive = MotherNetAdditiveClassifier(path=model_path, device="cpu")
+    pipe = make_pipeline(ct, VarianceThreshold(), additive)
+    pipe, feature_names, selected_features = eval_model(pipe, filter_feature, filter_value)
+    additive = pipe[-1]
+    weights = []
+    for w in additive.w_:
+        weights.append(w[0:-1][:, 1] - w[0:-1].mean(axis=-1))
+
+    return pipe, additive.bin_edges_, weights, feature_names, selected_features
+
+
+def fit_predict_ebm(filter_feature=None, filter_value=None):
+    ebm_bins_main_effects = ExplainableBoostingClassifier(max_bins=64, interactions=0)
+    pipe, feature_names, selected_features = eval_model(ebm_bins_main_effects, filter_feature, filter_value, subsample=False)
+    bins = []
+    weights = []
+    for b, w in zip(ebm_bins_main_effects.bins_, ebm_bins_main_effects.term_scores_):
+            weights.append(w[:-3])
+            bins.append(b[0])
+    return pipe, bins, weights, feature_names, selected_features
+
 
 select = ["None"] + list(cat_cols)
 per_col_cats = X_train[cat_cols].apply(lambda x: pd.unique(x).tolist()).to_dict()
 
-
 menu = [(s, s) for s in select]
-
 cats = Dropdown(label="None", menu=menu, width=100)
 vals = Dropdown(label="None", menu=[("None", "None")], width=100)
 
@@ -142,17 +161,13 @@ checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[
 
 
 def pick_feature(event):
-    print("callback")
-    print(event)
     selection = event.item
-    print(selection)
     cats.label = selection
     if selection != "None":
         old_vals = vals.label
         new_menu = [("None", "None")] + [(str(v), str(v)) for v in per_col_cats[selection]]
-        print(vals.menu)
         vals.update(label="None", menu= new_menu)
-        vals.label = "bla"
+        vals.label = "none"
         vals.label = "None"
         if old_vals != "None":
             fit_predict_with_model()
@@ -162,20 +177,16 @@ def pick_feature(event):
         fit_predict_with_model()
 
 def select_val(event):
-    print("select val callback")
-    print(event)
     value_item = event.item
-    print(f"selected value: {value_item}")
     vals.label = value_item
     fit_predict_with_model()
 
-def update_plot(bin_edges, w, feature_names):
-    for bins, w, feature in zip(bin_edges, w, feature_names):
+def update_plot(bin_edges, weights, feature_names):
+    for bins, w, feature in zip(bin_edges, weights, feature_names):
         if feature not in grid_figures:
             continue
         p, my_step = grid_figures[feature]
-        weights_normalized = w[0:-1][:, 1] - w[0:-1].mean(axis=-1)
-        my_step.data_source.data['y'] = weights_normalized
+        my_step.data_source.data['y'] = w
         my_step.data_source.data['x'] = bins
 
 def get_model():
@@ -189,7 +200,8 @@ def fit_predict_with_model():
     model = get_model()
     if model == "ebm":
         print("fitting ebm")
-        return
+        pipe, bin_edges, w, feature_names, selected_features = fit_predict_ebm(cats.label, vals.label)
+
     if model == "gamma_net":
         print("fitting gamma_net")
         pipe, bin_edges, w, feature_names, selected_features = fit_predict_gamma_net(cats.label, vals.label)
