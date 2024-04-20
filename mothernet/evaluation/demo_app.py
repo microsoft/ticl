@@ -114,18 +114,27 @@ def pick_feature(event):
     print(selection)
     cats.label = selection
     if selection != "None":
-        vals.menu = [(str(v), str(v)) for v in per_col_cats[selection]]
+        old_vals = vals.label
+        new_menu = [("None", "None")] + [(str(v), str(v)) for v in per_col_cats[selection]]
         print(vals.menu)
-        vals.label = vals.menu[0][0]
+        vals.update(label="None", menu= new_menu)
+        vals.label = "bla"
+        vals.label = "None"
+        if old_vals != "None":
+            plot_with_val(value_item="None")
     else:
         vals.menu = [("None", "None")]
         vals.label = "None"
+        plot_with_val(value_item="None")
 
 def select_val(event):
     print("select val callback")
     print(event)
     value_item = event.item
     print(f"selected value: {value_item}")
+    plot_with_val(value_item)
+
+def plot_with_val(value_item):
     vals.label = value_item
     if value_item == "None":
         mask = np.ones(X_train.shape[0], dtype="bool")
