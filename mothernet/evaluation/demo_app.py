@@ -126,15 +126,14 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     return model, feature_names, selected_features
 
 def fit_predict_gamma_net(filter_feature=None, filter_value=None):
-
     pipe = make_pipeline(ct, VarianceThreshold(), additive)
     pipe, feature_names, selected_features = eval_model(pipe, filter_feature, filter_value)
-    additive = pipe[-1]
+    last_step = pipe[-1]
     weights = []
-    for w in additive.w_:
+    for w in last_step.w_:
         weights.append(w[0:-1][:, 1] - w[0:-1].mean(axis=-1))
 
-    return pipe, additive.bin_edges_, weights, feature_names, selected_features
+    return pipe, last_step.bin_edges_, weights, feature_names, selected_features
 
 
 def fit_predict_ebm(filter_feature=None, filter_value=None):
