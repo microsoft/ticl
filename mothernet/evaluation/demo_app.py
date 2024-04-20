@@ -78,6 +78,14 @@ cat_cols = X_train.dtypes.index[X_train.dtypes == "object"]
 cont_cols = X_train.dtypes.index[X_train.dtypes != "object"]
 
 
+ct = make_column_transformer((OneHotEncoder(sparse_output=False, max_categories=10, handle_unknown='ignore'), X_train.dtypes == object), remainder="passthrough", verbose_feature_names_out=False)
+
+model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt"
+model_path = get_mn_model(model_string)
+
+additive = MotherNetAdditiveClassifier(path=model_path, device="cuda:1")
+
+
 def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     vals.label = filter_value
     if filter_value == "None":
@@ -118,12 +126,7 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     return model, feature_names, selected_features
 
 def fit_predict_gamma_net(filter_feature=None, filter_value=None):
-    ct = make_column_transformer((OneHotEncoder(sparse_output=False, max_categories=10, handle_unknown='ignore'), X_train.dtypes == object), remainder="passthrough", verbose_feature_names_out=False)
 
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt"
-    model_path = get_mn_model(model_string)
-
-    additive = MotherNetAdditiveClassifier(path=model_path, device="cuda:1")
     pipe = make_pipeline(ct, VarianceThreshold(), additive)
     pipe, feature_names, selected_features = eval_model(pipe, filter_feature, filter_value)
     additive = pipe[-1]
