@@ -24,7 +24,7 @@ torch.set_num_threads(1)
 from sklearn.pipeline import make_pipeline, Pipeline
 import numpy as np
 from bokeh.models import Div, CheckboxButtonGroup
-from sklearn.datasets import load_iris()
+from sklearn.datasets import load_iris
 
 from mothernet.utils import get_mn_model
 
