@@ -46,7 +46,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
         my_step = p.step(bin_edges[feature_idx], w[feature_idx])
         grid_figures[title] = (p, my_step)
         figures.append(p)
-    grid = gridplot(zip(*([iter(figures)] * columns)), width=250, height=250, toolbar_location=None)
+    grid = gridplot(zip(*([iter(figures)] * columns)), width=200, height=250, toolbar_location=None)
     print("finshed gridplot")
     col.children[1] = grid
 
