@@ -24,6 +24,7 @@ torch.set_num_threads(1)
 from sklearn.pipeline import make_pipeline, Pipeline
 import numpy as np
 from bokeh.models import Div, CheckboxButtonGroup
+from sklearn.datasets import load_iris()
 
 from mothernet.utils import get_mn_model
 
@@ -84,7 +85,9 @@ model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzeros
 model_path = get_mn_model(model_string)
 
 additive = MotherNetAdditiveClassifier(path=model_path, device="cuda:1")
-
+# calling fit to read the model to memory
+iris = load_iris()
+additive.fit(iris.data, iris.target)
 
 def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     vals.label = filter_value
