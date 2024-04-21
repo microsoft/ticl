@@ -106,7 +106,7 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     if subsample:
         success = False
         while not success:
-            subsample = np.random.permutation(X_train_masked.shape[0])[:3000]
+            subsample = np.random.permutation(X_train_masked.shape[0])[:1000]
             if y_train_masked.iloc[subsample].nunique() > 1:
                 success = True
     else:
