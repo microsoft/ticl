@@ -210,8 +210,8 @@ def fit_predict_with_model():
         print("fitting gamma_net")
         pipe, bin_edges, w, feature_names, selected_features = fit_predict_gamma_net(cats.label, vals.label)
 
-    if 22 in selected_features:
-        selected_features.remove(22)
+    if 23 in selected_features:
+        selected_features.remove(23)
     if len(grid_figures) == 0:
         plot_shape_function(bin_edges, w, feature_names=feature_names, feature_subset=selected_features)
     else:
