@@ -33,7 +33,7 @@ grid_figures = {}
 
 def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None, feature_subset=None):
     num_features = len(feature_subset) if feature_subset is not None else len(bin_edges)
-    columns = min(int(np.ceil(np.sqrt(num_features))), 6)
+    columns = min(int(np.ceil(np.sqrt(num_features))), 2)
     rows = int(np.ceil(num_features / columns))
     feature_range = feature_subset if feature_subset is not None else range(num_features)
     figures = []
@@ -157,9 +157,9 @@ menu = [(s, s) for s in select]
 cats = Dropdown(label="None", menu=menu, width=100)
 vals = Dropdown(label="None", menu=[("None", "None")], width=100)
 
-slice_label = Div(text="Slice By", margin=(10, 2, 0, 20))
-value_label = Div(text="Value", margin=(10, 2, 0, 20))
-some_output = Div(text="", margin=(10, 2, 0, 20))
+slice_label = Div(text="Slice By", margin=(10, 2, 0, 2))
+value_label = Div(text="Value", margin=(10, 2, 0, 2))
+some_output = Div(text="", margin=(10, 2, 0, 2))
 
 checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[])
 
