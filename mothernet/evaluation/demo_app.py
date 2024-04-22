@@ -33,7 +33,7 @@ grid_figures = {}
 
 def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None, feature_subset=None):
     num_features = len(feature_subset) if feature_subset is not None else len(bin_edges)
-    columns = min(int(np.ceil(np.sqrt(num_features))), 6)
+    columns = min(int(np.ceil(np.sqrt(num_features))), 2)
     rows = int(np.ceil(num_features / columns))
     feature_range = feature_subset if feature_subset is not None else range(num_features)
     figures = []
