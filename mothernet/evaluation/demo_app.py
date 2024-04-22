@@ -48,7 +48,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
         figures.append(p)
     grid = gridplot(zip(*([iter(figures)] * columns)), width=240, height=240, toolbar_location=None)
     print("finshed gridplot")
-    col.children[1] = grid
+    col.children[-1] = grid
 
 
 columns = (['duration','protocol_type','service','flag','src_bytes','dst_bytes','land','wrong_fragment','urgent','hot'
@@ -231,7 +231,7 @@ def checkbox_event(attr, old, new):
 cats.on_click(pick_feature)
 vals.on_click(select_val)
 checkbox_button_group.on_change("active", checkbox_event)
-col = layout([[checkbox_button_group], [slice_label, cats, value_label, vals, some_output], [Div()]])
+col = layout([[checkbox_button_group, some_output], [slice_label, cats, value_label, vals], [Div()]])
 print("prestart")
 curdoc().add_root(col)
 print("starting")
