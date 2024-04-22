@@ -154,12 +154,12 @@ select = ["None"] + list(cat_cols)
 per_col_cats = X_train[cat_cols].apply(lambda x: pd.unique(x).tolist()).to_dict()
 
 menu = [(s, s) for s in select]
-cats = Dropdown(label="None", menu=menu, width=100)
-vals = Dropdown(label="None", menu=[("None", "None")], width=100)
+cats = Dropdown(label="None", menu=menu, width=60)
+vals = Dropdown(label="None", menu=[("None", "None")], width=60)
 
-slice_label = Div(text="Slice By", margin=(10, 2, 0, 2))
-value_label = Div(text="Value", margin=(10, 2, 0, 2))
-some_output = Div(text="", margin=(10, 2, 0, 2))
+slice_label = Div(text="Slice By", margin=(10, 0, 0, 2))
+value_label = Div(text="Value", margin=(10, 0, 0, 2))
+some_output = Div(text="", margin=(10, 0, 0, 2))
 
 checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[])
 
