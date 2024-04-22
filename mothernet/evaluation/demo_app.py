@@ -119,7 +119,7 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     y_test_masked = y_test[mask_test]
     auc = roc_auc_score(y_test_masked, model.predict_proba(X_test_masked)[:, 1])
     scoring_time = time.time() - tick
-    some_output.text = f"fitting time: {fitting_time:.2f}s, AUC: {auc:.2f}"
+    some_output.text = f"fit time: {fitting_time:.2f}s, AUC: {auc:.2f}"
     print(f"fitting time: {fitting_time:.2f}s")
     if isinstance(model, Pipeline):
         feature_names = model[:-1].get_feature_names_out()
@@ -154,12 +154,12 @@ select = ["None"] + list(cat_cols)
 per_col_cats = X_train[cat_cols].apply(lambda x: pd.unique(x).tolist()).to_dict()
 
 menu = [(s, s) for s in select]
-cats = Dropdown(label="None", menu=menu, width=60)
-vals = Dropdown(label="None", menu=[("None", "None")], width=60)
+cats = Dropdown(label="None", menu=menu)
+vals = Dropdown(label="None", menu=[("None", "None")])
 
-slice_label = Div(text="Slice By", margin=(10, 0, 0, 2))
-value_label = Div(text="Value", margin=(10, 0, 0, 2))
-some_output = Div(text="", margin=(10, 0, 0, 2))
+slice_label = Div(text="Slice By", margin=(10, 2, 0, 2))
+value_label = Div(text="Value", margin=(10, 2, 0, 2))
+some_output = Div(text="", margin=(10, 2, 0, 2))
 
 checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[])
 
