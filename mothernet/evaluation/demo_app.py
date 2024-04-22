@@ -33,7 +33,7 @@ grid_figures = {}
 
 def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None, feature_subset=None):
     num_features = len(feature_subset) if feature_subset is not None else len(bin_edges)
-    columns = min(int(np.ceil(np.sqrt(num_features))), 2)
+    columns = min(int(np.ceil(np.sqrt(num_features))), 6)
     rows = int(np.ceil(num_features / columns))
     feature_range = feature_subset if feature_subset is not None else range(num_features)
     figures = []
@@ -154,12 +154,12 @@ select = ["None"] + list(cat_cols)
 per_col_cats = X_train[cat_cols].apply(lambda x: pd.unique(x).tolist()).to_dict()
 
 menu = [(s, s) for s in select]
-cats = Dropdown(label="None", menu=menu)
-vals = Dropdown(label="None", menu=[("None", "None")])
+cats = Dropdown(label="None", menu=menu, width=100)
+vals = Dropdown(label="None", menu=[("None", "None")], width=100)
 
-slice_label = Div(text="Slice By", margin=(10, 2, 0, 2))
-value_label = Div(text="Value", margin=(10, 2, 0, 2))
-some_output = Div(text="", margin=(10, 2, 0, 2))
+slice_label = Div(text="Slice By", margin=(10, 2, 0, 20))
+value_label = Div(text="Value", margin=(10, 2, 0, 20))
+some_output = Div(text="", margin=(10, 2, 0, 20))
 
 checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[])
 
@@ -231,7 +231,7 @@ def checkbox_event(attr, old, new):
 cats.on_click(pick_feature)
 vals.on_click(select_val)
 checkbox_button_group.on_change("active", checkbox_event)
-col = layout([[checkbox_button_group, slice_label, cats, value_label, vals, some_output], [Div()]])
+col = layout([[checkbox_button_group], [slice_label, cats, value_label, vals, some_output], [Div()]])
 print("prestart")
 curdoc().add_root(col)
 print("starting")
