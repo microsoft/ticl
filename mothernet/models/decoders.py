@@ -287,7 +287,9 @@ class MLPModelDecoder(nn.Module):
         self.predicted_hidden_layers = predicted_hidden_layers
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
 
-        if self.weight_embedding_rank is None:
+        if self.predicted_hidden_layers == 0:
+            self.num_output_layer_weights =  n_out * (1 + self.in_size)
+        elif self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + (self.in_size + 1) * self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
                 self.num_output_layer_weights += (self.predicted_hidden_layers - 1) * (self.predicted_hidden_layer_size ** 2 + self.predicted_hidden_layer_size)
@@ -319,6 +321,11 @@ class MLPModelDecoder(nn.Module):
                 raise ValueError("Only 1D and 2D shapes are supported")
             return res[:, :size].reshape(-1, *shape), res[:, size:]
 
+        if self.predicted_hidden_layers == 0:
+            w, next_res = take_weights(res, (self.in_size, self.n_out))
+            b, next_res = take_weights(next_res, (self.n_out,))
+            assert next_res.shape[1] == 0
+            return (b, w), 
         if self.weight_embedding_rank is not None:
             second_shape = self.weight_embedding_rank
         else:

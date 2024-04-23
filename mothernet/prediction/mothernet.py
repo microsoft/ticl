@@ -118,7 +118,10 @@ def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_d
         layers_result.append((b.squeeze(), w.squeeze()))
 
     # remove extra classes on output layer
-    layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
+    if len(layers):
+        layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
+    else:
+        layers_result = [(b1_data_space[:n_classes], w1_data_space[:, :n_classes])]
 
     if inference_device == "cpu":
         def detach(x):
