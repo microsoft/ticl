@@ -134,7 +134,7 @@ def get_mothernet_config():
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 512,
         'predicted_activation': 'relu',
-        'decoder_type': "output_attention",
+        'decoder_type': "class_average",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 2,
         'decoder_hidden_layers': 1,
