@@ -116,6 +116,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         mothernet.add_argument('-T', '--decoder-hidden-layers', help='How many hidden layers to use in decoder MLP', type=int)
         mothernet.add_argument('-P', '--predicted-hidden-layer-size', type=int, help='Size of hidden layers in predicted network.')
         mothernet.add_argument('-L', '--predicted-hidden-layers', type=int, help='number of predicted hidden layers')
+        mothernet.add_argument('--predicted-activation', type=str, help="activation in predicted network")
         mothernet.add_argument('-r', '--low-rank-weights', type=str2bool, help='Whether to use low-rank weights in mothernet.')
         mothernet.add_argument('-W', '--weight-embedding-rank', type=int, help='Rank of weights in predicted network.')
         mothernet.set_defaults(**config['mothernet'])

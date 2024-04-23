@@ -16,7 +16,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, nan_bin=False, input_bin_embedding=False,
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
-                 predicted_hidden_layer_size=None, predicted_hidden_layers=None,
+                 predicted_hidden_layer_size=None, predicted_hidden_layers=None, predicted_activation=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
                  shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False):
         super().__init__()

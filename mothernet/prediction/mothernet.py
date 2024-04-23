@@ -300,7 +300,8 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
             state_dict[f"model.linear{i}.bias"] = torch.Tensor(layer[0])
         nn.load_state_dict(state_dict)
         self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
-                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, nn=nn)
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, nn=nn,
+                            nonlinearity=config['mothernet']['predicted_activation'])
         self.scaler = StandardScaler().fit(X)
         self.mlp.fit(X, y)
         self.parameters_ = layers

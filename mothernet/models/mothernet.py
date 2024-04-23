@@ -44,7 +44,12 @@ class MLPModelPredictor(nn.Module):
         h = h + b1
 
         for i, (b, w) in enumerate(layers):
-            h = torch.relu(h)
+            if self.predicted_activation == "relu":
+                h = torch.relu(h)
+            elif self.predicted_activation == "gelu":
+                h = torch.nn.functional.gelu(h)
+            else:
+                raise ValueError(f"Unsupported predicted activation: {self.predicted_activation}")
             h = (h.unsqueeze(-1) * w.unsqueeze(0)).sum(2)
             if self.decoder.weight_embedding_rank is not None and i != len(layers) - 1:
                 # last layer has no shared weights
@@ -64,7 +69,7 @@ class MotherNet(MLPModelPredictor):
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
                  decoder_embed_dim=2048,
                  decoder_hidden_layers=1, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
-                 low_rank_weights=False, tabpfn_zero_weights=True, decoder_activation="relu"):
+                 low_rank_weights=False, tabpfn_zero_weights=True, decoder_activation="relu", predicted_activation="relu"):
         super().__init__()
         # decoder activation = "relu" is legacy behavior
         nhid = emsize * nhid_factor
@@ -84,6 +89,7 @@ class MotherNet(MLPModelPredictor):
         self.decoder_type = decoder_type
         decoder_hidden_size = decoder_hidden_size or nhid
         self.tabpfn_zero_weights = tabpfn_zero_weights
+        self.predicted_activation = predicted_activation
 
         self.decoder = MLPModelDecoder(emsize=emsize, hidden_size=decoder_hidden_size, n_out=n_out, decoder_type=self.decoder_type,
                                        predicted_hidden_layer_size=predicted_hidden_layer_size, embed_dim=decoder_embed_dim,

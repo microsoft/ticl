@@ -133,6 +133,7 @@ def get_mothernet_config():
         'weight_embedding_rank': 32,
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 512,
+        'predicted_activation': 'relu',
         'decoder_type': "output_attention",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 2,
