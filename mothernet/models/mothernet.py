@@ -39,7 +39,7 @@ class MLPModelPredictor(nn.Module):
         x_test_nona = torch.nan_to_num(x[single_eval_pos:], nan=0)
         h = (x_test_nona.unsqueeze(-1) * w1.unsqueeze(0)).sum(2)
 
-        if self.decoder.weight_embedding_rank is not None:
+        if self.decoder.weight_embedding_rank is not None and len(layers):
             h = torch.matmul(h, self.decoder.shared_weights[0])
         h = h + b1
 

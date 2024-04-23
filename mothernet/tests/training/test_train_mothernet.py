@@ -59,6 +59,22 @@ def test_train_mothernet_no_hidden():
     assert results['loss'] == 2.125208854675293
 
 
+def test_train_mothernet_no_hidden():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
+                    '--decoder-activation', 'relu', '-B', tmpdir])
+        clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf)
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_N4_n1_P64_L0_tFalse_cpu")
+    assert count_parameters(results['model']) == 838514
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 294258
+    assert results['loss'] == 2.125208854675293
+
+
+
 def test_train_mothernet_less_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
