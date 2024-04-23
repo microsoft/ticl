@@ -147,6 +147,7 @@ class TabPerceiver(MLPModelPredictor):
         init_method=None,  # ignored
         tabpfn_zero_weights=None,  # ignored
         decoder_activation='relu',
+        predicted_activation='relu',
 
     ):
         """The shape of the final attention mechanism will be:
@@ -185,6 +186,8 @@ class TabPerceiver(MLPModelPredictor):
         self.ff_dropout = dropout
         self.decoder_activation = decoder_activation
         assert decoder_type == "output_attention"
+        self.predicted_activation = predicted_activation
+        assert predicted_activation == "relu"
         self.latents = nn.Parameter(0.02 * torch.randn(num_latents, latent_dim))
 
         self.layers = nn.ModuleList([])
