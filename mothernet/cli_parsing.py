@@ -183,6 +183,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration.add_argument('--save-every', default=10, type=int)
     orchestration.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     orchestration.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    orchestration.add_argument('--use-wandb', help="whether to use wandb", action='store_true')
     orchestration.add_argument('-f', '--warm-start-from', help='Warm start from this file')
     orchestration.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')

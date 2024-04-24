@@ -3,6 +3,7 @@ import sys
 import time
 
 import mlflow
+import wandb
 import torch
 import os
 
@@ -101,6 +102,14 @@ def main(argv, extra_config=None):
                                            orchestration.st_checkpoint_dir, orchestration.validate)
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
+    if orchestration.use_wandb:
+        wandb.init(
+            dir='.',
+            project='mothernet',
+            entity='tabpfn_interpretability',
+            id=model_string,
+            config={k: v for k, v in flatten_dict(config).items() if k not in ['wallclock_times', 'losses', 'learning_rates']},
+        )
     if orchestration.no_mlflow or mlflow_hostname is None:
         print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment to variable enable mlflow.")
         total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
