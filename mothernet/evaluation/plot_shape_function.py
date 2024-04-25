@@ -34,7 +34,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
 
             if feature_idx == 0:
                 ax.set_ylabel(f'Class {class_idx}')
-    if num_classes == 2:
+    if num_classes == 2 and rows * columns > 1:
         for i in range(num_features, len(axs.ravel())):
             axs.ravel()[i].set_axis_off()
     plt.tight_layout()
