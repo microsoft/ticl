@@ -21,7 +21,10 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
             if num_classes > 2:
                 ax = axs[class_idx][ax_idx]
             else:
-                ax = axs.ravel()[ax_idx]
+                if columns == 1 and rows == 1:
+                    ax = axs
+                else:
+                    ax = axs.ravel()[ax_idx]
             ax.step(bin_edges[feature_idx], weights_normalized)
             if class_idx == 0 or num_classes == 2:
                 if feature_names is None:
