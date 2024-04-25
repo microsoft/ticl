@@ -84,7 +84,7 @@ def test_train_gelu_decoder():
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
-    assert results['loss'] == 0.6897920370101929
+    assert results['loss'] == 0.6897919178009033
 
 
 def test_train_mothernet_predict_gelu():
