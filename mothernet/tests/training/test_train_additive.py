@@ -156,7 +156,7 @@ def test_train_additive_input_bin_embedding():
 def test_train_additive_variable_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--num-features', 10])
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--num-features', '10'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
