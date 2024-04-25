@@ -73,7 +73,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
                 weights = marginals.permute(0, 2, 3, 1)
             else:
                 weights = weights + marginals.permute(0, 2, 3, 1)
-        w = weights.squeeze()[:n_features, :, :n_classes]
+        w = weights.squeeze(0)[:n_features, :, :n_classes]
         if biases is None:
             b = torch.zeros(n_classes, device=device)
         else:
