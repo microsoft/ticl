@@ -27,7 +27,7 @@ def test_train_perceiver_defaults():
     assert count_parameters(model.layers) == 664576
     assert count_parameters(model) == 1744842
     assert results['loss'] == pytest.approx(0.8764909505844116)
-    assert results['model_string'].startswith("perceiver_AFalse_decoderactivationrelu_d128_H128_Doutput_attention_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu")
+    assert results['model_string'].startswith("perceiver_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_n1_P64_L1_tFalse_cpu")
 
 
 def test_train_perceiver_two_hidden_layers():
