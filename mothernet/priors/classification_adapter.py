@@ -82,9 +82,8 @@ class ClassificationAdapter:
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, config):
         self.h = sample_distributions(parse_distributions(config))
-
         self.base_prior = base_prior
-        if self.h['num_classes'] == 0:
+        if self.h['max_num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
             if self.h['num_classes'] > 1 and not self.h['balanced']:

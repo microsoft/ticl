@@ -44,7 +44,7 @@ class AdditiveModelDecoder(nn.Module):
             mlp_in_size = emsize
         else:
             mlp_in_size = self.summary_layer.out_size
-            self.num_output_layer_weights = n_out * (n_bins * n_features + 1)
+            self.num_output_layer_weights = n_out * n_bins if biattention else n_out * (n_bins * n_features + 1)
             if add_marginals:
                 raise ValueError("add_marginals is not supported for non-class models")
 
@@ -76,10 +76,13 @@ class AdditiveModelDecoder(nn.Module):
                 shape_functions = res[:, :, :-1].reshape(batch_size, self.n_out, -1, self.n_bins)
                 biases = res[:, :, -1]
             shape_functions = shape_functions.permute(0, 2, 3, 1)
-
+        elif self.decoder_type == "average" and self.biattention:
+            assert res.shape[2] == self.num_output_layer_weights
+            shape_functions = res.reshape(batch_size, -1, self.n_bins, self.n_out)
+            biases = None
         else:
             assert res.shape[1] == self.num_output_layer_weights
-            shape_functions = res[:, :-self.n_out].reshape(-1, self.n_features, self.n_bins, self.n_out)
+            shape_functions = res[:, :-self.n_out].reshape(batch_size, self.n_features, self.n_bins, self.n_out)
             biases = res[:, -self.n_out:]
         if not self.biattention:
             assert shape_functions.shape == (batch_size, self.n_features, self.n_bins, self.n_out)
@@ -153,7 +156,7 @@ class FactorizedAdditiveModelDecoder(nn.Module):
         assert marginals is None
         summary = self.summary_layer(x, y_src)
         res = self.mlp(summary)
-        if self.decoder_type in ["class_tokens", "class_average"]:
+        if self.decoder_type in ["class_tokens", "class_average", "average"]:
             # for biattention, present features could be less than n_features
             res = res.reshape(x.shape[1], self.n_out, -1, self.rank)
             if self.shape_attention:

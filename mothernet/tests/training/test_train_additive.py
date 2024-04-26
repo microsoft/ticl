@@ -243,3 +243,4 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
     assert results['loss'] == pytest.approx(1.255028247833252, rel=1e-5)
+
