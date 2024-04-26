@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
-def bin_data(data, n_bins, nan_bin=False, single_eval_pos=None):
+def bin_data(data, n_bins, nan_bin=False, single_eval_pos=None, sklearn_binning: bool = False):
     if nan_bin:
         # data is samples x batch x features
         quantiles = torch.arange(n_bins, device=data.device) / (n_bins - 1)
@@ -38,6 +39,25 @@ def bin_data(data, n_bins, nan_bin=False, single_eval_pos=None):
         # FIXME extra data copy
         bin_edges = bin_edges.transpose(0, -1).contiguous()
         data_nona = data_nona.transpose(0, -1).contiguous()
+
+        # Bin like in sklearn if there are not enough unique values
+        # https://github.com/scikit-learn/scikit-learn/blob/3ee60a720aab3598668af3a3d7eb01d6958859be/sklearn/ensemble/_hist_gradient_boosting/binning.py#L53
+        if sklearn_binning:
+            # Vanilla binning
+            for batch_idx in range(data_nona.shape[1]):
+                for col_idx in range(data_nona.shape[0]):
+                    unique_vals = data_nona[col_idx, batch_idx, :].unique(sorted=True).flatten()
+                    if len(unique_vals) < n_bins:
+                        bin_edges_cat = (unique_vals[:-1] + unique_vals[1:]) * 0.5
+                        bin_edges_cat = F.interpolate(bin_edges_cat.unsqueeze(0).unsqueeze(0),
+                                                      size=n_bins - 1, mode='nearest')
+                        bin_edges[col_idx, batch_idx] = bin_edges_cat.squeeze()
+
+            # Vectorized version
+            # unique_vals = data_nona.unique(sorted=True, dim=1)
+            # bin_edges_cat = (unique_vals[:, :, :-1] + unique_vals[:, :, 1:]) * 0.5
+            # bin_edges = F.interpolate(bin_edges_cat, size=n_bins - 1, mode='nearest')
+
         X_binned = torch.searchsorted(bin_edges, data_nona)
         X_onehot = nn.functional.one_hot(X_binned.transpose(0, -1), num_classes=n_bins)
         # mask zero padding data
