@@ -31,7 +31,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
-        X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin, sklearn_binning=True)
+        X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
+                                       sklearn_binning=model.sklearn_binning)
         if model.input_layer_norm:
             X_onehot = model.input_norm(X_onehot.float())
         if getattr(model, "fourier_features", 0) > 0:
@@ -156,6 +157,10 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             self.nan_bin = model.nan_bin
         else:
             self.nan_bin = False
+        if hasattr(model, "sklearn_binning"):
+            self.sklearn_binning = model.sklearn_binning
+        else:
+            self.sklearn_binning = False
 
     def fit(self, X, y, is_categorical: List[bool] = None):
         self.X_train_ = X
@@ -192,8 +197,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device)[0]
+        return self.predict_proba_with_additive_components(X)
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
