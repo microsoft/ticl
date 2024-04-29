@@ -157,6 +157,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
 
     classification_prior = parser.add_argument_group('prior.classification')
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", type=str)
+    classification_prior.add_argument('--num-features-sampler', help="How to sample number of features, 'uniform', 'double_sample'. ", type=str)
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", type=int)
     classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", type=str2bool)
     classification_prior.add_argument('--max-num-classes', help="Maximum number of classes. 0 means regression.", type=int)

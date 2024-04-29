@@ -111,6 +111,7 @@ def get_prior_config(max_features=100, n_samples=1024+128):
         'nan_prob_unknown_reason': 0.0,
         'nan_prob_a_reason': 0.0,
         'set_value_to_nan': .1,
+        'num_features_sampler': 'uniform',
         'pad_zeros': True,
         'feature_curriculum': False,
     }
