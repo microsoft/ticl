@@ -2,8 +2,7 @@ import random
 import numpy as np
 import torch
 
-from mothernet.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
-                             nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
+from mothernet.utils import (get_nan_value, normalize_by_used_features_f, normalize_data,
                              remove_outliers)
 
 from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions, safe_randint
@@ -129,18 +128,12 @@ class ClassificationAdapter:
 
         assert x.shape[2] == num_features_used
 
-        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
+        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
             if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
-                x = self.drop_for_no_reason(x, nan_handling_missing_for_no_reason_value(self.h['set_value_to_nan']))
+                x = self.drop_for_no_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
-            if self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Missing for a reason
-                x = self.drop_for_reason(x, nan_handling_missing_for_a_reason_value(self.h['set_value_to_nan']))
-
-            if self.h['nan_prob_unknown_reason'] > 0:  # Missing for unknown reason  and random.random() > 0.5
-                if random.random() < self.h['nan_prob_unknown_reason_reason_prior']:
-                    x = self.drop_for_no_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
-                else:
-                    x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
+            if self.h['nan_prob_a_reason'] > 0:  # Missing for a reason
+                x = self.drop_for_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
         # Categorical features
         categorical_features = []
