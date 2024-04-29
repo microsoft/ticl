@@ -33,7 +33,7 @@ grid_figures = {}
 
 def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None, feature_subset=None):
     num_features = len(feature_subset) if feature_subset is not None else len(bin_edges)
-    columns = min(int(np.ceil(np.sqrt(num_features))), 6)
+    columns = min(int(np.ceil(np.sqrt(num_features))), 2)
     rows = int(np.ceil(num_features / columns))
     feature_range = feature_subset if feature_subset is not None else range(num_features)
     figures = []
@@ -48,7 +48,7 @@ def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None
         figures.append(p)
     grid = gridplot(zip(*([iter(figures)] * columns)), width=240, height=240, toolbar_location=None)
     print("finshed gridplot")
-    col.children[1] = grid
+    col.children[-1] = grid
 
 
 columns = (['duration','protocol_type','service','flag','src_bytes','dst_bytes','land','wrong_fragment','urgent','hot'
@@ -106,7 +106,7 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     if subsample:
         success = False
         while not success:
-            subsample = np.random.permutation(X_train_masked.shape[0])[:1000]
+            subsample = np.random.permutation(X_train_masked.shape[0])[:3000]
             if y_train_masked.iloc[subsample].nunique() > 1:
                 success = True
     else:
@@ -119,7 +119,7 @@ def eval_model(model, filter_feature=None, filter_value=None, subsample=True):
     y_test_masked = y_test[mask_test]
     auc = roc_auc_score(y_test_masked, model.predict_proba(X_test_masked)[:, 1])
     scoring_time = time.time() - tick
-    some_output.text = f"fitting time: {fitting_time:.2f}s, AUC: {auc:.2f}"
+    some_output.text = f"fit time: {fitting_time:.2f}s, AUC: {auc:.2f}"
     print(f"fitting time: {fitting_time:.2f}s")
     if isinstance(model, Pipeline):
         feature_names = model[:-1].get_feature_names_out()
@@ -209,7 +209,8 @@ def fit_predict_with_model():
     if model == "gamma_net":
         print("fitting gamma_net")
         pipe, bin_edges, w, feature_names, selected_features = fit_predict_gamma_net(cats.label, vals.label)
-
+    if 25 in selected_features:
+        selected_features.remove(25)
     if len(grid_figures) == 0:
         plot_shape_function(bin_edges, w, feature_names=feature_names, feature_subset=selected_features)
     else:
@@ -231,7 +232,7 @@ def checkbox_event(attr, old, new):
 cats.on_click(pick_feature)
 vals.on_click(select_val)
 checkbox_button_group.on_change("active", checkbox_event)
-col = layout([[checkbox_button_group, slice_label, cats, value_label, vals, some_output], [Div()]])
+col = layout([[checkbox_button_group, some_output], [slice_label, cats, value_label, vals], [Div()]])
 print("prestart")
 curdoc().add_root(col)
 print("starting")

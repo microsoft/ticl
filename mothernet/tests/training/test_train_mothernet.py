@@ -46,6 +46,22 @@ def test_train_mothernet_validation():
     assert count_parameters(results['model'].decoder) == 1000394
 
 
+def test_train_mothernet_no_hidden():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
+                    '--decoder-activation', 'relu', '-B', tmpdir])
+        clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf)
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_N4_n1_P64_L0_tFalse_cpu")
+    assert count_parameters(results['model']) == 757234
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 212978
+    assert results['loss'] == 0.7772496938705444
+
+
+
 def test_train_mothernet_less_features():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -65,10 +81,23 @@ def test_train_gelu_decoder():
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--decoder-activation', 'gelu'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == 0.6897920370101929
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
+    assert results['loss'] == 0.6897919178009033
+
+
+def test_train_mothernet_predict_gelu():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--decoder-activation', 'gelu', '--predicted-activation', 'gelu'])
+        clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf)
+    assert results['model_string'].startswith("mn_AFalse_d128_H128_e128_E10_rFalse_N4_n1_predictedactivationgelu_P64_L1_tFalse_cpu")
+    assert count_parameters(results['model']) == 1544650
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 1000394
+    assert results['loss'] == 0.6914207935333252
 
 
 def test_train_synetune():

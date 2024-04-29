@@ -73,7 +73,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
                 weights = marginals.permute(0, 2, 3, 1)
             else:
                 weights = weights + marginals.permute(0, 2, 3, 1)
-        w = weights.squeeze()[:n_features, :, :n_classes]
+        w = weights.squeeze(0)[:n_features, :, :n_classes]
         if biases is None:
             b = torch.zeros(n_classes, device=device)
         else:
@@ -90,11 +90,12 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu"):
     additive_components = []
     assert X_train.shape[1] == X_test.shape[1]
     assert X_test.shape[1] == len(weights)
-    assert weights.shape[:2] == (X_train.shape[1], n_bins)
+    assert weights.shape[0] == X_train.shape[1]
+    n_bins = weights.shape[1]
     assert bin_edges.shape == (X_train.shape[1], n_bins - 1)
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
