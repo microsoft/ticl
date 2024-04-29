@@ -12,11 +12,11 @@ from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                    '--decoder-activation', 'relu', '--save-every', '8']
+                    '--decoder-activation', 'relu', '--save-every', '8', '--validate', 'False']
 
 TESTING_DEFAULTS_SHORT = ['baam', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                           'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                          '--decoder-activation', 'relu', '--save-every', '2']
+                          '--decoder-activation', 'relu', '--save-every', '2', '--validate', 'False']
 
 
 def test_train_baam_shape_attention():
