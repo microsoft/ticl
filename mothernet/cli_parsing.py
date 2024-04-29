@@ -188,7 +188,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     orchestration.add_argument('--detect-anomaly', help='Whether enable anomaly detection in pytorch. For debugging only.', action='store_true')
-    orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.')
+    orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.', default=True)
 
     # orchestration options are not part of the default config
     return parser
