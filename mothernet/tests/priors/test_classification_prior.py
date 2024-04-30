@@ -2,6 +2,7 @@ from mothernet.model_configs import get_prior_config
 import lightning as L
 import torch
 import pytest
+import numpy as np
 
 from mothernet.priors import ClassificationAdapterPrior, MLPPrior
 from mothernet.priors.classification_adapter import ClassificationAdapter
@@ -89,6 +90,25 @@ def test_classification_adapter_curriculum():
     assert x.shape == (n_samples, batch_size, 51)
 
 
+def test_classification_adapter_double_sampler():
+    batch_size = 16
+    num_features = 100
+    n_samples = 900
+    # test the mlp prior
+    L.seed_everything(42)
+    config = get_prior_config()
+    classification_config = config['prior']['classification']
+    classification_config['num_features_sampler'] = 'double_sample'
+    classification_config['pad_zeros'] = False
+
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=classification_config)
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features, 'epoch': 0}
+    num_features = np.array([adapter(batch_size=batch_size, **args)[0].shape[-1] for i in range(10)])
+    assert num_features.min() == 5
+    assert num_features.max() == 61
+    assert (num_features < 20).sum() == 5
+
+
 def test_classification_adapter_with_sampling_no_padding():
     batch_size = 16
     num_features = 100
@@ -108,3 +128,34 @@ def test_classification_adapter_with_sampling_no_padding():
 
     assert float(x[0, 0, 0]) == pytest.approx(-1.2161709070205688)
     assert float(y[0, 0]) == 3.0
+
+
+def test_classification_adapter_nan():
+    batch_size = 16
+    num_features = 100
+    n_samples = 900
+    # test the mlp prior
+    L.seed_everything(12)
+    config = get_prior_config()
+    prior_config = config['prior']['classification']
+    prior_config['pad_zeros'] = False
+    prior_config['nan_prob_no_reason'] = 0.99
+    prior_config['nan_prob_a_reason'] = 0
+    prior_config['set_value_to_nan'] = 0.99
+
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
+
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert y.shape == (n_samples, batch_size)
+    assert x.isnan().float().mean() > 0.95
+
+    prior_config['nan_prob_no_reason'] = 0
+    prior_config['nan_prob_a_reason'] = 0.99
+    adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
+
+    args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
+    x, y, y_ = adapter(batch_size=batch_size, **args)
+    assert y.shape == (n_samples, batch_size)
+    assert y_.shape == (n_samples, batch_size)
+    assert x.isnan().float().mean() > 0.45

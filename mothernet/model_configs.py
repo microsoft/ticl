@@ -98,7 +98,6 @@ def get_prior_config(max_features=100, n_samples=1024+128):
 
     max_num_classes = 10
     classsification_prior = {
-        "nan_prob_unknown_reason_reason_prior": 0.5,
         "max_num_classes": max_num_classes,
         "num_classes": {'distribution': 'uniform_int', 'min': 2, 'max': max_num_classes},
         # "noise_type": "Gaussian",  # NN unused?!
@@ -108,9 +107,9 @@ def get_prior_config(max_features=100, n_samples=1024+128):
         "multiclass_type": 'rank',
         'categorical_feature_p': .2,  # diff: .0
         'nan_prob_no_reason': 0.0,
-        'nan_prob_unknown_reason': 0.0,
         'nan_prob_a_reason': 0.0,
-        'set_value_to_nan': .1,
+        'set_value_to_nan': .9,
+        'num_features_sampler': 'uniform',
         'pad_zeros': True,
         'feature_curriculum': False,
     }
@@ -133,6 +132,7 @@ def get_mothernet_config():
         'weight_embedding_rank': 32,
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 512,
+        'predicted_activation': 'relu',
         'decoder_type': "output_attention",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 2,

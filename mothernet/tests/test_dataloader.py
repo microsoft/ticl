@@ -97,8 +97,6 @@ def test_get_dataloader_nan_in_flexible(batch_size=16, n_samples=256, n_features
     prior_class = prior_config['classification']
     prior_class['nan_prob_a_reason'] = .5
     prior_class['nan_prob_no_reason'] = .5
-    prior_class['nan_prob_unknown_reason'] = .5
-    prior_class['nan_prob_unknown_reason_reason_prior'] = .5
     dataloader = get_dataloader(prior_config=prior_config, dataloader_config=dataloader_config, device="cpu")
     for i in range(10):
         # sample a couple times to explore different code paths

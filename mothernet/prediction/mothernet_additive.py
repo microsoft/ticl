@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
@@ -10,6 +11,9 @@ from mothernet.models.biattention_additive_mothernet import _determine_is_catego
 from mothernet.models.encoders import get_fourier_features
 from mothernet.models.utils import bin_data
 from mothernet.utils import normalize_data
+
+from interpret.glassbox._ebm._ebm import EBMExplanation
+from interpret.utils._explanation import gen_global_selector
 
 
 def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, is_categorical=None):
@@ -69,9 +73,27 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     else:
         weights, biases = model.decoder(output, ys)
 
-    if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-        if hasattr(model, "layers") and len(model.layers) == 0:
-            weights = marginals.permute(0, 2, 3, 1)
+
+        if model.marginal_residual == 'decoder':
+            weights, biases = model.decoder(output, ys, marginals)
+        else:
+            weights, biases = model.decoder(output, ys)
+
+        if model.marginal_residual in [True, 'True', 'output', 'decoder']:
+            if hasattr(model, "layers") and len(model.layers) == 0:
+                weights = marginals.permute(0, 2, 3, 1)
+            else:
+                weights = weights + marginals.permute(0, 2, 3, 1)
+        w = weights.squeeze(0)[:n_features, :, :n_classes]
+        if biases is None:
+            b = torch.zeros(n_classes, device=device)
+        else:
+            b = biases.squeeze()[:n_classes]
+        bins_data_space = bin_edges[:n_features]
+        # remove extra classes on output layer
+        if inference_device == "cpu":
+            def detach(x):
+                return x.detach().cpu().numpy()
         else:
             weights = weights + marginals.permute(0, 2, 3, 1)
     w = weights.squeeze()[:n_features, :, :n_classes]
@@ -91,12 +113,13 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu"):
     additive_components = []
     assert X_train.shape[1] == X_test.shape[1]
     assert X_test.shape[1] == len(weights)
-    assert weights.shape[:2] == (X_train.shape[1], n_bins)
-    assert bin_edges.shape == (X_train.shape[1], n_bins - 1)
+    assert weights.shape[0] == X_train.shape[1]
+    n_bins = weights.shape[1]
+    assert bin_edges.shape == (X_train.shape[1], n_bins - 1 - int(nan_bin))
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
@@ -149,10 +172,6 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             raise ValueError("config must be provided if model is provided")
         self.model = model
         self.config = config
-        if hasattr(model, "nan_bin"):
-            self.nan_bin = model.nan_bin
-        else:
-            self.nan_bin = False
 
     def fit(self, X, y, is_categorical: List[int] = None):
         self.X_train_ = X
@@ -162,6 +181,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             model, config = self.model, self.config
         else:
             model, config = load_model(self.path, device=self.device)
+            self.config_ = config
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["additive", "baam"]:
@@ -171,13 +191,27 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             pad_zeros = config['prior']['classification']['pad_zeros']
         except KeyError:
             pad_zeros = True
+
+        try:
+            self.nan_bin = config['additive']['nan_bin']
+        except KeyError:
+            self.nan_bin = False
+
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
                                                  pad_zeros=pad_zeros, is_categorical=is_categorical)
+        
+        # Extract feature bounds for graphing
+        mins = X.min(axis=0).tolist()
+        maxs = X.max(axis=0).tolist()
+        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
+        
         self.w_ = w
         self.b_ = b
         self.bin_edges_ = bin_edges
+        self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
         self.pad_zeros = pad_zeros
+
         return self
 
     def predict_proba(self, X):
@@ -190,3 +224,101 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
+
+    def explain_global(self):
+        # Start creating properties in the same style as EBM to leverage existing explanations
+
+        # Loop over features to extract term_scores_
+
+        self.term_scores_ = []
+        for feature_idx in range(self.w_.shape[0]):
+            if self.w_.shape[2] == 2: # binary classification
+                class_one_scores = self.w_[feature_idx, :, 1]
+                padded_scores = np.pad(class_one_scores, (1, 1), 'constant', constant_values=(0, 0))
+            else:
+                raise Exception("Need to implement explanations for multiclass")
+            
+            self.term_scores_.append(padded_scores)
+        
+        lower_bound, upper_bound = np.inf, -np.inf
+        for scores in self.term_scores_:
+            lower_bound = min(lower_bound, np.min(scores))
+            upper_bound = max(upper_bound, np.max(scores))
+
+        bounds = (lower_bound, upper_bound)
+
+        # TODO: Update to include real feature names
+        term_names = [f"Feature {i}" for i in range(self.w_.shape[0])]
+        term_types = ["continuous"] * len(term_names) # TODO: Currently assume all numeric features
+
+        data_dicts = []
+        feature_list = []
+        density_list = []
+
+        # loop over features
+        for i in range(self.w_.shape[0]):
+            model_graph = self.term_scores_[i]
+            errors = None
+            feature_bins = self.bin_edges_[i]
+
+            min_graph = np.nan
+            max_graph = np.nan
+            feature_bounds = getattr(self, "feature_bounds_", None)
+            if feature_bounds is not None:
+                min_graph = feature_bounds[i][0]
+                max_graph = feature_bounds[i][1]
+
+            bin_labels = list(
+                np.concatenate(([min_graph], feature_bins, [max_graph]))
+            )
+
+            scores = list(model_graph)
+            density_dict = {
+                "names": None,
+                "scores": None,
+            }
+            density_list.append(density_dict)
+
+            data_dict = {
+                "type": "univariate",
+                "names": bin_labels,
+                "scores": np.array(scores)[1:-1],
+                "scores_range": bounds,
+                "upper_bounds": None if errors is None else model_graph + errors,
+                "lower_bounds": None if errors is None else model_graph - errors,
+                # "density": {
+                #     "names": names,
+                #     "scores": densities,
+                # },
+            }
+            if hasattr(self, "classes_"):
+                # Classes should be numpy array, convert to list.
+                data_dict["meta"] = {"label_names": self.classes_.tolist()}
+
+            data_dicts.append(data_dict)
+
+
+        overall_dict = {
+            "type": "univariate",
+            "names": term_names,
+            "scores": [1 for i in range(len(term_names))], # TODO: Stop hard coding
+        }
+        internal_obj = {
+            "overall": overall_dict,
+            "specific": data_dicts,
+        }
+
+        return EBMExplanation(
+            "global",
+            internal_obj,
+            feature_names=term_names,
+            feature_types=term_types,
+            name="Mothernet Explanation",
+            selector=gen_global_selector(
+                len(term_names),
+                term_names,
+                term_types,
+                getattr(self, "unique_val_counts_", None),
+                None,
+            ),
+        )
