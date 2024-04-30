@@ -60,5 +60,3 @@ def eval_step_function():
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
 
-
-eval_step_function()
