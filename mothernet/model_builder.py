@@ -141,7 +141,8 @@ def old_config_to_new(old_config, new_config):
     if old_config['model_type'] == 'tabpfn':
         # we used to store mothernet parameters in tabpfn models, but we no longer allow that
         ignored_configs.extend(['decoder_embed_dim', 'decoder_hidden_size', 'predicted_hidden_layer_size',
-                                'predicted_hidden_layers', 'weight_embedding_rank', 'decoder_hidden_layers'])
+                                'predicted_hidden_layers', 'weight_embedding_rank', 'decoder_hidden_layers',
+                                'nan_prob_unknown_reason_reason_prior', 'nan_prob_unknown_reason'])
     if old_config['model_type'] in ['mothernet', 'additive']:
         ignored_configs.extend(['num_latents'])
     for k in ignored_configs:

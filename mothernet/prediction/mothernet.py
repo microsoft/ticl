@@ -186,7 +186,7 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
             if i != len(layers) - 1:
                 try:
                     activation = config['mothernet']['predicted_activation']
-                except KeyError:
+                except (KeyError, TypeError):
                     activation = "relu"
                 if activation != "relu":
                     raise ValueError(f"Only ReLU activation supported, got {activation}")
