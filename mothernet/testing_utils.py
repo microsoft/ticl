@@ -10,11 +10,11 @@ def count_parameters(model):
 # one step per epoch, no adapting batchsize, CPU, Mothernet
 TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1',
-                    '--decoder-activation', 'relu']
+                    '--decoder-activation', 'relu', '--validate', 'False']
 TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                           'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--low-rank-weights', 'False', '-L', '1',
                           '--decoder-activation', 'relu',
-                          '--save-every', '2']
+                          '--save-every', '2', '--validate', 'False']
 
 
 def get_model_path(results):

@@ -11,7 +11,7 @@ from mothernet.testing_utils import count_parameters, check_predict_iris
 
 
 TESTING_DEFAULTS = ['batabpfn', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '4', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200', '--save-every', '8']
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200', '--save-every', '8', '--validate', 'False']
 
 
 def test_train_batabpfn_basic():

@@ -6,6 +6,7 @@ import warnings
 import urllib.request
 from tqdm import tqdm
 import mlflow
+import wandb
 import numpy as np
 import torch
 
@@ -55,24 +56,12 @@ class SeqBN(nn.Module):
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
 
-def get_nan_value(v, set_value_to_nan=0.0):
+def get_nan_value(set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
-        return v
+        return float('nan')
     else:
         return random.choice([-999, 0, 1, 999])
-
-
-def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('nan'), set_value_to_nan)
-
-
-def nan_handling_missing_for_no_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('-inf'), set_value_to_nan)
-
-
-def nan_handling_missing_for_a_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('inf'), set_value_to_nan)
-
+    
 
 def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
     """
@@ -435,6 +424,9 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
                 mlflow.log_metric(key="epoch", value=epoch, step=epoch)
+            if wandb.run is not None:
+                wandb.log({"loss": model.losses[-1], "learning_rate": model.learning_rates[-1], "wallclock_time": model.wallclock_times[-1],
+                           "wallclock_ticker": wallclock_ticker, "epoch": epoch})
             if report is not None:
                 # synetune callback
                 report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
@@ -475,6 +467,11 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                         mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
                         for dataset, score in per_dataset_score.items():
                             mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
+                    if wandb.run is not None:
+                        val_metrics = {"val_score": validation_score, "epoch": epoch}
+                        for dataset, score in per_dataset_score.items():
+                            val_metrics[f"val_score_{dataset}"] = score
+                        wandb.log(val_metrics)
                 # remove checkpoints that are worse than current
                 if epoch - save_every > 0:
                     this_loss = model.losses[-1]

@@ -167,7 +167,7 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu"):
+def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu", config=None):
     X_train, X_test = np.array(X_train, dtype=float), np.array(X_test, dtype=float)
     if inference_device == "cpu":
         mean = np.nanmean(X_train, axis=0)
@@ -184,6 +184,12 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
         for i, (b, w) in enumerate(layers):
             out = np.dot(out, w) + b
             if i != len(layers) - 1:
+                try:
+                    activation = config['mothernet']['predicted_activation']
+                except KeyError:
+                    activation = "relu"
+                if activation != "relu":
+                    raise ValueError(f"Only ReLU activation supported, got {activation}")
                 out = np.maximum(out, 0)
         if np.isnan(out).any():
             print("NAN")
@@ -242,6 +248,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
             config = self.config
         else:
             model, config = load_model(self.path, device=self.device)
+            self.config = config
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["mlp", "mothernet"]:

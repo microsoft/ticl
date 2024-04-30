@@ -157,9 +157,12 @@ def argparser_from_config(parser, description="Train Mothernet"):
 
     classification_prior = parser.add_argument_group('prior.classification')
     classification_prior.add_argument('--multiclass-type', help="Which multiclass prior to use ['steps', 'rank'].", type=str)
+    classification_prior.add_argument('--num-features-sampler', help="How to sample number of features, 'uniform', 'double_sample'. ", type=str)
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", type=int)
     classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", type=str2bool)
     classification_prior.add_argument('--max-num-classes', help="Maximum number of classes. 0 means regression.", type=int)
+    classification_prior.add_argument('--nan-prob-no-reason', help="NaN probability missing at random.", type=float)
+    classification_prior.add_argument('--nan-prob-a-reason', help="NaN probability missing not at random.", type=float)
 
     classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
@@ -186,12 +189,13 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration.add_argument('--save-every', default=10, type=int)
     orchestration.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
     orchestration.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    orchestration.add_argument('--use-wandb', help="whether to use wandb", action='store_true')
     orchestration.add_argument('-f', '--warm-start-from', help='Warm start from this file')
     orchestration.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
     orchestration.add_argument('-s', '--load-strict', help='Whether to load the architecture strictly when warm starting', action='store_true')
     orchestration.add_argument('--restart-scheduler', help='Whether to restart the scheduler when warm starting', action='store_true')
     orchestration.add_argument('--detect-anomaly', help='Whether enable anomaly detection in pytorch. For debugging only.', action='store_true')
-    orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.')
+    orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.', default=True)
 
     # orchestration options are not part of the default config
     return parser
