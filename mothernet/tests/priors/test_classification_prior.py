@@ -156,7 +156,6 @@ def test_classification_adapter_nan():
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
     x, y, y_ = adapter(batch_size=batch_size, **args)
-    #assert x.shape == (n_samples, batch_size, 72)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
     assert x.isnan().float().mean() > 0.45

@@ -161,6 +161,8 @@ def argparser_from_config(parser, description="Train Mothernet"):
     classification_prior.add_argument('--multiclass-max-steps', help="Maximum number of steps in multiclass step prior", type=int)
     classification_prior.add_argument('--pad-zeros', help="Whether to pad data with zeros for consistent size", type=str2bool)
     classification_prior.add_argument('--max-num-classes', help="Maximum number of classes. 0 means regression.", type=int)
+    classification_prior.add_argument('--nan-prob-no-reason', help="NaN probability missing at random.", type=float)
+    classification_prior.add_argument('--nan-prob-a-reason', help="NaN probability missing not at random.", type=float)
 
     classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
