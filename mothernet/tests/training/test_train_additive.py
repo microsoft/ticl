@@ -160,9 +160,9 @@ def test_train_additive_variable_features():
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
-    assert results['model'].encoder.weights.shape == (64, 16)
-    assert count_parameters(results['model']) == 9078730
-    assert results['loss'] == pytest.approx(0.8084635734558105, rel=1e-5)
+    assert results['model'].encoder[1].weight.shape == (128, 640)
+    assert count_parameters(results['model']) == 712577
+    assert results['loss'] == pytest.approx(0.7357390522956848, rel=1e-5)
 
 
 def test_train_additive_special_token_simple():

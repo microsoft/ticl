@@ -15,7 +15,17 @@ from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
 
 
-def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, regression=False):
+def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False):
+    try:
+        max_features = config['prior']['num_features']
+    except KeyError:
+        max_features = 100
+
+    try:
+        pad_zeros = config['prior']['classification']['pad_zeros']
+    except KeyError:
+        pad_zeros = True
+
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     with torch.no_grad():
@@ -28,7 +38,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
         if pad_zeros:
-            x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
+            x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
@@ -172,18 +182,13 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         if config['model_type'] not in ["additive", "baam"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
-        try:
-            pad_zeros = config['prior']['classification']['pad_zeros']
-        except KeyError:
-            pad_zeros = True
-
+    
         try:
             self.nan_bin = config['additive']['nan_bin']
         except KeyError:
             self.nan_bin = False
 
-        w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
-                                                 pad_zeros=pad_zeros)
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device)
         
         # Extract feature bounds for graphing
         if torch.is_tensor(X):
@@ -199,7 +204,6 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         self.bin_edges_ = bin_edges
         self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
-        self.pad_zeros = pad_zeros
 
         return self
 
@@ -337,11 +341,10 @@ class MotherNetAdditiveRegressor(ClassifierMixin, BaseEstimator):
         if config['model_type'] not in ["additive", "baam"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
-        pad_zeros = config['prior']['classification']['pad_zeros']
         self.nan_bin = config['additive']['nan_bin']
 
-        w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
-                                                 pad_zeros=pad_zeros, regression=True)
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
+                                                 regression=True)
         
         # Extract feature bounds for graphing
         if torch.is_tensor(X):
@@ -356,8 +359,6 @@ class MotherNetAdditiveRegressor(ClassifierMixin, BaseEstimator):
         self.b_ = b
         self.bin_edges_ = bin_edges
         self.feature_bounds_ = feature_bounds
-        self.pad_zeros = pad_zeros
-
         return self
 
     def predict(self, X):
