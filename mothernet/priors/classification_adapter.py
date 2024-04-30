@@ -100,12 +100,11 @@ class ClassificationAdapter:
                 raise NotImplementedError("Balanced multiclass training is not possible")
 
     def drop_for_reason(self, x, v):
-        nan_prob_sampler = CategoricalActivation(
-            ordered_p=0.0, categorical_p=1.0, keep_activation_size=False,
-            num_classes_sampler=lambda: 20)
+        nan_prob_sampler = CategoricalActivation(ordered_p=0.0, categorical_p=1.0, num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
-        x[d < torch.rand((1,), device=x.device) * 20 * self.h['nan_prob_no_reason'] * random.random()] = v
+        # actually only half that probability but that's fine
+        x[d < torch.rand((1, d.shape[1], d.shape[2]), device=x.device) * 20 * self.h['nan_prob_a_reason'] - 10] = v
         return x
 
     def drop_for_no_reason(self, x, v):
@@ -132,7 +131,7 @@ class ClassificationAdapter:
             if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
                 x = self.drop_for_no_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
-            if self.h['nan_prob_a_reason'] > 0:  # Missing for a reason
+            if random.random() < self.h['nan_prob_a_reason']:  # Missing for a reason
                 x = self.drop_for_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
         # Categorical features
