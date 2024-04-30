@@ -1,5 +1,7 @@
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_iris, fetch_openml
 from sklearn.model_selection import train_test_split
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import OrdinalEncoder
 
 
 def count_parameters(model):
@@ -30,3 +32,15 @@ def check_predict_iris(clf, check_accuracy=False):
     assert y_pred.shape[0] == X_test.shape[0]
     if check_accuracy:
         assert clf.score(X_test, y_test) > 0.9
+
+def check_predict_moneyball(reg, check_score=False):
+    # smoke test for predict, models aren't trained enough to check for accuracy
+    data = fetch_openml("Moneyball")
+    X_train, X_test, y_train, y_test = train_test_split(data.data, data.target, random_state=42)
+    prep = make_column_transformer((OrdinalEncoder(), X_train.dtypes == "category"), remainder='passthrough')
+    X_train_pre = prep.fit_transform(X_train)
+    reg.fit(X_train_pre, y_train)
+    y_pred = reg.predict(prep.transform(X_test))
+    assert y_pred.shape[0] == X_test.shape[0]
+    if check_score:
+        assert reg.score(X_test, y_test) < 0.9

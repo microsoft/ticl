@@ -15,11 +15,11 @@ from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
 
 
-def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True):
+def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, regression=False):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     with torch.no_grad():
-        n_classes = len(np.unique(y_train))
+        n_classes = 0 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
         ys = torch.Tensor(y_train).to(device)
@@ -78,8 +78,9 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
             else:
                 weights = weights + marginals.permute(0, 2, 3, 1)
         w = weights.squeeze(0)[:n_features, :, :n_classes]
+
         if biases is None:
-            b = torch.zeros(n_classes, device=device)
+            b = torch.zeros(n_classes, device=device) if n_classes > 0 else torch.zeros((1,), device=device)
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
@@ -94,7 +95,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu"):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu",
+                                regression=False):
     additive_components = []
     assert X_train.shape[1] == X_test.shape[1]
     assert X_test.shape[1] == len(weights)
@@ -115,6 +117,8 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
             print("NAN")
             import pdb
             pdb.set_trace()
+        if regression:
+            return out, additive_components
         from scipy.special import softmax
         return softmax(out / .8, axis=1), additive_components
     elif "cuda" in inference_device:
@@ -307,3 +311,59 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
                 None,
             ),
         )
+
+
+class MotherNetAdditiveRegressor(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
+        self.path = path
+        self.device = device
+        self.inference_device = inference_device
+        if model is None and path is None:
+            raise ValueError("Either path or model must be provided")
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
+
+    def fit(self, X, y, is_categorical: List[bool] = None):
+        self.X_train_ = X
+        if self.model is not None:
+            model, config = self.model, self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
+            self.config_ = config
+        if config['model_type'] not in ["additive", "baam"]:
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
+        model.to(self.device)
+        pad_zeros = config['prior']['classification']['pad_zeros']
+        self.nan_bin = config['additive']['nan_bin']
+
+        w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
+                                                 pad_zeros=pad_zeros, regression=True)
+        
+        # Extract feature bounds for graphing
+        if torch.is_tensor(X):
+            X_numpy = X.cpu().detach().numpy()
+        else:
+            X_numpy = X
+        mins = X_numpy.min(axis=0).tolist()
+        maxs = X_numpy.max(axis=0).tolist()
+        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
+        
+        self.w_ = w
+        self.b_ = b
+        self.bin_edges_ = bin_edges
+        self.feature_bounds_ = feature_bounds
+        self.pad_zeros = pad_zeros
+
+        return self
+
+    def predict(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                           inference_device=self.inference_device, regression=True)[0]
+
+    def predict_with_additive_components(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                           inference_device=self.inference_device, regression=True)

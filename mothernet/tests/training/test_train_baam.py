@@ -5,9 +5,9 @@ import pytest
 
 from mothernet.fit_model import main
 from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 
-from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path
+from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_moneyball
 from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
@@ -176,9 +176,10 @@ def test_train_baam_regression():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
-                     '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0'])
-        #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
-        #check_predict_iris(clf)
+                     '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0',
+                     '--validate', 'False'])
+        reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
+        check_predict_moneyball(reg)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert results['model'].decoder_type == "average"
     assert count_parameters(results['model']) == 51504
@@ -186,4 +187,4 @@ def test_train_baam_regression():
     assert results['model'].y_encoder.in_features == 1
     assert results['model'].decoder.mlp[0].in_features == 16
     assert results['model'].decoder.mlp[2].out_features == 64
-    assert results['loss'] == pytest.approx(10004.5185546875)
+    assert results['loss'] == pytest.approx(14190.2978515625)
