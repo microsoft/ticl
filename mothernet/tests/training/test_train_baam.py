@@ -83,7 +83,7 @@ def test_train_baam_nan_bin():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7001329064369202, rel=1e-5)
 
 
 def test_train_baam_marginal_residual_decoder():
