@@ -66,7 +66,7 @@ def test_train_baam_validation():
     # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--validate', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT[:-2] + ['-B', tmpdir, '--validate', 'True'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)

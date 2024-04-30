@@ -182,8 +182,12 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
                                                  pad_zeros=pad_zeros)
         
         # Extract feature bounds for graphing
-        mins = X.min(axis=0).tolist()
-        maxs = X.max(axis=0).tolist()
+        if torch.is_tensor(X):
+            X_numpy = X.cpu().detach().numpy()
+        else:
+            X_numpy = X
+        mins = X_numpy.min(axis=0).tolist()
+        maxs = X_numpy.max(axis=0).tolist()
         feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
         
         self.w_ = w
