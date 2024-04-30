@@ -166,18 +166,18 @@ class ClassificationAdapter:
 
         for b in range(y.shape[1]):
             is_compatible, N = False, 0
-            while not is_compatible and N < 10:
-                targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
-                targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
+            if self.h['max_num_classes'] != 0:
+                while not is_compatible and N < 10:
+                    targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
+                    targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
 
-                is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                    targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                    is_compatible = len(targets_in_train) == len(targets_in_eval) and (
+                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
-                if not is_compatible:
-                    randperm = torch.randperm(x.shape[0])
-                    x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
-                N = N + 1
-            if not is_compatible:
+                    if not is_compatible:
+                        randperm = torch.randperm(x.shape[0])
+                        x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
+                    N = N + 1
                 if not is_compatible:
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
