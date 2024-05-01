@@ -7,7 +7,7 @@ from mothernet.fit_model import main
 from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
 from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 
-from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_moneyball
+from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_linear
 from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
@@ -179,7 +179,7 @@ def test_train_baam_regression():
                      '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0',
                      '--validate', 'False'])
         reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
-        check_predict_moneyball(reg)
+        check_predict_linear(reg)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert results['model'].decoder_type == "average"
     assert count_parameters(results['model']) == 51504

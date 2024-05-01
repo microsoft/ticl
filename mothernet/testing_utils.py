@@ -2,7 +2,7 @@ from sklearn.datasets import load_iris, fetch_openml
 from sklearn.model_selection import train_test_split
 from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import OrdinalEncoder
-
+import numpy as np
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -44,4 +44,18 @@ def check_predict_moneyball(reg, check_score=False):
     assert y_pred.shape[0] == X_test.shape[0]
     assert y_pred.ndim == 1 or y_pred.shape[1] == 1
     if check_score:
-        assert reg.score(X_test, y_test) < 0.9
+        assert reg.score(X_test, y_test) > 0.9
+
+
+def check_predict_linear(reg, check_score=False):
+    # smoke test for predict, models aren't trained enough to check for accuracy
+    rng = np.random.RandomState(0)
+    X = rng.normal(size=(400, 2))
+    y = X @ rng.normal(size=(2,))
+    reg.fit(X, y)
+    import pdb; pdb.set_trace()
+    y_pred = reg.predict(X)
+    assert y_pred.shape[0] == X.shape[0]
+    assert y_pred.ndim == 1 or y_pred.shape[1] == 1
+    if check_score:
+        assert reg.score(X, y) > 0.9

@@ -160,10 +160,11 @@ class ClassificationAdapter:
 
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
+            y[:] = -100
 
-        for b in range(y.shape[1]):
-            is_compatible, N = False, 0
-            if self.h['max_num_classes'] != 0:
+        if self.h['max_num_classes'] != 0:
+            for b in range(y.shape[1]):
+                is_compatible, N = False, 0
                 while not is_compatible and N < 10:
                     targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
                     targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
@@ -179,16 +180,16 @@ class ClassificationAdapter:
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
-        for b in range(y.shape[1]):
-            valid_labels = y[:, b] != -100
-            y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
+            for b in range(y.shape[1]):
+                valid_labels = y[:, b] != -100
+                y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-            if y[valid_labels, b].numel() != 0:
-                num_classes_float = (y[valid_labels, b].max() + 1).cpu()
-                num_classes = num_classes_float.int().item()
-                assert num_classes == num_classes_float.item()
-                random_shift = torch.randint(0, num_classes, (1,), device=device)
-                y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
+                if y[valid_labels, b].numel() != 0:
+                    num_classes_float = (y[valid_labels, b].max() + 1).cpu()
+                    num_classes = num_classes_float.int().item()
+                    assert num_classes == num_classes_float.item()
+                    random_shift = torch.randint(0, num_classes, (1,), device=device)
+                    y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
         return x, y, y  # x.shape = (T,B,H)
 
