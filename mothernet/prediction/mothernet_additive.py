@@ -114,7 +114,6 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
     n_bins = weights.shape[1]
     assert bin_edges.shape == (X_train.shape[1], n_bins - 1 - int(nan_bin))
     if inference_device == "cpu":
-        import pdb; pdb.set_trace()
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
             binned = np.searchsorted(bins, col)
