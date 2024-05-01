@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
@@ -29,7 +29,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     with torch.no_grad():
-        n_classes = 0 if regression else len(np.unique(y_train))
+        n_classes = 1 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
         ys = torch.Tensor(y_train).to(device)
@@ -90,7 +90,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         w = weights.squeeze(0)[:n_features, :, :n_classes]
 
         if biases is None:
-            b = torch.zeros(n_classes, device=device) if n_classes > 0 else torch.zeros((1,), device=device)
+            b = torch.zeros(n_classes, device=device)
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
@@ -114,6 +114,7 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
     n_bins = weights.shape[1]
     assert bin_edges.shape == (X_train.shape[1], n_bins - 1 - int(nan_bin))
     if inference_device == "cpu":
+        import pdb; pdb.set_trace()
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
             binned = np.searchsorted(bins, col)
@@ -317,7 +318,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         )
 
 
-class MotherNetAdditiveRegressor(ClassifierMixin, BaseEstimator):
+class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator):
     def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device

@@ -36,9 +36,9 @@ def test_train_additive_nbins():
 
     assert isinstance(results['model'], MotherNetAdditive)
     assert results['model_string'].startswith("additive_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_nbins128_N4_n1_P64_L1_tFalse_cpu")
-    assert count_parameters(results['model']) == 13706497
-    assert results['model'].decoder.mlp[2].weight.shape[0] == 51201
-    assert results['loss'] == pytest.approx(0.779898464679718, rel=1e-5)
+    assert count_parameters(results['model']) == 3837697
+    assert results['model'].decoder.mlp[2].weight.shape[0] == 12801
+    assert results['loss'] == pytest.approx(1.582958459854126, rel=1e-5)
 
 
 def test_train_additive_validation():

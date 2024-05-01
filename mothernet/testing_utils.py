@@ -42,5 +42,6 @@ def check_predict_moneyball(reg, check_score=False):
     reg.fit(X_train_pre, y_train)
     y_pred = reg.predict(prep.transform(X_test))
     assert y_pred.shape[0] == X_test.shape[0]
+    assert y_pred.ndim == 1 or y_pred.shape[1] == 1
     if check_score:
         assert reg.score(X_test, y_test) < 0.9
