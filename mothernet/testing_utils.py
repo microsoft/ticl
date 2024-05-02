@@ -53,7 +53,6 @@ def check_predict_linear(reg, check_score=False):
     X = rng.normal(size=(400, 2))
     y = X @ rng.normal(size=(2,))
     reg.fit(X, y)
-    import pdb; pdb.set_trace()
     y_pred = reg.predict(X)
     assert y_pred.shape[0] == X.shape[0]
     assert y_pred.ndim == 1 or y_pred.shape[1] == 1
