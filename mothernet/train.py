@@ -48,6 +48,8 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
 
                 if single_eval_pos is not None:
                     targets = targets[single_eval_pos:]
+                print(f"targets: {targets.mean(axis=0)}")
+                print(f"output: {output.mean(axis=0).squeeze()}")
                 loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
                 loss = loss / aggregate_k_gradients
 

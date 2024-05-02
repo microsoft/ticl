@@ -26,12 +26,13 @@ class RegressionNormalized:
     def __call__(self, x):
         # x has shape (T,B)
 
+        # already gets normalized later
         # TODO: Normalize to -1, 1 or gaussian normal
-        maxima = torch.max(x, 0)[0]
-        minima = torch.min(x, 0)[0]
-        norm = (x - minima) / (maxima-minima)
+        # maxima = torch.max(x, 0)[0]
+        # minima = torch.min(x, 0)[0]
+        # norm = (x - minima) / (maxima-minima)
 
-        return norm
+        return x
 
 
 class MulticlassSteps:

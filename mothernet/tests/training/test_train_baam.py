@@ -187,4 +187,4 @@ def test_train_baam_regression():
     assert results['model'].y_encoder.in_features == 1
     assert results['model'].decoder.mlp[0].in_features == 16
     assert results['model'].decoder.mlp[2].out_features == 64
-    assert results['loss'] == pytest.approx(14190.2978515625)
+    assert results['loss'] == pytest.approx(1.1154769659042358)
