@@ -29,13 +29,13 @@ def test_train_additive_old_defaults():
 def test_train_additive_nbins():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--n-bins', '512'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--n-bins', '128'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-        assert clf.w_.shape == (4, 512, 3)
+        assert clf.w_.shape == (4, 128, 3)
 
     assert isinstance(results['model'], MotherNetAdditive)
-    assert results['model_string'].startswith("additive_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_nbins512_N4_n1_P64_L1_tFalse_cpu")
+    assert results['model_string'].startswith("additive_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_nbins128_N4_n1_P64_L1_tFalse_cpu")
     assert count_parameters(results['model']) == 13706497
     assert results['model'].decoder.mlp[2].weight.shape[0] == 51201
     assert results['loss'] == pytest.approx(0.779898464679718, rel=1e-5)
@@ -153,6 +153,18 @@ def test_train_additive_input_bin_embedding():
     assert results['loss'] == pytest.approx(0.8084635734558105, rel=1e-5)
 
 
+def test_train_additive_variable_features():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT_ADDITIVE + ['-B', tmpdir, '--num-features', '10'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], MotherNetAdditive)
+    assert results['model'].encoder.weights.shape == (64, 16)
+    assert count_parameters(results['model']) == 9078730
+    assert results['loss'] == pytest.approx(0.8084635734558105, rel=1e-5)
+
+
 def test_train_additive_special_token_simple():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -231,3 +243,4 @@ def test_train_additive_factorized_in_and_out():
     assert results['model'].decoder.output_weights.shape == (16, 64, 10)
     assert count_parameters(results['model']) == 1038090
     assert results['loss'] == pytest.approx(1.255028247833252, rel=1e-5)
+

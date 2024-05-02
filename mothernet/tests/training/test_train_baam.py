@@ -8,14 +8,15 @@ from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNet
 from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
 
 from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path
+from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                    '--decoder-activation', 'relu', '--save-every', '8']
+                    '--decoder-activation', 'relu', '--save-every', '8', '--validate', 'False']
 
 TESTING_DEFAULTS_SHORT = ['baam', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                           'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                          '--decoder-activation', 'relu', '--save-every', '2']
+                          '--decoder-activation', 'relu', '--save-every', '2', '--validate', 'False']
 
 
 def test_train_baam_shape_attention():
@@ -66,6 +67,18 @@ def test_train_baam_validation():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--validate', 'True'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 51648
+    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
+
+
+def test_train_baam_nan_bin():
+    # FIXME not actually testing that validation worked
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--nan-bin', 'True', '--nan-prob-no-reason', '0.5', '--nan-prob-a-reason', '0.5'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
@@ -140,3 +153,37 @@ def test_train_baam_class_average_no_y_encoder():
     assert results['model'].y_encoder is None
     assert results['model'].decoder.mlp[0].in_features == 16
     assert results['loss'] == pytest.approx(1.2202619314193726)
+
+
+def test_train_baam_average_decoder():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                     '--save-every', '8', '-B', tmpdir, '-D', 'average'])
+        #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        #check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model'].decoder_type == "average"
+    assert count_parameters(results['model']) == 347136
+    assert results['model'].decoder.mlp[0].in_features == 16
+    assert results['model'].decoder.mlp[2].out_features == 640
+    assert results['loss'] == pytest.approx(0.7809338569641113)
+
+
+def test_train_baam_regression():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                     '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0'])
+        #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        #check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model'].decoder_type == "average"
+    assert count_parameters(results['model']) == 51504
+    assert isinstance(results['model'].y_encoder, encoders.Linear)
+    assert results['model'].y_encoder.in_features == 1
+    assert results['model'].decoder.mlp[0].in_features == 16
+    assert results['model'].decoder.mlp[2].out_features == 64
+    assert results['loss'] == pytest.approx(10004.5185546875)

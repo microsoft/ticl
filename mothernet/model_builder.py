@@ -24,7 +24,9 @@ except ImportError:
 
 
 def get_criterion(max_num_classes):
-    if max_num_classes == 2:
+    if max_num_classes == 0:
+        loss = nn.MSELoss(reduction='none')
+    elif max_num_classes == 2:
         loss = nn.BCEWthLogitsLoss(reduction='none')
     elif max_num_classes > 2:
         loss = nn.CrossEntropyLoss(reduction='none')

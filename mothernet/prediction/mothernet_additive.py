@@ -95,12 +95,13 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu", n_bins=64):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu"):
     additive_components = []
     assert X_train.shape[1] == X_test.shape[1]
     assert X_test.shape[1] == len(weights)
-    assert weights.shape[:2] == (X_train.shape[1], n_bins)
-    assert bin_edges.shape == (X_train.shape[1], n_bins - 1)
+    assert weights.shape[0] == X_train.shape[1]
+    n_bins = weights.shape[1]
+    assert bin_edges.shape == (X_train.shape[1], n_bins - 1 - int(nan_bin))
     if inference_device == "cpu":
         out = np.zeros((X_test.shape[0], weights.shape[-1]))
         for col, bins, w in zip(X_test.T, bin_edges, weights):
@@ -162,6 +163,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         else:
             self.sklearn_binning = False
 
+
     def fit(self, X, y, is_categorical: List[bool] = None):
         self.X_train_ = X
         le = LabelEncoder()
@@ -170,6 +172,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             model, config = self.model, self.config
         else:
             model, config = load_model(self.path, device=self.device)
+            self.config_ = config
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
         if config['model_type'] not in ["additive", "baam"]:
@@ -179,6 +182,12 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             pad_zeros = config['prior']['classification']['pad_zeros']
         except KeyError:
             pad_zeros = True
+
+        try:
+            self.nan_bin = config['additive']['nan_bin']
+        except KeyError:
+            self.nan_bin = False
+
         w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
                                                  pad_zeros=pad_zeros, is_categorical=is_categorical)
         

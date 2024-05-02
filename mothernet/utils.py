@@ -56,24 +56,12 @@ class SeqBN(nn.Module):
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
 
-def get_nan_value(v, set_value_to_nan=0.0):
+def get_nan_value(set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
-        return v
+        return float('nan')
     else:
         return random.choice([-999, 0, 1, 999])
-
-
-def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('nan'), set_value_to_nan)
-
-
-def nan_handling_missing_for_no_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('-inf'), set_value_to_nan)
-
-
-def nan_handling_missing_for_a_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('inf'), set_value_to_nan)
-
+    
 
 def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
     """

@@ -90,7 +90,7 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
             smoothed = this_df[[y, x]].reset_index()
         else:
             try:
-                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2 * extra_smoothing).mean().reset_index()
+                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df[x].max() / 2 * extra_smoothing).mean().reset_index()
             except ValueError as e:
                 print(e)
                 continue
