@@ -84,6 +84,7 @@ class ClassificationAdapter:
         self.h = sample_distributions(parse_distributions(config))
 
         self.base_prior = base_prior
+        self.per_feature_categorical = config['per_dataset_categorical']
         if self.h['num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
@@ -138,24 +139,35 @@ class ClassificationAdapter:
                 else:
                     x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
 
-        # Categorical features (random.gammavariate equivalent is torch Gamma but with inverse scale)
-        per_dataset_cat_features = torch.distributions.Gamma(
-            1, 1.0 / 10).sample(sample_shape=(x.shape[1], x.shape[2])).round().clamp(min=2).to(x.device)
-        # Mask out categorical features randomly as before
-        per_dataset_cat_features *= (
-                torch.rand(size=(x.shape[1], x.shape[2]), device=x.device) < self.h['categorical_feature_p']
-        ).to(torch.float)
+        if self.per_feature_categorical:
+            # Categorical features (random.gammavariate equivalent is torch Gamma but with inverse scale)
+            per_dataset_cat_features = torch.distributions.Gamma(
+                1, 1.0 / 10).sample(sample_shape=(x.shape[1], x.shape[2])).round().clamp(min=2).to(x.device)
+            # Mask out categorical features randomly as before
+            per_dataset_cat_features *= (
+                    torch.rand(size=(x.shape[1], x.shape[2]), device=x.device) < self.h['categorical_feature_p']
+            ).to(torch.float)
 
-        class_boundaries = torch.randint(
-            0, x.shape[0], (x.shape[1], x.shape[2], int(per_dataset_cat_features.max())))
-        classes = torch.searchsorted(class_boundaries.contiguous(), x.permute(1, 2, 0).contiguous())
-        class_assignment = torch.remainder(
-            classes, torch.where(per_dataset_cat_features == 0, torch.inf, per_dataset_cat_features).unsqueeze(-1))
+            class_boundaries = torch.randint(
+                0, x.shape[0], (x.shape[1], x.shape[2], int(per_dataset_cat_features.max())))
+            classes = torch.searchsorted(class_boundaries.contiguous(), x.permute(1, 2, 0).contiguous())
+            class_assignment = torch.remainder(
+                classes, torch.where(per_dataset_cat_features == 0, torch.inf, per_dataset_cat_features).unsqueeze(-1))
 
-        # Only overwrite the categorical features.
-        x[:, per_dataset_cat_features > 0] = class_assignment.permute(2, 0, 1)[:, per_dataset_cat_features > 0]
-        categorical_features = per_dataset_cat_features > 0
-
+            # Only overwrite the categorical features.
+            x[:, per_dataset_cat_features > 0] = class_assignment.permute(2, 0, 1)[:, per_dataset_cat_features > 0]
+            categorical_features = per_dataset_cat_features > 0
+        else:
+            # Categorical features
+            categorical_features = []
+            if random.random() < self.h['categorical_feature_p']:
+                p = random.random()
+                for col in range(x.shape[2]):
+                    num_unique_features = max(round(random.gammavariate(1, 10)), 2)
+                    m = MulticlassRank(num_unique_features, ordered_p=0.3)
+                    if random.random() < p:
+                        categorical_features.append(col)
+                        x[:, :, col] = m(x[:, :, col])
         x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
