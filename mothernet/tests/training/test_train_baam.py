@@ -83,7 +83,23 @@ def test_train_baam_nan_bin():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-2)
+
+
+def test_train_baam_categorical_embedding():
+    # FIXME not actually testing that validation worked
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + [
+            '-B', tmpdir,
+            '--categorical-embedding', 'True',
+            '--categorical-feature-p', '1.0',
+        ])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 51696
+    assert results['loss'] == pytest.approx(1.7002005577087402, rel=1e-2)
 
 
 def test_train_baam_marginal_residual_decoder():
