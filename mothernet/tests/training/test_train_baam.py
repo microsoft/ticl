@@ -5,9 +5,9 @@ import pytest
 
 from mothernet.fit_model import main
 from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 
-from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path
+from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_linear
 from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
@@ -66,7 +66,7 @@ def test_train_baam_validation():
     # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--validate', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT[:-2] + ['-B', tmpdir, '--validate', 'True'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
@@ -83,7 +83,7 @@ def test_train_baam_nan_bin():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.697007954120636, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7001329064369202, rel=1e-5)
 
 
 def test_train_baam_marginal_residual_decoder():
@@ -160,7 +160,7 @@ def test_train_baam_average_decoder():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
-                     '--save-every', '8', '-B', tmpdir, '-D', 'average'])
+                     '--save-every', '8', '-B', tmpdir, '-D', 'average', '--validate', 'False'])
         #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         #check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
@@ -175,10 +175,11 @@ def test_train_baam_regression():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
-                     '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0'])
-        #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
-        #check_predict_iris(clf)
+                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                        '--save-every', '8', '-B', tmpdir, '-D', 'average', '--y-encoder', 'linear', '--max-num-classes', '0',
+                        '--validate', 'False'])
+        reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
+        check_predict_linear(reg)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert results['model'].decoder_type == "average"
     assert count_parameters(results['model']) == 51504
@@ -186,4 +187,4 @@ def test_train_baam_regression():
     assert results['model'].y_encoder.in_features == 1
     assert results['model'].decoder.mlp[0].in_features == 16
     assert results['model'].decoder.mlp[2].out_features == 64
-    assert results['loss'] == pytest.approx(10004.5185546875)
+    assert results['loss'] == pytest.approx(1.1154769659042358)

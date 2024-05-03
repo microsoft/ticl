@@ -26,12 +26,13 @@ class RegressionNormalized:
     def __call__(self, x):
         # x has shape (T,B)
 
+        # already gets normalized later
         # TODO: Normalize to -1, 1 or gaussian normal
-        maxima = torch.max(x, 0)[0]
-        minima = torch.min(x, 0)[0]
-        norm = (x - minima) / (maxima-minima)
+        # maxima = torch.max(x, 0)[0]
+        # minima = torch.min(x, 0)[0]
+        # norm = (x - minima) / (maxima-minima)
 
-        return norm
+        return x
 
 
 class MulticlassSteps:
@@ -164,27 +165,28 @@ class ClassificationAdapter:
 
         if torch.isnan(y).sum() > 0:
             print('Nans in target!')
+            y[:] = -100
 
-        for b in range(y.shape[1]):
-            is_compatible, N = False, 0
-            while not is_compatible and N < 10:
-                targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
-                targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
+        if self.h['max_num_classes'] != 0:
+            for b in range(y.shape[1]):
+                is_compatible, N = False, 0
+                while not is_compatible and N < 10:
+                    targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
+                    targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
 
-                is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                    targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                    is_compatible = len(targets_in_train) == len(targets_in_eval) and (
+                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
-                if not is_compatible:
-                    randperm = torch.randperm(x.shape[0])
-                    x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
-                N = N + 1
-            if not is_compatible:
+                    if not is_compatible:
+                        randperm = torch.randperm(x.shape[0])
+                        x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
+                    N = N + 1
                 if not is_compatible:
                     if self.h['max_num_classes'] != 0:
                         # todo check that it really does this and how many together
                         y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
-
-        if self.h['max_num_classes'] != 0:
+                    # todo check that it really does this and how many together
+                    y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
             for b in range(y.shape[1]):
                 valid_labels = y[:, b] != -100
                 y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
