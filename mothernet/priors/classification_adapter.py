@@ -150,7 +150,11 @@ class ClassificationAdapter:
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled
+        # In case of regression two normalizations.
         y = self.class_assigner(y).float()
+        if self.h['max_num_classes'] == 0:
+            # Inpute potential nan values after normalization
+            y[y.isnan()] = 0
 
         # Append empty features if enabled
         if self.h['pad_zeros']:
@@ -178,9 +182,11 @@ class ClassificationAdapter:
                         x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
                     N = N + 1
                 if not is_compatible:
+                    if self.h['max_num_classes'] != 0:
+                        # todo check that it really does this and how many together
+                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
-
             for b in range(y.shape[1]):
                 valid_labels = y[:, b] != -100
                 y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
