@@ -54,8 +54,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
 
         x_src = model.encoder(X_onehot.float())
         if getattr(model, 'categorical_embedding', False):
-          is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
-          x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
+            is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
+            x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
 
         if model.y_encoder is None:
             train_x = x_src
@@ -73,6 +73,12 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
                 output = mod(output)
         else:
             output = model.transformer_encoder(train_x)
+
+        if model.marginal_residual in [True, 'True', 'output', 'decoder']:
+            class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
+            # class averages are batch x outputs x features x bins
+            # output is batch x features x bins x outputs
+            marginals = model.marginal_residual_layer(class_averages)
 
         if model.marginal_residual == 'decoder':
             weights, biases = model.decoder(output, ys, marginals)
