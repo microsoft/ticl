@@ -114,9 +114,10 @@ def test_baam_with_categoricals():
     X, y = load_iris(return_X_y=True)
     rng = np.random.RandomState(42)
     X_rand = rng.normal(size=X.shape)
-    X_rand_cat = (X_rand > 0.0).astype(np.int32)
+    X_rand_binary = (X_rand > 0.0).astype(np.int32)
+    X_rand_3_classes = np.tile([1, 2, 3], 100)[:X.shape[0]]
     # Mix Float and categorical features.
-    X = np.concatenate([X[:, :2], X_rand_cat[:, 2:]], axis=-1)
+    X = np.concatenate([X, X_rand_binary[:, 0].reshape(-1, 1), X_rand_3_classes.reshape(-1, 1)], axis=-1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
     model_string = "baam_categoricalembeddingTrue_e8_N4_numfeatures4_04_07_2024_11_18_57_epoch_on_exit.cpkt"
     model_path = get_mn_model(model_string)

@@ -15,7 +15,7 @@ class MotherNetAdditive(nn.Module):
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, nan_bin=False, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, sklearn_binning=False,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None, predicted_activation=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
                  shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False, categorical_embedding=False,):
@@ -54,6 +54,7 @@ class MotherNetAdditive(nn.Module):
         self.efficient_eval_masking = efficient_eval_masking
         self.n_bins = n_bins
         self.nan_bin = nan_bin
+        self.sklearn_binning = sklearn_binning
         self.n_out = n_out
         self.nhid = nhid
         self.input_bin_embedding = input_bin_embedding
@@ -97,7 +98,7 @@ class MotherNetAdditive(nn.Module):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin,
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin, sklearn_binning=self.sklearn_binning,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:
