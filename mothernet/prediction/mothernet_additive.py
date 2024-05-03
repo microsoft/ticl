@@ -213,7 +213,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
                                            inference_device=self.inference_device)
 
     def predict(self, X):
-        return self.classes_[self.predict_proba(X).argmax(axis=1)]
+        return self.classes_[self.predict_proba(X)[0].argmax(axis=1)]
 
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
