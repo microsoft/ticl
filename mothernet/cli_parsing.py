@@ -129,7 +129,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--fourier-features', help="Number of Fourier features to add per feature. A value of 0 means off.", type=int)
         additive.add_argument('--n-bins', help="Number of bins", type=int)
         additive.add_argument('--nan-bin', help="Whether to use the last bin to denote a nan value.", type=bool)
-        additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=bool)
+        additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=str2bool)
         additive.add_argument('--marginal-residual', help="Whether to learn the residual of the marginals. 'output', 'decoder' or 'none'.", type=str)
         additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
         additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)
@@ -163,7 +163,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     classification_prior.add_argument('--max-num-classes', help="Maximum number of classes. 0 means regression.", type=int)
     classification_prior.add_argument('--nan-prob-no-reason', help="NaN probability missing at random.", type=float)
     classification_prior.add_argument('--nan-prob-a-reason', help="NaN probability missing not at random.", type=float)
-
+    classification_prior.add_argument('--categorical-feature-p', help="Categorical feature probability.", type=float)
     classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
 
