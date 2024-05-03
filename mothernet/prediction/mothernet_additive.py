@@ -91,12 +91,15 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
-        # remove extra classes on output layer
-        if inference_device == "cpu":
-            def detach(x):
-                return x.detach().cpu().numpy()
-        else:
-            weights = weights + marginals.permute(0, 2, 3, 1)
+
+        weights = weights + marginals.permute(0, 2, 3, 1)
+          
+    if inference_device == "cpu":
+        def detach(x):
+            return x.detach().cpu().numpy()
+    else:
+        def detach(x):
+            return x.detach()
 
     return detach(w), detach(b), detach(bins_data_space)
 
