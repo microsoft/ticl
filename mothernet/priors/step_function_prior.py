@@ -42,4 +42,4 @@ class StepFunctionPrior:
     def get_batch(self, batch_size, n_samples, num_features, device=default_device, num_outputs=1, epoch=None,
                   single_eval_pos=None):
         x, y, _, _, _ = self._get_batch(batch_size, n_samples, num_features, device, num_outputs, epoch,)
-        return x, y, y
+        return x, y, y, {}

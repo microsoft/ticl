@@ -7,12 +7,14 @@ from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
-from mothernet.models.utils import bin_data
+from mothernet.models.biattention_additive_mothernet import _determine_is_categorical
 from mothernet.models.encoders import get_fourier_features
+from mothernet.models.utils import bin_data
 from mothernet.utils import normalize_data
 
 from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
+
 
 
 def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False, is_categorical: List[List] = None):
@@ -52,8 +54,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
 
         x_src = model.encoder(X_onehot.float())
         if getattr(model, 'categorical_embedding', False):
-            is_categorical = model._determine_is_categorical(x_src)  # (1, batch_size, num_features)
-            x_src += model.is_categorical_encoder(is_categorical)
+          is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
+          x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
 
         if model.y_encoder is None:
             train_x = x_src
@@ -72,11 +74,6 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             output = model.transformer_encoder(train_x)
 
-        if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-            class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
-            # class averages are batch x outputs x features x bins
-            # output is batch x features x bins x outputs
-            marginals = model.marginal_residual_layer(class_averages)
 
         if model.marginal_residual == 'decoder':
             weights, biases = model.decoder(output, ys, marginals)
@@ -95,13 +92,14 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
-        # remove extra classes on output layer
-        if inference_device == "cpu":
-            def detach(x):
-                return x.detach().cpu().numpy()
-        else:
-            def detach(x):
-                return x.detach()
+        weights = weights + marginals.permute(0, 2, 3, 1)
+          
+    if inference_device == "cpu":
+        def detach(x):
+            return x.detach().cpu().numpy()
+    else:
+        def detach(x):
+            return x.detach()
 
     return detach(w), detach(b), detach(bins_data_space)
 
@@ -178,7 +176,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             self.sklearn_binning = False
 
 
-    def fit(self, X, y, is_categorical: List[bool] = None):
+    def fit(self, X, y, is_categorical: List[int] = None):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
