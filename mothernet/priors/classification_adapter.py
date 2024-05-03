@@ -163,9 +163,12 @@ class ClassificationAdapter:
             x = torch.cat(
                 [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
-        if torch.isnan(y).sum() > 0:
+        if torch.isnan(y).any():
             print('Nans in target!')
-            y[:] = -100
+            if self.h['max_num_classes'] == 0:
+                y[torch.isnan(y)] = 0
+            else:
+                y[torch.isnan(y)] = -100
 
         if self.h['max_num_classes'] != 0:
             for b in range(y.shape[1]):
