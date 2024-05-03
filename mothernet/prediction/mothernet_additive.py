@@ -36,7 +36,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
 
         ys = torch.Tensor(y_train).to(device).unsqueeze(1)
         xs = torch.Tensor(X_train).to(device).unsqueeze(1)
-
+        
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
         if pad_zeros:
@@ -74,7 +74,6 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             output = model.transformer_encoder(train_x)
 
-
         if model.marginal_residual == 'decoder':
             weights, biases = model.decoder(output, ys, marginals)
         else:
@@ -92,6 +91,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
+
         weights = weights + marginals.permute(0, 2, 3, 1)
           
     if inference_device == "cpu":
