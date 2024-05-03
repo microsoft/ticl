@@ -86,6 +86,30 @@ def test_train_baam_nan_bin():
     assert results['loss'] == pytest.approx(0.7001329064369202, rel=1e-5)
 
 
+def test_train_baam_sklearn_binning():
+    # FIXME not actually testing that validation worked
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 51648
+    assert results['loss'] == pytest.approx(0.7035961151123047, rel=1e-3)
+
+
+def test_train_baam_sklearn_binning_with_nan_bin():
+    # FIXME not actually testing that validation worked
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40', '--nan-bin', 'True', '--nan-prob-no-reason', '0.5', '--nan-prob-a-reason', '0.5'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 51648
+    assert results['loss'] == pytest.approx(0.6030288338661194, rel=1e-3)
+
+
 def test_train_baam_marginal_residual_decoder():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
