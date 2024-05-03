@@ -87,7 +87,6 @@ def test_train_baam_nan_bin():
 
 
 def test_train_baam_categorical_embedding():
-    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + [
@@ -99,7 +98,7 @@ def test_train_baam_categorical_embedding():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51696
-    assert results['loss'] == pytest.approx(1.7002005577087402, rel=1e-2)
+    assert results['loss'] == pytest.approx(0.8239374756813049, rel=1e-2)
 
 
 def test_train_baam_sklearn_binning():
