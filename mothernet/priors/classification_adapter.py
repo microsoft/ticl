@@ -149,7 +149,7 @@ class ClassificationAdapter:
             ).to(torch.float)
 
             class_boundaries = torch.randint(
-                0, x.shape[0], (x.shape[1], x.shape[2], int(per_dataset_cat_features.max())))
+                0, x.shape[0], (x.shape[1], x.shape[2], int(per_dataset_cat_features.max())), device=x.device)
             classes = torch.searchsorted(class_boundaries.contiguous(), x.permute(1, 2, 0).contiguous())
             class_assignment = torch.remainder(
                 classes, torch.where(per_dataset_cat_features == 0, torch.inf, per_dataset_cat_features).unsqueeze(-1))
