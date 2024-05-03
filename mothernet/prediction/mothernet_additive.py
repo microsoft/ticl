@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
@@ -16,63 +16,63 @@ from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
 
 
-def extract_additive_model(model, X_train, y_train, device="cpu", inference_device="cpu", pad_zeros=True, is_categorical=None):
+
+def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False, is_categorical: List[List] = None):
+    try:
+        max_features = config['prior']['num_features']
+    except KeyError:
+        max_features = 100
+
+    try:
+        pad_zeros = config['prior']['classification']['pad_zeros']
+    except KeyError:
+        pad_zeros = True
+
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
     with torch.no_grad():
-        n_classes = len(np.unique(y_train))
+        n_classes = 1 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
-        ys = torch.Tensor(y_train).to(device)
-        xs = torch.Tensor(X_train).to(device)
-
-    if X_train.shape[1] > 100:
-        raise ValueError("Cannot run inference on data with more than 100 features")
-    if pad_zeros:
-        x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
-    else:
-        x_all_torch = xs
-    X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
-    if model.input_layer_norm:
-        X_onehot = model.input_norm(X_onehot.float())
+        ys = torch.Tensor(y_train).to(device).unsqueeze(1)
+        xs = torch.Tensor(X_train).to(device).unsqueeze(1)
         
-    if getattr(model, "fourier_features", 0) > 0:
-        x_scaled = normalize_data(xs)
-        x_fourier = get_fourier_features(x_scaled, model.fourier_features)
-        X_onehot = torch.cat([X_onehot, x_fourier], -1)
+        if X_train.shape[1] > 100:
+            raise ValueError("Cannot run inference on data with more than 100 features")
+        if pad_zeros:
+            x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
+        else:
+            x_all_torch = xs
+        X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
+                                       sklearn_binning=model.sklearn_binning)
+        if model.input_layer_norm:
+            X_onehot = model.input_norm(X_onehot.float())
+        if getattr(model, "fourier_features", 0) > 0:
+            x_scaled = normalize_data(xs)
+            x_fourier = get_fourier_features(x_scaled, model.fourier_features)
+            X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
-    x_src = model.encoder(X_onehot.unsqueeze(1).float())
-    if getattr(model, 'categorical_embedding', False):
-        # --> # (1, batch_size, num_features, 1)
-        is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
-        x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
-    if model.y_encoder is None:
-        train_x = x_src
-    else:
-        y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-        if x_src.ndim == 4:
-            # baam model, per feature
-            y_src = y_src.unsqueeze(-2)
-        train_x = x_src + y_src
-    assert train_x.shape == x_src.shape
-    if hasattr(model, "layers"):
-        # baam model
-        output = train_x
-        for mod in model.layers:
-            output = mod(output)
-    else:
-        output = model.transformer_encoder(train_x)
-    if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-        class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
-        # class averages are batch x outputs x features x bins
-        # output is batch x features x bins x outputs
-        marginals = model.marginal_residual_layer(class_averages)
+        x_src = model.encoder(X_onehot.float())
+        if getattr(model, 'categorical_embedding', False):
+          is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
+          x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
 
-    if model.marginal_residual == 'decoder':
-        weights, biases = model.decoder(output, ys, marginals)
-    else:
-        weights, biases = model.decoder(output, ys)
-
+        if model.y_encoder is None:
+            train_x = x_src
+        else:
+            y_src = model.y_encoder(ys)
+            if x_src.ndim == 4:
+                # baam model, per feature
+                y_src = y_src.unsqueeze(-2)
+            train_x = x_src + y_src
+        assert train_x.shape == x_src.shape
+        if hasattr(model, "layers"):
+            # baam model
+            output = train_x
+            for mod in model.layers:
+                output = mod(output)
+        else:
+            output = model.transformer_encoder(train_x)
 
         if model.marginal_residual == 'decoder':
             weights, biases = model.decoder(output, ys, marginals)
@@ -85,6 +85,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
             else:
                 weights = weights + marginals.permute(0, 2, 3, 1)
         w = weights.squeeze(0)[:n_features, :, :n_classes]
+
         if biases is None:
             b = torch.zeros(n_classes, device=device)
         else:
@@ -113,7 +114,8 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
     return detach(w), detach(b), detach(bins_data_space)
 
 
-def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu"):
+def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan_bin, inference_device="cpu",
+                                regression=False):
     additive_components = []
     assert X_train.shape[1] == X_test.shape[1]
     assert X_test.shape[1] == len(weights)
@@ -134,6 +136,8 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
             print("NAN")
             import pdb
             pdb.set_trace()
+        if regression:
+            return out, additive_components
         from scipy.special import softmax
         return softmax(out / .8, axis=1), additive_components
     elif "cuda" in inference_device:
@@ -172,6 +176,15 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             raise ValueError("config must be provided if model is provided")
         self.model = model
         self.config = config
+        if hasattr(model, "nan_bin"):
+            self.nan_bin = model.nan_bin
+        else:
+            self.nan_bin = False
+        if hasattr(model, "sklearn_binning"):
+            self.sklearn_binning = model.sklearn_binning
+        else:
+            self.sklearn_binning = False
+
 
     def fit(self, X, y, is_categorical: List[int] = None):
         self.X_train_ = X
@@ -187,43 +200,40 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         if config['model_type'] not in ["additive", "baam"]:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
-        try:
-            pad_zeros = config['prior']['classification']['pad_zeros']
-        except KeyError:
-            pad_zeros = True
-
+    
         try:
             self.nan_bin = config['additive']['nan_bin']
         except KeyError:
             self.nan_bin = False
 
-        w, b, bin_edges = extract_additive_model(model, X, y, device=self.device, inference_device=self.inference_device,
-                                                 pad_zeros=pad_zeros, is_categorical=is_categorical)
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device, is_categorical=is_categorical)
         
         # Extract feature bounds for graphing
-        mins = X.min(axis=0).tolist()
-        maxs = X.max(axis=0).tolist()
+        if torch.is_tensor(X):
+            X_numpy = X.cpu().detach().numpy()
+        else:
+            X_numpy = X
+        mins = X_numpy.min(axis=0).tolist()
+        maxs = X_numpy.max(axis=0).tolist()
         feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
         
         self.w_ = w
         self.b_ = b
-        self.bin_edges_ = bin_edges
+        self.bin_edges_ = bin_edges.squeeze(1)
         self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
-        self.pad_zeros = pad_zeros
 
         return self
 
     def predict_proba(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device)[0]
+        return self.predict_proba_with_additive_components(X)
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device)
 
     def predict(self, X):
-        return self.classes_[self.predict_proba(X).argmax(axis=1)]
+        return self.classes_[self.predict_proba(X)[0].argmax(axis=1)]
 
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
@@ -322,3 +332,56 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
                 None,
             ),
         )
+
+
+class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
+        self.path = path
+        self.device = device
+        self.inference_device = inference_device
+        if model is None and path is None:
+            raise ValueError("Either path or model must be provided")
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
+
+    def fit(self, X, y, is_categorical: List[bool] = None):
+        self.X_train_ = X
+        if self.model is not None:
+            model, config = self.model, self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
+            self.config_ = config
+        if config['model_type'] not in ["additive", "baam"]:
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
+        model.to(self.device)
+        self.nan_bin = config['additive']['nan_bin']
+
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
+                                                 regression=True)
+        
+        # Extract feature bounds for graphing
+        if torch.is_tensor(X):
+            X_numpy = X.cpu().detach().numpy()
+        else:
+            X_numpy = X
+        mins = X_numpy.min(axis=0).tolist()
+        maxs = X_numpy.max(axis=0).tolist()
+        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
+        
+        self.w_ = w
+        self.b_ = b
+        self.bin_edges_ = bin_edges
+        self.feature_bounds_ = feature_bounds
+        return self
+
+    def predict(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                           inference_device=self.inference_device, regression=True)[0]
+
+    def predict_with_additive_components(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                           inference_device=self.inference_device, regression=True)

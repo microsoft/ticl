@@ -46,12 +46,12 @@ def test_train_mothernet_validation():
     assert count_parameters(results['model'].decoder) == 1000394
 
 
-def test_train_mothernet_no_hidden():
+def test_train_mothernet_no_hidden_output_attention():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
                     'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
-                    '--decoder-activation', 'relu', '-B', tmpdir])
+                    '--decoder-activation', 'relu', '-D', 'output_attention', '-B', tmpdir, '--validate', 'False'])
         clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
         check_predict_iris(clf)
     assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_N4_n1_P64_L0_tFalse_cpu")
@@ -60,6 +60,20 @@ def test_train_mothernet_no_hidden():
     assert count_parameters(results['model'].decoder) == 212978
     assert results['loss'] == 0.7772496938705444
 
+
+def test_train_mothernet_no_hidden_class_average():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
+                    '--decoder-activation', 'relu', '-D', 'class_average', '-B', tmpdir])
+        clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
+        check_predict_iris(clf)
+    assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_Dclass_average_e128_E10_N4_n1_P64_L0_tFalse_cpu")
+    assert count_parameters(results['model']) == 573797
+    assert isinstance(results['model'], MotherNet)
+    assert count_parameters(results['model'].decoder) == 29541
+    assert results['loss'] == 0.961327075958252
 
 
 def test_train_mothernet_less_features():
