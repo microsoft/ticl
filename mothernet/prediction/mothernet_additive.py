@@ -15,7 +15,7 @@ from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
 
 
-def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False):
+def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False, is_categorical: List[List] = None):
     try:
         max_features = config['prior']['num_features']
     except KeyError:
@@ -32,8 +32,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         n_classes = 1 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
-        ys = torch.Tensor(y_train).to(device)
-        xs = torch.Tensor(X_train).to(device)
+        ys = torch.Tensor(y_train).to(device).unsqueeze(1)
+        xs = torch.Tensor(X_train).to(device).unsqueeze(1)
 
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
@@ -41,7 +41,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
-        X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin)
+        X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
+                                       sklearn_binning=model.sklearn_binning)
         if model.input_layer_norm:
             X_onehot = model.input_norm(X_onehot.float())
         if getattr(model, "fourier_features", 0) > 0:
@@ -49,7 +50,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_fourier = get_fourier_features(x_scaled, model.fourier_features)
             X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
-        x_src = model.encoder(X_onehot.unsqueeze(1).float())
+        x_src = model.encoder(X_onehot.float())
         if getattr(model, 'categorical_embedding', False):
             is_categorical = model._determine_is_categorical(x_src)  # (1, batch_size, num_features)
             x_src += model.is_categorical_encoder(is_categorical)
@@ -57,7 +58,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         if model.y_encoder is None:
             train_x = x_src
         else:
-            y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+            y_src = model.y_encoder(ys)
             if x_src.ndim == 4:
                 # baam model, per feature
                 y_src = y_src.unsqueeze(-2)
@@ -167,6 +168,15 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
             raise ValueError("config must be provided if model is provided")
         self.model = model
         self.config = config
+        if hasattr(model, "nan_bin"):
+            self.nan_bin = model.nan_bin
+        else:
+            self.nan_bin = False
+        if hasattr(model, "sklearn_binning"):
+            self.sklearn_binning = model.sklearn_binning
+        else:
+            self.sklearn_binning = False
+
 
     def fit(self, X, y, is_categorical: List[bool] = None):
         self.X_train_ = X
@@ -188,7 +198,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         except KeyError:
             self.nan_bin = False
 
-        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device)
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device, is_categorical=is_categorical)
         
         # Extract feature bounds for graphing
         if torch.is_tensor(X):
@@ -201,22 +211,21 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         
         self.w_ = w
         self.b_ = b
-        self.bin_edges_ = bin_edges
+        self.bin_edges_ = bin_edges.squeeze(1)
         self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
 
         return self
 
     def predict_proba(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device)[0]
+        return self.predict_proba_with_additive_components(X)
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device)
 
     def predict(self, X):
-        return self.classes_[self.predict_proba(X).argmax(axis=1)]
+        return self.classes_[self.predict_proba(X)[0].argmax(axis=1)]
 
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations

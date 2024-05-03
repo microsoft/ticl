@@ -155,6 +155,7 @@ def get_additive_config():
         'shape_init': 'constant',
         'n_bins': 64,
         'nan_bin': False,
+        'sklearn_binning': False,
         'fourier_features': 0,
         'marginal_residual': "none",
         'categorical_embedding': False
