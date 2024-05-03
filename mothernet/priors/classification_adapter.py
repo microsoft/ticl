@@ -149,7 +149,11 @@ class ClassificationAdapter:
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled
+        # In case of regression two normalizations.
         y = self.class_assigner(y).float()
+        if self.h['max_num_classes'] == 0:
+            # Inpute potential nan values after normalization
+            y[y.isnan()] = 0
 
         # Append empty features if enabled
         if self.h['pad_zeros']:
@@ -176,19 +180,21 @@ class ClassificationAdapter:
                 N = N + 1
             if not is_compatible:
                 if not is_compatible:
-                    # todo check that it really does this and how many together
-                    y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
+                    if self.h['max_num_classes'] != 0:
+                        # todo check that it really does this and how many together
+                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
 
-        for b in range(y.shape[1]):
-            valid_labels = y[:, b] != -100
-            y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
+        if self.h['max_num_classes'] != 0:
+            for b in range(y.shape[1]):
+                valid_labels = y[:, b] != -100
+                y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-            if y[valid_labels, b].numel() != 0:
-                num_classes_float = (y[valid_labels, b].max() + 1).cpu()
-                num_classes = num_classes_float.int().item()
-                assert num_classes == num_classes_float.item()
-                random_shift = torch.randint(0, num_classes, (1,), device=device)
-                y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
+                if y[valid_labels, b].numel() != 0:
+                    num_classes_float = (y[valid_labels, b].max() + 1).cpu()
+                    num_classes = num_classes_float.int().item()
+                    assert num_classes == num_classes_float.item()
+                    random_shift = torch.randint(0, num_classes, (1,), device=device)
+                    y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
         return x, y, y  # x.shape = (T,B,H)
 
