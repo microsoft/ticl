@@ -34,8 +34,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         n_classes = 1 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
-        ys = torch.Tensor(y_train).to(device).unsqueeze(1)
-        xs = torch.Tensor(X_train).to(device).unsqueeze(1)
+        ys = torch.Tensor(y_train).to(device)
+        xs = torch.Tensor(X_train).to(device)
         
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
@@ -43,6 +43,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
+        x_all_torch = x_all_torch.unsqueeze(1)
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
                                        sklearn_binning=model.sklearn_binning)
         if model.input_layer_norm:
@@ -84,7 +85,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             weights, biases = model.decoder(output, ys, marginals)
         else:
             weights, biases = model.decoder(output, ys)
-
+        marginals = None
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
             if hasattr(model, "layers") and len(model.layers) == 0:
                 weights = marginals.permute(0, 2, 3, 1)
@@ -97,8 +98,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
-
-        weights = weights + marginals.permute(0, 2, 3, 1)
+        if marginals is not None:
+            weights = weights + marginals.permute(0, 2, 3, 1)
           
     if inference_device == "cpu":
         def detach(x):
@@ -222,14 +223,15 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba(self, X):
-        return self.predict_proba_with_additive_components(X)
+        p, components =  self.predict_proba_with_additive_components(X)
+        return p
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device)
 
     def predict(self, X):
-        return self.classes_[self.predict_proba(X)[0].argmax(axis=1)]
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
