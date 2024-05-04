@@ -34,13 +34,14 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         n_classes = 1 if regression else len(np.unique(y_train))
         n_features = X_train.shape[1]
 
-        ys = torch.Tensor(y_train).to(device).unsqueeze(1)
-        xs = torch.Tensor(X_train).to(device).unsqueeze(1)
+        if len(X_train.shape) == 2:
+            ys = torch.Tensor(y_train).to(device).unsqueeze(1)
+            xs = torch.Tensor(X_train).to(device).unsqueeze(1)
         
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
         if pad_zeros:
-            x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
+            x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 1, max_features - X_train.shape[1]), device=device)], axis=2)
         else:
             x_all_torch = xs
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
@@ -63,7 +64,10 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             y_src = model.y_encoder(ys)
             if x_src.ndim == 4:
                 # baam model, per feature
-                y_src = y_src.unsqueeze(-2)
+                if y_src.ndim == 2:
+                    y_src = y_src.unsqueeze(-2).unsqueeze(-2)
+                elif y_src.ndim == 3:
+                    y_src = y_src.unsqueeze(-2)
             train_x = x_src + y_src
         assert train_x.shape == x_src.shape
         if hasattr(model, "layers"):
@@ -75,7 +79,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             output = model.transformer_encoder(train_x)
 
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-            class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
+            class_averages = model.class_average_layer(X_onehot.float(), ys)
             # class averages are batch x outputs x features x bins
             # output is batch x features x bins x outputs
             marginals = model.marginal_residual_layer(class_averages)
@@ -96,10 +100,12 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             b = torch.zeros(n_classes, device=device)
         else:
             b = biases.squeeze()[:n_classes]
-        bins_data_space = bin_edges[:n_features]
 
-        weights = weights + marginals.permute(0, 2, 3, 1)
-          
+        if len(bin_edges.shape) == 3:
+            bins_data_space = bin_edges[:n_features, 0]
+        else:
+            bins_data_space = bin_edges[:n_features]
+
     if inference_device == "cpu":
         def detach(x):
             return x.detach().cpu().numpy()
@@ -215,21 +221,21 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         
         self.w_ = w
         self.b_ = b
-        self.bin_edges_ = bin_edges.squeeze(1)
+        self.bin_edges_ = bin_edges.squeeze()
         self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
 
         return self
 
     def predict_proba(self, X):
-        return self.predict_proba_with_additive_components(X)
+        return self.predict_proba_with_additive_components(X)[0]
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
                                            inference_device=self.inference_device)
 
     def predict(self, X):
-        return self.classes_[self.predict_proba(X)[0].argmax(axis=1)]
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
