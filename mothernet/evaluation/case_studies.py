@@ -97,10 +97,10 @@ def plot_shape_functions(model_string: str, dataset: str):
 
 if __name__ == '__main__':
     model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
-    dataset = "MIMIC3"
+    dataset = "MIMIC2"
     # Scaling analysis
     # time_stamp = scaling_analysis(model_string, dataset)
-    plot_scaling_analysis("MIMIC3", '05_02_2024_16_08_36')
+    # plot_scaling_analysis(dataset, '05_02_2024_16_08_36')
 
     # Shape Function Visualization
     plot_shape_functions(model_string, dataset)
