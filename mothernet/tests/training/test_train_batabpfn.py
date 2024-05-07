@@ -17,7 +17,7 @@ TESTING_DEFAULTS = ['batabpfn', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e',
 def test_train_batabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--pad-zeros', 'True', '--input-embedding', 'linear', '--validate', 'True'])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--pad-zeros', 'True', '--input-embedding', 'linear'])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
 

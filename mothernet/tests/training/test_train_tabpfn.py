@@ -19,7 +19,7 @@ TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128'
 def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--validate', 'True'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
     assert count_parameters(results['model']) == 579850
