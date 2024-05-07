@@ -16,7 +16,6 @@ from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector
 
 
-
 def extract_additive_model(model, X_train, y_train, config=None, device="cpu", inference_device="cpu", regression=False, is_categorical: List[List] = None):
     try:
         max_features = config['prior']['num_features']
@@ -43,9 +42,10 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
-        x_all_torch = x_all_torch.unsqueeze(1)
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
                                        sklearn_binning=model.sklearn_binning)
+        X_onehot = X_onehot.unsqueeze(1)
+
         if model.input_layer_norm:
             X_onehot = model.input_norm(X_onehot.float())
         if getattr(model, "fourier_features", 0) > 0:
@@ -64,7 +64,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             train_x = x_src
         else:
             if ys.ndim == 1:
-                ys = ys.reshape(-1, 1)
+                ys = ys.reshape(-1, 1, 1)
             y_src = model.y_encoder(ys)
             if x_src.ndim == 4:
                 # baam model, per feature
@@ -78,7 +78,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
                 output = mod(output)
         else:
             output = model.transformer_encoder(train_x)
-            
+
         marginals = None
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
             class_averages = model.class_average_layer(X_onehot.float(), ys.unsqueeze(1))
@@ -103,8 +103,6 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             b = biases.squeeze()[:n_classes]
         bins_data_space = bin_edges[:n_features]
-        if marginals is not None:
-            weights = weights + marginals.permute(0, 2, 3, 1)
 
     if inference_device == "cpu":
         def detach(x):
@@ -187,7 +185,6 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         else:
             self.sklearn_binning = False
 
-
     def fit(self, X, y, is_categorical: List[int] = None):
         self.X_train_ = X
         le = LabelEncoder()
@@ -221,14 +218,14 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
         
         self.w_ = w
         self.b_ = b
-        self.bin_edges_ = bin_edges.squeeze(1)
+        self.bin_edges_ = bin_edges
         self.feature_bounds_ = feature_bounds
         self.classes_ = le.classes_
 
         return self
 
     def predict_proba(self, X):
-        p, components =  self.predict_proba_with_additive_components(X)
+        p, components = self.predict_proba_with_additive_components(X)
         return p
 
     def predict_proba_with_additive_components(self, X):
