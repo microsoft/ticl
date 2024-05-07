@@ -78,7 +78,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
                 output = mod(output)
         else:
             output = model.transformer_encoder(train_x)
-
+            
+        marginals = None
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
             class_averages = model.class_average_layer(X_onehot.float(), ys.unsqueeze(1))
             # class averages are batch x outputs x features x bins
@@ -89,7 +90,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             weights, biases = model.decoder(output, ys, marginals)
         else:
             weights, biases = model.decoder(output, ys)
-        marginals = None
+
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
             if hasattr(model, "layers") and len(model.layers) == 0:
                 weights = marginals.permute(0, 2, 3, 1)
