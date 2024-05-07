@@ -51,6 +51,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         if getattr(model, "fourier_features", 0) > 0:
             x_scaled = normalize_data(xs)
             x_fourier = get_fourier_features(x_scaled, model.fourier_features)
+            # batch
+            x_fourier = x_fourier.unsqueeze(1)
             X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
         x_src = model.encoder(X_onehot.float())
@@ -61,6 +63,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         if model.y_encoder is None:
             train_x = x_src
         else:
+            if ys.ndim == 1:
+                ys = ys.reshape(-1, 1)
             y_src = model.y_encoder(ys)
             if x_src.ndim == 4:
                 # baam model, per feature
@@ -76,7 +80,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             output = model.transformer_encoder(train_x)
 
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-            class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
+            class_averages = model.class_average_layer(X_onehot.float(), ys.unsqueeze(1))
             # class averages are batch x outputs x features x bins
             # output is batch x features x bins x outputs
             marginals = model.marginal_residual_layer(class_averages)
@@ -100,7 +104,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         bins_data_space = bin_edges[:n_features]
         if marginals is not None:
             weights = weights + marginals.permute(0, 2, 3, 1)
-          
+
     if inference_device == "cpu":
         def detach(x):
             return x.detach().cpu().numpy()
