@@ -146,7 +146,7 @@ def test_classification_adapter_nan():
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, _ = adapter(batch_size=batch_size, **args)
     assert y.shape == (n_samples, batch_size)
     assert x.isnan().float().mean() > 0.95
 
@@ -155,7 +155,7 @@ def test_classification_adapter_nan():
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, _ = adapter(batch_size=batch_size, **args)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
     assert x.isnan().float().mean() > 0.45
