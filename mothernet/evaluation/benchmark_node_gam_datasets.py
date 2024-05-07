@@ -1,5 +1,7 @@
 # Adapted from https://nbviewer.org/github/interpretml/interpret/blob/develop/docs/benchmarks/ebm-classification-comparison.ipynb
 
+import time
+
 import numpy as np
 import pandas as pd
 from interpret.glassbox import ExplainableBoostingClassifier
@@ -40,13 +42,18 @@ def format_n(x):
 def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.7, n_jobs=None):
     # Evaluate model
     ss = StratifiedShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=1337)
+    print('Fitting', name)
+    start = time.time()
     scores = cross_validate(
         clf, X, y, scoring='roc_auc', cv=ss,
         n_jobs=n_jobs, return_estimator=True
     )
+    end = time.time()
+    print(f'Done: {end - start}, Testing', name)
     n_train_points = X.shape[0] * (1 - test_size)
     n_test_points = X.shape[0] * test_size
     record = dict()
+    start = time.time()
     record['model_name'] = name
     record['n_train_points'] = n_train_points
     record['n_test_points'] = n_test_points
@@ -55,7 +62,8 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.7, n_
     record['test_score_mean'] = format_n(np.mean(scores['test_score']))
     record['test_score_std'] = format_n(np.std(scores['test_score']))
     record['test_node_gam_scores'] = [estimator.score(X_test, y_test) for estimator in scores['estimator']]
-
+    end = time.time()
+    print(f'Done: {end - start}')
     return record
 
 
@@ -130,7 +138,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
         baam, 'baam',
         X.to_numpy().astype(np.float32), y,
         X_test.to_numpy().astype(np.float32), y_test,
-        n_splits=3, n_jobs=1
+        n_splits=3, n_jobs=1, test_size=0.8
     )
     print(record)
     record.update(summary_record)
