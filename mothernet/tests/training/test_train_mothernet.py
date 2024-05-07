@@ -58,7 +58,7 @@ def test_train_mothernet_no_hidden_output_attention():
     assert count_parameters(results['model']) == 757234
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 212978
-    assert results['loss'] == 0.7772496938705444
+    assert results['loss'] == pytest.approx(0.7772496938705444)
 
 
 def test_train_mothernet_no_hidden_class_average():
@@ -73,7 +73,7 @@ def test_train_mothernet_no_hidden_class_average():
     assert count_parameters(results['model']) == 573797
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 29541
-    assert results['loss'] == 0.961327075958252
+    assert results['loss'] == pytest.approx(0.961327075958252)
 
 
 def test_train_mothernet_less_features():
@@ -82,7 +82,7 @@ def test_train_mothernet_less_features():
         results = main(TESTING_DEFAULTS_MOTHERNET + ['-B', tmpdir, '--num-features', '15'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
-    assert results['loss'] == 0.6780109405517578
+    assert results['loss'] == pytest.approx(0.6780109405517578)
     assert results['model_string'].startswith("mn_AFalse_decoderactivationrelu_d128_H128_e128_E10_rFalse_N4_numfeatures15_n1_P64_L1_tFalse_cpu_")
     assert count_parameters(results['model']) == 832010
     assert isinstance(results['model'], MotherNet)
@@ -98,7 +98,7 @@ def test_train_gelu_decoder():
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
-    assert results['loss'] == 0.6897919178009033
+    assert results['loss'] == pytest.approx(0.6897919178009033)
 
 
 def test_train_mothernet_predict_gelu():
@@ -111,7 +111,7 @@ def test_train_mothernet_predict_gelu():
     assert count_parameters(results['model']) == 1544650
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 1000394
-    assert results['loss'] == 0.6914207935333252
+    assert results['loss'] == pytest.approx(0.6914207935333252)
 
 
 def test_train_synetune():
