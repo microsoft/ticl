@@ -100,7 +100,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     print('-' * 78)
     print(summary_record)
     print()
-    '''
+
     pipe = Pipeline([
         ('ct', ct),
         ('std', StandardScaler()),
@@ -137,7 +137,13 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     record.update(summary_record)
     records.append(record)
 
-    '''
+    # Main effects only EBM
+    ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0)
+    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits)
+    print(record)
+    record.update(summary_record)
+    records.append(record)
+
     if ct is None:
         is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
         cat_cols = X.columns.values[is_cat]
