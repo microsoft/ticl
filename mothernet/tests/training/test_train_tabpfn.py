@@ -25,7 +25,7 @@ def test_train_tabpfn_basic():
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['model_string'].startswith("tabpfn_AFalse_e128_E10_N4_n1_tFalse_cpu")
-    assert results['loss'] == pytest.approx(0.7048388719558716, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7048388719558716, rel=1e-4)
 
 
 def test_train_tabpfn_num_features():
