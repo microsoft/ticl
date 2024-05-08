@@ -157,79 +157,7 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
     else:
         raise ValueError(f"Unknown inference_device: {inference_device}")
 
-
-class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
-        self.path = path
-        self.device = device
-        self.inference_device = inference_device
-        if model is None and path is None:
-            raise ValueError("Either path or model must be provided")
-        if model is not None and path is not None:
-            raise ValueError("Only one of path or model must be provided")
-        if model is not None and config is None:
-            raise ValueError("config must be provided if model is provided")
-        self.model = model
-        self.config = config
-        if hasattr(model, "nan_bin"):
-            self.nan_bin = model.nan_bin
-        else:
-            self.nan_bin = False
-        if hasattr(model, "sklearn_binning"):
-            self.sklearn_binning = model.sklearn_binning
-        else:
-            self.sklearn_binning = False
-
-    def fit(self, X, y, is_categorical: List[int] = None):
-        self.X_train_ = X
-        le = LabelEncoder()
-        y = le.fit_transform(y)
-        if self.model is not None:
-            model, config = self.model, self.config
-        else:
-            model, config = load_model(self.path, device=self.device)
-            self.config_ = config
-        if "model_type" not in config:
-            config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] not in ["additive", "baam"]:
-            raise ValueError(f"Incompatible model_type: {config['model_type']}")
-        model.to(self.device)
-    
-        try:
-            self.nan_bin = config['additive']['nan_bin']
-        except KeyError:
-            self.nan_bin = False
-
-        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device, is_categorical=is_categorical)
-        
-        # Extract feature bounds for graphing
-        if torch.is_tensor(X):
-            X_numpy = X.cpu().detach().numpy()
-        else:
-            X_numpy = X
-        mins = X_numpy.min(axis=0).tolist()
-        maxs = X_numpy.max(axis=0).tolist()
-        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
-        
-        self.w_ = w
-        self.b_ = b
-        self.bin_edges_ = bin_edges
-        self.feature_bounds_ = feature_bounds
-        self.classes_ = le.classes_
-
-        return self
-
-    def predict_proba(self, X):
-        p, components = self.predict_proba_with_additive_components(X)
-        return p
-
-    def predict_proba_with_additive_components(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device)
-
-    def predict(self, X):
-        return self.classes_[self.predict_proba(X).argmax(axis=1)]
-
+class ExplainableAdditivePredictor:
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
 
@@ -302,7 +230,6 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
 
             data_dicts.append(data_dict)
 
-
         overall_dict = {
             "type": "univariate",
             "names": term_names,
@@ -327,9 +254,86 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator):
                 None,
             ),
         )
+    
+    def _extract_feature_bounds(self, X):
+        if torch.is_tensor(X):
+            X_numpy = X.cpu().detach().numpy()
+        else:
+            X_numpy = X
+        mins = X_numpy.min(axis=0).tolist()
+        maxs = X_numpy.max(axis=0).tolist()
+        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
+        
+        self.feature_bounds_ = feature_bounds
+        return self
+    
+
+class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdditivePredictor):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
+        self.path = path
+        self.device = device
+        self.inference_device = inference_device
+        if model is None and path is None:
+            raise ValueError("Either path or model must be provided")
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
+        if hasattr(model, "nan_bin"):
+            self.nan_bin = model.nan_bin
+        else:
+            self.nan_bin = False
+        if hasattr(model, "sklearn_binning"):
+            self.sklearn_binning = model.sklearn_binning
+        else:
+            self.sklearn_binning = False
+
+    def fit(self, X, y, is_categorical: List[int] = None):
+        self.X_train_ = X
+        le = LabelEncoder()
+        y = le.fit_transform(y)
+        if self.model is not None:
+            model, config = self.model, self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
+            self.config_ = config
+        if "model_type" not in config:
+            config['model_type'] = config.get("model_maker", 'tabpfn')
+        if config['model_type'] not in ["additive", "baam"]:
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
+        model.to(self.device)
+    
+        try:
+            self.nan_bin = config['additive']['nan_bin']
+        except KeyError:
+            self.nan_bin = False
+
+        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
+                                                 is_categorical=is_categorical)
+
+        self.w_ = w
+        self.b_ = b
+        self.bin_edges_ = bin_edges
+        self.classes_ = le.classes_
+        self._extract_feature_bounds(X)
+
+        return self
+
+    def predict_proba(self, X):
+        p, components = self.predict_proba_with_additive_components(X)
+        return p
+
+    def predict_proba_with_additive_components(self, X):
+        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                           inference_device=self.inference_device)
+
+    def predict(self, X):
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator):
+class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAdditivePredictor):
     def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device
@@ -356,22 +360,12 @@ class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator):
         self.nan_bin = config['additive']['nan_bin']
 
         w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
-                                                 regression=True)
-        
-        # Extract feature bounds for graphing
-        if torch.is_tensor(X):
-            X_numpy = X.cpu().detach().numpy()
-        else:
-            X_numpy = X
-        mins = X_numpy.min(axis=0).tolist()
-        maxs = X_numpy.max(axis=0).tolist()
-        feature_bounds = [(float(min_), float(max_)) for min_, max_ in zip(mins, maxs)]
-        
+                                                 regression=True,
+                                                 is_categorical=is_categorical)
         self.w_ = w
         self.b_ = b
         self.bin_edges_ = bin_edges
-        self.feature_bounds_ = feature_bounds
-        return self
+        self._extract_feature_bounds(X)
 
     def predict(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
