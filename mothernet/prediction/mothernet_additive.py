@@ -51,8 +51,6 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         if getattr(model, "fourier_features", 0) > 0:
             x_scaled = normalize_data(xs)
             x_fourier = get_fourier_features(x_scaled, model.fourier_features)
-            # batch
-            x_fourier = x_fourier.unsqueeze(1)
             X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
         x_src = model.encoder(X_onehot.unsqueeze(1).float())
