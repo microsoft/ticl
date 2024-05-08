@@ -10,6 +10,7 @@ from interpret.glassbox import ExplainableBoostingClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
@@ -63,7 +64,11 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n
     record['fit_time_std'] = format_n(np.std(scores['fit_time']))
     record['test_score_mean'] = format_n(np.mean(scores['test_score']))
     record['test_score_std'] = format_n(np.std(scores['test_score']))
-    record['test_node_gam_scores'] = [estimator.score(X_test, y_test) for estimator in scores['estimator']]
+    record['test_node_gam_scores'] = [
+        roc_auc_score(
+            y_test.flatten(),
+            estimator.predict_proba(X_test)[:, 1].flatten()) for estimator in scores['estimator']
+    ]
     end = time.time()
     print(f'Done: {end - start}')
     return record
@@ -193,9 +198,11 @@ for dataset_name in ['Churn', 'Support2', 'Adult', 'mimic2', 'mimic3', 'income',
     except Exception as e:
         print(e)
 
+'''
 df = pd.read_csv('ebm-perf-classification-overnight.csv')
 for dataset_name, df_dataset in df.groupby('dataset_name'):
     print(f'\nDataset: {dataset_name}')
     for method, df_method in df_dataset.groupby('model_name'):
         l = eval(df_method['test_node_gam_scores'].to_list()[0])
         print(f'{method}: {np.mean(l):.5f} +- {np.std(l) / np.sqrt(len(l)):.5f}')
+'''
