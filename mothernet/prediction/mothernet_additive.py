@@ -42,9 +42,10 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
+        x_all_torch = x_all_torch.unsqueeze(1)
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
                                        sklearn_binning=model.sklearn_binning)
-        X_onehot = X_onehot.unsqueeze(1)
+        bin_edges = bin_edges.squeeze(1)
 
         if model.input_layer_norm:
             X_onehot = model.input_norm(X_onehot.float())
