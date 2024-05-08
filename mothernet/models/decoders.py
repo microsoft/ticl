@@ -236,16 +236,13 @@ class SummaryLayer(nn.Module):
                     counts = torch.zeros(self.n_out, x.shape[1], device=x.device)
                     indices = y_src
                 elif x.ndim == 4:
-                    # doing feature attention, need to also expand for features
-                    if y_src.ndim == 2:
-                        y_src = y_src.unsqueeze(2)
-                    indices = y_src.unsqueeze(-1).expand(-1, -1, x.shape[2], self.emsize)
+                    indices = y_src.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, x.shape[2], self.emsize)
                     sums = torch.zeros(self.n_out, x.shape[1], x.shape[2], self.emsize, device=x.device)
                     sums.scatter_add_(0, indices, x)
                     # create counts
                     ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1], x.shape[2])
                     counts = torch.zeros(self.n_out, x.shape[1], x.shape[2], device=x.device)
-                    indices = y_src.expand(-1, -1, x.shape[2])
+                    indices = y_src.unsqueeze(-1).expand(-1, -1, x.shape[2])
                 else:
                     raise ValueError(f"Unknown x shape: {x.shape}")
                 counts.scatter_add_(0, indices, ones)

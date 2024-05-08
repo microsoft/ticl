@@ -35,17 +35,14 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
 
         ys = torch.Tensor(y_train).to(device)
         xs = torch.Tensor(X_train).to(device)
-        
         if X_train.shape[1] > 100:
             raise ValueError("Cannot run inference on data with more than 100 features")
         if pad_zeros:
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
         else:
             x_all_torch = xs
-        x_all_torch = x_all_torch.unsqueeze(1)
         X_onehot, bin_edges = bin_data(x_all_torch, n_bins=model.n_bins, nan_bin=model.nan_bin,
                                        sklearn_binning=model.sklearn_binning)
-        bin_edges = bin_edges.squeeze(1)
 
         if model.input_layer_norm:
             X_onehot = model.input_norm(X_onehot.float())
@@ -56,7 +53,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
             x_fourier = x_fourier.unsqueeze(1)
             X_onehot = torch.cat([X_onehot, x_fourier], -1)
 
-        x_src = model.encoder(X_onehot.float())
+        x_src = model.encoder(X_onehot.unsqueeze(1).float())
         if getattr(model, 'categorical_embedding', False):
             is_categorical = _determine_is_categorical(x_src, info={'categorical_features': is_categorical})
             x_src = x_src + model.categorical_embedding(is_categorical, inference=True)
@@ -64,9 +61,7 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         if model.y_encoder is None:
             train_x = x_src
         else:
-            if ys.ndim == 1:
-                ys = ys.reshape(-1, 1, 1)
-            y_src = model.y_encoder(ys)
+            y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
             if x_src.ndim == 4:
                 # baam model, per feature
                 y_src = y_src.unsqueeze(-2)
@@ -80,9 +75,8 @@ def extract_additive_model(model, X_train, y_train, config=None, device="cpu", i
         else:
             output = model.transformer_encoder(train_x)
 
-        marginals = None
         if model.marginal_residual in [True, 'True', 'output', 'decoder']:
-            class_averages = model.class_average_layer(X_onehot.float(), ys.unsqueeze(1))
+            class_averages = model.class_average_layer(X_onehot.float().unsqueeze(1), ys.unsqueeze(1))
             # class averages are batch x outputs x features x bins
             # output is batch x features x bins x outputs
             marginals = model.marginal_residual_layer(class_averages)
