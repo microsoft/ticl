@@ -81,9 +81,13 @@ class AdditiveModelDecoder(nn.Module):
             shape_functions = res.reshape(batch_size, -1, self.n_bins, self.n_out)
             biases = None
         else:
-            assert res.shape[1] == self.num_output_layer_weights
-            shape_functions = res[:, :-self.n_out].reshape(batch_size, self.n_features, self.n_bins, self.n_out)
-            biases = res[:, -self.n_out:]
+            if self.biattention:
+                shape_functions = res.reshape(batch_size, -1, self.n_bins, self.n_out)
+                biases = None
+            else:
+                assert res.shape[1] == self.num_output_layer_weights
+                shape_functions = res[:, :-self.n_out].reshape(batch_size, self.n_features, self.n_bins, self.n_out)
+                biases = res[:, -self.n_out:]
         if not self.biattention:
             assert shape_functions.shape == (batch_size, self.n_features, self.n_bins, self.n_out)
             assert biases.shape == (batch_size, self.n_out)
@@ -211,7 +215,14 @@ class SummaryLayer(nn.Module):
     def forward(self, x, y_src):
         if x.shape[0] != 0:
             if self.decoder_type == "output_attention":
-                res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0].squeeze(0)
+                if x.ndim == 3:
+                    res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0].squeeze(0)
+                elif x.ndim == 4:
+                    x_flat = x.reshape(x.shape[0], -1, x.shape[3])
+                    res = self.output_layer(self.query.repeat(1, x_flat.shape[1], 1), x_flat, x_flat, need_weights=False)[0]
+                    res = res.reshape(x.shape[1], x.shape[2], -1)
+                else:
+                    raise ValueError(f"Unknown x shape: {x.shape}")
             elif self.decoder_type == "special_token":
                 res = self.output_layer(x[[0]], x[1:], x[1:], need_weights=False)[0]
             elif self.decoder_type == "special_token_simple":
