@@ -1,6 +1,8 @@
 # Adapted from https://nbviewer.org/github/interpretml/interpret/blob/develop/docs/benchmarks/ebm-classification-comparison.ipynb
-
+import json
+import os
 import time
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -10,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
 from xgboost import XGBClassifier
 
 from mothernet.evaluation.node_gam_data import DATASETS
@@ -39,7 +41,7 @@ def format_n(x):
     return "{0:.3f}".format(x)
 
 
-def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.7, n_jobs=None):
+def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None):
     # Evaluate model
     ss = StratifiedShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=1337)
     print('Fitting', name)
@@ -81,7 +83,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
             ('cat', cat_pipe, cat_cols),
             ('num', num_pipe, num_cols)
         ]
-        ct = ColumnTransformer(transformers=transformers)
+        ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
 
     records = []
 
@@ -93,7 +95,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     print('-' * 78)
     print(summary_record)
     print()
-
+    '''
     pipe = Pipeline([
         ('ct', ct),
         ('std', StandardScaler()),
@@ -130,15 +132,34 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     record.update(summary_record)
     records.append(record)
 
+    '''
+    if ct is None:
+        is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
+        cat_cols = X.columns.values[is_cat]
+        num_cols = X.columns.values[~is_cat]
+
+        cat_ohe_step = ('ohe', OrdinalEncoder(handle_unknown='ignore'))
+
+        cat_pipe = Pipeline([cat_ohe_step])
+        num_pipe = Pipeline([('identity', FunctionTransformer())])
+        transformers = [
+            ('cat', cat_pipe, cat_cols),
+            ('num', num_pipe, num_cols)
+        ]
+        ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
     # No pipeline for BAAM
     model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
     model_path = get_mn_model(model_string)
-    baam = MotherNetAdditiveClassifier(device='cpu', path=model_path)
+    baam = Pipeline([
+        ('ct', ct),
+        # n_estimators updated from 10 to 100 due to sci-kit defaults changing in future versions
+        ('baam', MotherNetAdditiveClassifier(device='cpu', path=model_path)),
+    ])
     record = process_model(
         baam, 'baam',
-        X.to_numpy().astype(np.float32), y,
-        X_test.to_numpy().astype(np.float32), y_test,
-        n_splits=3, n_jobs=1, test_size=0.8
+        X, y,
+        X_test, y_test,
+        n_splits=n_splits, n_jobs=1, test_size=0.8
     )
     print(record)
     record.update(summary_record)
@@ -148,19 +169,33 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
 
 
 results = []
-n_splits = 3
+n_splits = 5
 
-for dataset_name in ['mimic2', 'mimic3', 'compas']:
-    dataset = load_node_gam_data(dataset_name)
-    result = benchmark_models(
-        dataset_name,
-        dataset['full']['X'], dataset['full']['y'],
-        dataset['test']['X'], dataset['test']['y'],
-        n_splits=n_splits
-    )
-    results.append(result)
+time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-records = [item for result in results for item in result]
-record_df = pd.DataFrame.from_records(records)[
-    ['dataset_name', 'model_name', 'test_score_mean', 'test_score_std', 'test_split_scores']]
-record_df.to_csv('ebm-perf-classification-overnight.csv')
+for dataset_name in ['Churn', 'Support2', 'Adult', 'mimic2', 'mimic3', 'income',
+                     'credit', 'microsoft', 'year']:
+    try:
+        dataset = load_node_gam_data(dataset_name)
+        result = benchmark_models(
+            dataset_name,
+            dataset['full']['X'], dataset['full']['y'],
+            dataset['test']['X'], dataset['test']['y'],
+            n_splits=n_splits
+        )
+        os.makedirs(f"output/{dataset_name}", exist_ok=True)
+        json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
+        results.append(result)
+
+        records = [item for result in results for item in result]
+        record_df = pd.DataFrame.from_records(records)
+        record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
+    except Exception as e:
+        print(e)
+
+df = pd.read_csv('ebm-perf-classification-overnight.csv')
+for dataset_name, df_dataset in df.groupby('dataset_name'):
+    print(f'\nDataset: {dataset_name}')
+    for method, df_method in df_dataset.groupby('model_name'):
+        l = eval(df_method['test_node_gam_scores'].to_list()[0])
+        print(f'{method}: {np.mean(l):.5f} +- {np.std(l) / np.sqrt(len(l)):.5f}')
