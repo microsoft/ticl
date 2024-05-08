@@ -166,7 +166,10 @@ class ExplainableAdditivePredictor:
         self.term_scores_ = []
         for feature_idx in range(self.w_.shape[0]):
             if self.w_.shape[2] == 2: # binary classification
-                class_one_scores = self.w_[feature_idx, :, 1]
+                class_one_scores = self.w_[feature_idx, :, 1] - self.w_[feature_idx, :, 0]
+                padded_scores = np.pad(class_one_scores, (1, 1), 'constant', constant_values=(0, 0))
+            elif self.w_.shape[2] == 1: # regression
+                class_one_scores = self.w_[feature_idx, :]
                 padded_scores = np.pad(class_one_scores, (1, 1), 'constant', constant_values=(0, 0))
             else:
                 raise Exception("Need to implement explanations for multiclass")
