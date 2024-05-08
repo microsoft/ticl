@@ -236,3 +236,22 @@ def test_train_baam_regression():
     assert results['model'].decoder.mlp[0].in_features == 16
     assert results['model'].decoder.mlp[2].out_features == 64
     assert results['loss'] == pytest.approx(1.1154769659042358)
+
+
+def test_train_baam_regression_output_attention():
+    L.seed_everything(42)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
+                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                        '--save-every', '8', '-B', tmpdir, '-D', 'output_attention', '--y-encoder', 'linear', '--max-num-classes', '0', '-d', '16',
+                        '--validate', 'False'])
+        reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
+        check_predict_linear(reg)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert results['model'].decoder_type == "output_attention"
+    assert count_parameters(results['model']) == 52608
+    assert isinstance(results['model'].y_encoder, encoders.Linear)
+    assert results['model'].y_encoder.in_features == 1
+    assert results['model'].decoder.mlp[0].in_features == 16
+    assert results['model'].decoder.mlp[2].out_features == 64
+    assert results['loss'] == pytest.approx(1.0008562803268433)
