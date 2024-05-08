@@ -2,7 +2,7 @@ import pickle
 
 import numpy as np
 
-from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier
+from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
 from mothernet.utils import get_mn_model
 
@@ -93,6 +93,21 @@ def test_baam():
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
+
+
+def test_baam_regression():
+    rng = np.random.RandomState(3)
+    X = rng.normal(size=(400, 2))
+    y = X @ rng.normal(size=(2,)) + 100
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "baam_Daverage_l1e-05_maxnumclasses0_nsamples500_numfeatures10_yencoderlinear_05_08_2024_03_04_01_epoch_40.cpkt"
+    model_path = get_mn_model(model_string)
+    reg = MotherNetAdditiveRegressor(device='cpu', path=model_path)
+    reg.fit(X_train, y_train)
+    print(reg)
+    y_pred = reg.predict(X_test)
+    assert y_pred.shape == y_test.shape
+    assert reg.score(X_test, y_test) > 0.9
 
 
 def test_baam_with_nan():

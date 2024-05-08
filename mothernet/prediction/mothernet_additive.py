@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from mothernet.model_builder import load_model
 from mothernet.models.biattention_additive_mothernet import _determine_is_categorical
@@ -157,7 +157,7 @@ def predict_with_additive_model(X_train, X_test, weights, biases, bin_edges, nan
     else:
         raise ValueError(f"Unknown inference_device: {inference_device}")
  
- 
+
 class ExplainableAdditivePredictor:
     def explain_global(self):
         # Start creating properties in the same style as EBM to leverage existing explanations
@@ -362,8 +362,10 @@ class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAddit
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         self.nan_bin = config['additive']['nan_bin']
+        self._y_scaler = StandardScaler()
+        y_scaled = self._y_scaler.fit_transform(y.reshape(-1, 1)).ravel()
 
-        w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
+        w, b, bin_edges = extract_additive_model(model, X, y_scaled, config=config, device=self.device, inference_device=self.inference_device,
                                                  regression=True,
                                                  is_categorical=is_categorical)
         self.w_ = w
@@ -372,9 +374,11 @@ class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAddit
         self._extract_feature_bounds(X)
 
     def predict(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device, regression=True)[0]
+        y_pred = predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                             inference_device=self.inference_device, regression=True)[0]
+        return self._y_scaler.inverse_transform(y_pred).ravel()
 
     def predict_with_additive_components(self, X):
-        return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device, regression=True)
+        y_pred, components = predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
+                                                         inference_device=self.inference_device, regression=True)
+        return self._y_scaler.inverse_transform(y_pred).ravel(), components
