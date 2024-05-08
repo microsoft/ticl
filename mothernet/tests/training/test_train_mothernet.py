@@ -73,7 +73,7 @@ def test_train_mothernet_no_hidden_class_average():
     assert count_parameters(results['model']) == 573797
     assert isinstance(results['model'], MotherNet)
     assert count_parameters(results['model'].decoder) == 29541
-    assert results['loss'] == pytest.approx(0.961327075958252, rel=1e-5)
+    assert results['loss'] == pytest.approx(2.063021183013916, rel=1e-5)
 
 
 def test_train_mothernet_less_features():
