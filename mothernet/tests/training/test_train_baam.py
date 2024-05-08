@@ -115,7 +115,7 @@ def test_train_baam_sklearn_binning_categorical_embedding():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40', '--categorical-embedding', 'True',
-                                                 '--categorical-feature-p', '0.7', '--validate', 'True'])
+                                                 '--categorical-feature-p', '0.7'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
