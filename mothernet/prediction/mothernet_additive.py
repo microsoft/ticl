@@ -273,7 +273,7 @@ class ExplainableAdditivePredictor:
     
 
 class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdditivePredictor):
-    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None, cat_features: List[int] = None):
         self.path = path
         self.device = device
         self.inference_device = inference_device
@@ -293,8 +293,9 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdd
             self.sklearn_binning = model.sklearn_binning
         else:
             self.sklearn_binning = False
+        self.cat_features = cat_features
 
-    def fit(self, X, y, is_categorical: List[int] = None):
+    def fit(self, X, y):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
@@ -315,7 +316,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdd
             self.nan_bin = False
 
         w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
-                                                 is_categorical=is_categorical)
+                                                 is_categorical=self.cat_features)
 
         self.w_ = w
         self.b_ = b
@@ -338,7 +339,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdd
 
 
 class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAdditivePredictor):
-    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None, cat_features: List[int] = None):
         self.path = path
         self.device = device
         self.inference_device = inference_device
@@ -350,8 +351,9 @@ class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAddit
             raise ValueError("config must be provided if model is provided")
         self.model = model
         self.config = config
+        self.cat_features = cat_features
 
-    def fit(self, X, y, is_categorical: List[bool] = None):
+    def fit(self, X, y):
         self.X_train_ = X
         if self.model is not None:
             model, config = self.model, self.config
@@ -366,8 +368,7 @@ class MotherNetAdditiveRegressor(RegressorMixin, BaseEstimator, ExplainableAddit
         y_scaled = self._y_scaler.fit_transform(y.reshape(-1, 1)).ravel()
 
         w, b, bin_edges = extract_additive_model(model, X, y_scaled, config=config, device=self.device, inference_device=self.inference_device,
-                                                 regression=True,
-                                                 is_categorical=is_categorical)
+                                                 regression=True, is_categorical=self.cat_features)
         self.w_ = w
         self.b_ = b
         self.bin_edges_ = bin_edges
