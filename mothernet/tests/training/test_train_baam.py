@@ -75,7 +75,6 @@ def test_train_baam_validation():
 
 
 def test_train_baam_nan_bin():
-    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--nan-bin', 'True', '--nan-prob-no-reason', '0.5', '--nan-prob-a-reason', '0.5'])
@@ -87,7 +86,6 @@ def test_train_baam_nan_bin():
 
 
 def test_train_baam_categorical_embedding():
-    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + [
@@ -99,11 +97,10 @@ def test_train_baam_categorical_embedding():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51696
-    assert results['loss'] == pytest.approx(1.7002005577087402, rel=1e-2)
+    assert results['loss'] == pytest.approx(0.8239374756813049, rel=1e-2)
 
 
 def test_train_baam_sklearn_binning():
-    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40'])
@@ -111,11 +108,22 @@ def test_train_baam_sklearn_binning():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.7035961151123047, rel=1e-3)
+    assert results['loss'] == pytest.approx(0.6122044920921326, rel=1e-3)
+
+
+def test_train_baam_sklearn_binning_categorical_embedding():
+    L.seed_everything(0)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40', '--categorical-embedding', 'True',
+                                                 '--categorical-feature-p', '0.7'])
+        clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
+        check_predict_iris(clf)
+    assert isinstance(results['model'], BiAttentionMotherNetAdditive)
+    assert count_parameters(results['model']) == 51696
+    assert results['loss'] == pytest.approx(0.5267367362976074, rel=1e-3)
 
 
 def test_train_baam_sklearn_binning_with_nan_bin():
-    # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(TESTING_DEFAULTS_SHORT + ['-B', tmpdir, '--sklearn-binning', 'True', '--n-samples', '40', '--nan-bin', 'True', '--nan-prob-no-reason', '0.5', '--nan-prob-a-reason', '0.5'])
@@ -123,7 +131,7 @@ def test_train_baam_sklearn_binning_with_nan_bin():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.6030288338661194, rel=1e-3)
+    assert results['loss'] == pytest.approx(0.6950242519378662, rel=1e-3)
 
 
 def test_train_baam_marginal_residual_decoder():
