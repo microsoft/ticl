@@ -102,7 +102,7 @@ def plot_scaling_analysis(dataset, time_stamp):
     plt.title(f'{dataset} Scaling Analysis')
     plt.tight_layout()
     plt.gcf().set_dpi(300)
-    plt.show()
+    plt.savefig('scaling_analysis.pdf')
 
 
 def plot_shape_functions(model_string: str, dataset: str):
@@ -128,10 +128,10 @@ def plot_shape_functions(model_string: str, dataset: str):
 if __name__ == '__main__':
     model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
     dataset = "MIMIC2"
-    scaling_analysis_train_test_points(model_string)
+    # scaling_analysis_train_test_points(model_string)
     # Scaling analysis
     # time_stamp = scaling_analysis(model_string, dataset)
-    # plot_scaling_analysis(dataset, '05_02_2024_16_08_36')
+    plot_scaling_analysis(dataset, '05_02_2024_16_08_36')
 
     # Shape Function Visualization
     plot_shape_functions(model_string, dataset)

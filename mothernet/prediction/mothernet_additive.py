@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
 
 from mothernet.model_builder import load_model
+from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
 from mothernet.models.utils import bin_data
 from mothernet.models.encoders import get_fourier_features
 from mothernet.utils import normalize_data
@@ -25,7 +26,7 @@ def extract_additive_model(model, X_train, y_train, device="cpu", inference_devi
         ys = torch.Tensor(y_train).to(device)
         xs = torch.Tensor(X_train).to(device)
 
-        if X_train.shape[1] > 100:
+        if X_train.shape[1] > 100 and not isinstance(model, BiAttentionMotherNetAdditive):
             raise ValueError("Cannot run inference on data with more than 100 features")
         if pad_zeros:
             x_all_torch = torch.concat([xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)

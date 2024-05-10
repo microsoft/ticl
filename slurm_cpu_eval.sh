@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --partition=bosch_cpu-cascadelake #  partition (queue)
-#SBATCH --mem 190000 # memory pool for all cores (8GB)
+#SBATCH --partition=alldlc_gpu-rtx2080 #  partition (queue)
+#SBATCH --mem 510000 # memory pool for all cores (8GB)
 #SBATCH -t 01-00:00:00 # time (D-HH:MM)
 #SBATCH -c 8 # number of cores
 #SBATCH -D /home/siemsj/projects/mothernet # Change working_dir
