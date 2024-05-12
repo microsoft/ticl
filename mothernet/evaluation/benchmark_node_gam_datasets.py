@@ -15,10 +15,34 @@ from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
 from xgboost import XGBClassifier
+from pygam import LinearGAM, LogisticGAM, s
 
 from mothernet.evaluation.node_gam_data import DATASETS
 from mothernet.prediction import MotherNetAdditiveClassifier
 from mothernet.utils import get_mn_model
+
+
+class PyGAMSklearnWrapper:
+    def __init__(self, dataset_type, rs_samples=5):
+        self.model = None
+        self.dataset_type = dataset_type
+        self.rs_samples = rs_samples
+
+    def fit(self, X, y):
+        if self.dataset_type == "classification":
+            gam = LogisticGAM()
+        else:
+            gam = LinearGAM()
+        lams = np.random.rand(self.rs_samples, X.shape[1])  # random points on [0, 1], with shape (rs-samples, 3)
+        lams = lams * 8 - 4  # shift values to -4, 4
+        lams = 10 ** lams  # transforms values to 1e-4, 1e4
+
+        gam_hpo = gam.gridsearch(X, y, lam=lams)
+        self.model = gam_hpo
+        return self
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
 
 
 def load_node_gam_data(dataset_name: str):
@@ -106,6 +130,15 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
 
     pipe = Pipeline([
         ('ct', ct),
+        ('pygam', PyGAMSklearnWrapper(dataset_type='classification')),
+    ])
+    record = process_model(pipe, 'pygam', X, y, X_test, y_test, n_splits=n_splits, n_jobs=1)
+    print(record)
+    record.update(summary_record)
+    records.append(record)
+
+    pipe = Pipeline([
+        ('ct', ct),
         ('std', StandardScaler()),
         ('lr', LogisticRegression(random_state=random_state)),
     ])
@@ -170,7 +203,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
         ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
 
     # No pipeline for BAAM
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
+    model_string = "baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
     model_path = get_mn_model(model_string)
     baam = Pipeline([
         ('ct', ct),
@@ -195,7 +228,7 @@ n_splits = 5
 
 time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-for dataset_name in ['churn', 'Support2', 'Adult', 'mimic2', 'mimic3', 'income',
+for dataset_name in ['Adult', 'mimic2', 'mimic3', 'income', 'churn', 'Support2',
                      'credit', 'microsoft', 'year']:
     dataset = load_node_gam_data(dataset_name)
     result = benchmark_models(
