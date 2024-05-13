@@ -99,6 +99,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
     transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
     transformer.add_argument('--pre-norm', action='store_true')
+    transformer.add_argument('--classification_task', type=str2bool, help='Whether to use classification or regression.')
     transformer.set_defaults(**config['transformer'])
 
     if model_type in ['baam', 'batabpfn']:

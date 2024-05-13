@@ -40,8 +40,10 @@ class BiAttentionMotherNetAdditive(nn.Module):
                  bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, sklearn_binning=False,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None, predicted_activation=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
-                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False):
+                 shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False,
+                 classification_task=True):
         super().__init__()
+        self.classification_task = classification_task
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         if categorical_embedding:

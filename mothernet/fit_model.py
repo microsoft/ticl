@@ -58,6 +58,12 @@ def main(argv, extra_config=None):
     config['num_gpus'] = 1
     config['device'] = device
 
+    if not config['transformer']['classification_task']:
+        print('Setting regression parameters')
+        config['prior']['classification']['max_num_classes'] = 0
+        config['transformer']['y_encoder'] = 'linear'
+        config['mothernet']['decoder_type'] = 'average'
+
     warm_start_weights = orchestration.warm_start_from
     config['transformer']['nhead'] = config['transformer']['emsize'] // 128
 
@@ -99,7 +105,7 @@ def main(argv, extra_config=None):
 
     model_string = get_model_string(config, num_gpus, device, parser)
     save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow,
-                                           orchestration.st_checkpoint_dir, orchestration.validate)
+                                           orchestration.st_checkpoint_dir, classification=config['transformer']['classification_task'], validate=orchestration.validate)
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
     if orchestration.use_wandb:

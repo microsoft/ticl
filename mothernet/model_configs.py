@@ -34,6 +34,7 @@ def get_transformer_config():
         'recompute_attn': True,
         'pre_norm': False,
         'y_encoder': "one_hot",
+        'classification_task': True,
         'efficient_eval_masking': True,
         'input_normalization': False,
         'tabpfn_zero_weights': True,
