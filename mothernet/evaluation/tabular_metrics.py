@@ -22,13 +22,6 @@ def root_mean_squared_error_metric(target, pred):
     return torch.sqrt(torch.nn.functional.mse_loss(target, pred))
 
 
-def r1_metric(target, pred):
-    target = torch.tensor(target) if not torch.is_tensor(target) else target
-    pred = torch.tensor(pred) if not torch.is_tensor(pred) else pred
-    mse_terms = torch.nn.functional.mse_loss(target, pred, reduction='None')
-    return torch.sqrt(torch.mean(mse_terms)) / mse_terms.std()
-
-
 def mean_squared_error_metric(target, pred):
     target = torch.tensor(target) if not torch.is_tensor(target) else target
     pred = torch.tensor(pred) if not torch.is_tensor(pred) else pred
