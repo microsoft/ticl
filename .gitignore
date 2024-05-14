@@ -182,3 +182,6 @@ mothernet/mlruns
 mothernet/models_diff
 tabpfn/mlruns/
 tabpfn/results
+mothernet/results_bak
+
+mlruns

@@ -18,6 +18,13 @@ from mothernet.prediction.tabpfn import transformer_predict
 from mothernet.evaluation.baselines.baseline_prediction_interface import baseline_predict
 
 
+def is_classification(metric_used):
+    if metric_used.__name__ == tabular_metrics.auc_metric.__name__ or metric_used.__name__ == tabular_metrics.cross_entropy.__name__:
+        return 'classification'
+    elif metric_used.__name__ == tabular_metrics.auc_metric.__name__:
+        return -1
+
+
 def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', N_ensemble_configurations=3, classifier=None, onehot=False, **kwargs):
     from sklearn.feature_selection import SelectKBest
     from sklearn.impute import SimpleImputer
@@ -31,6 +38,8 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
         ohe.fit(x)
         x, test_x = ohe.transform(x), ohe.transform(test_x)
         if x.shape[1] > 100:
+            if not is_classification(metric_used):
+                raise ValueError('feature selection is only supported for classification tasks')
             skb = SelectKBest(k=100).fit(x, y)
             x, test_x = skb.transform(x), skb.transform(test_x)
     elif classifier is not None:
@@ -43,7 +52,10 @@ def transformer_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
     fit_time = time.time() - tick
     # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
     tick = time.time()
-    pred = classifier.predict_proba(test_x)
+    if is_classification(metric_used):
+        pred = classifier.predict_proba(test_x)
+    else:
+        pred = classifier.predict(test_x)
     inference_time = time.time() - tick
     times = {'fit_time': fit_time, 'inference_time': inference_time}
     metric = metric_used(test_y, pred)
@@ -71,8 +83,8 @@ def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cp
     # For each dataset
     for [ds_name, X, y, categorical_feats, _, _] in datasets:
         dataset_n_samples = min(len(X), n_samples)
-        # if verbose and dataset_n_samples < n_samples:
-        #    print(f'Dataset too small for given n_samples, reducing to {len(X)} ({n_samples})')
+        if verbose:
+            print(f'Evaluating {ds_name} with {len(X)} samples')
 
         aggregated_metric, num = torch.tensor(0.0), 0
         ds_result = {}
@@ -81,7 +93,7 @@ def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cp
             eval_position_real = int(dataset_n_samples * 0.5) if 2 * eval_position > dataset_n_samples else eval_position
             eval_position_n_samples = int(eval_position_real * 2.0)
 
-            r = evaluate_position(X, y, model=model, num_classes=len(torch.unique(y)), categorical_feats=categorical_feats,
+            r = evaluate_position(X, y, model=model, categorical_feats=categorical_feats,
                                   n_samples=eval_position_n_samples, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device, **kwargs)
 
             if r is None:
@@ -151,7 +163,8 @@ def _eval_single_dataset_wrapper(**kwargs):
     return result
 
 
-def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False, append_metric=True, fetch_only=False, verbose=False, n_jobs=-1, device='auto', save=True):
+def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False, append_metric=True,
+                     fetch_only=False, verbose=False, n_jobs=-1, device='auto', save=True):
     if callable(model):
         model_callable = model
         if device == 'auto':
