@@ -63,12 +63,11 @@ def _encode_y(y):
 
 class TorchModelTrainer(ClassifierMixin, BaseEstimator):
     def __init__(self, n_epochs=10, learning_rate=1e-3,
-                 verbose=0, dropout_rate=0.0, device='cuda',  weight_decay=0.01, batch_size=None, epoch_callback=None,
+                 verbose=0, device='cuda',  weight_decay=0.01, batch_size=None, epoch_callback=None,
                  nonlinearity='relu', init_state=None):
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
         self.verbose = verbose
-        self.dropout_rate = dropout_rate
         self.device = device
         self.weight_decay = weight_decay
         self.batch_size = batch_size
@@ -151,8 +150,9 @@ class TorchMLP(TorchModelTrainer):
         self.n_layers = n_layers
         self.layernorm = layernorm
         self.nonlinearity = nonlinearity
+        self.dropout_rate = dropout_rate
         super().__init__(n_epochs=n_epochs, learning_rate=learning_rate, verbose=verbose,
-                         dropout_rate=dropout_rate, device=device, init_state=init_state, batch_size=batch_size,
+                         device=device, init_state=init_state, batch_size=batch_size,
                          epoch_callback=epoch_callback, weight_decay=weight_decay)
 
     def make_model(self, n_features, n_classes):

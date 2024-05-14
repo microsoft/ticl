@@ -33,6 +33,7 @@ def check_predict_iris(clf, check_accuracy=False):
     if check_accuracy:
         assert clf.score(X_test, y_test) > 0.9
 
+
 def check_predict_moneyball(reg, check_score=False):
     # smoke test for predict, models aren't trained enough to check for accuracy
     data = fetch_openml("Moneyball")
