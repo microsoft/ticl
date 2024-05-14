@@ -9,7 +9,9 @@ def test_main():
         filter_for_nan=False,
         max_samples=10000,
         num_feats=100,
-        return_capped=True)
+        return_capped=True,
+        classification=True,
+    )
 
     classifier_with_only_inference = TabPFNClassifier(device='cpu')
     classifier_normal = TabPFNClassifier(device='cpu')
