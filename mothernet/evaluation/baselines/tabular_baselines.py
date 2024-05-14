@@ -173,7 +173,7 @@ def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max
     def clf_(**params):
         return HyperFastClassifier(device=device, cat_features=cat_features, **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'hyperfast', clf_, metric_used, max_time)
 
 # Auto Gluon
 # WARNING: Crashes for some predictors for regression
@@ -863,7 +863,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, 
     def clf_(**params):
         return Ridge(tol=1e-4, **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'ridge', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'ridge', clf_, metric_used, max_time)
 
 
 def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
@@ -915,7 +915,7 @@ def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     def clf_(**params):
         return LGBMClassifier(categorical_feature=cat_features, use_missing=True, objective=tabular_metrics.get_scoring_string(metric_used, usage='lightgbm', multiclass=len(np.unique(y)) > 2), **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'lightgbm', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'lightgbm', clf_, metric_used, max_time)
 
 
 param_grid_hyperopt['logistic'] = {
@@ -928,7 +928,7 @@ def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     def clf_(**params):
         return LogisticRegression(solver='saga', tol=1e-4, n_jobs=1, **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'logistic', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'logistic', clf_, metric_used, max_time)
 
 
 # Random Forest
@@ -952,7 +952,7 @@ def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_ti
             return RandomForestClassifier(n_jobs=MULTITHREAD, **params)
         return RandomForestRegressor(n_jobs=MULTITHREAD, **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'random_forest', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'random_forest', clf_, metric_used, max_time)
 
 
 # Gradient Boosting
@@ -970,7 +970,7 @@ def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, ma
             return ensemble.GradientBoostingClassifier(**params)
         return ensemble.GradientBoostingRegressor(**params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'gradient_boosting', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'gradient_boosting', clf_, metric_used, max_time)
 
 
 # SVM
@@ -988,7 +988,7 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
             return sklearn.svm.SVC(probability=True, **params)
         return sklearn.svm.SVR(**params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time)
 
 
 
@@ -1011,7 +1011,7 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **
         else:
             raise ValueError("No Regression MLP yet")
 
-    return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time)
 
 
 param_grid_hyperopt['mlp_sklearn'] = {'hidden_layer_sizes': hp.choice('hidden_layer_sizes', [(16,), (32,), (64,), (128,), (256,), (512,), (16, 16), (32, 32),
@@ -1033,7 +1033,7 @@ def mlp_sklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time
         else:
             return MLPRegressor(**params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'mlp_sklearn', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'mlp_sklearn', clf_, metric_used, max_time)
 
 
 # KNN
@@ -1051,7 +1051,7 @@ def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **
             return neighbors.KNeighborsClassifier(n_jobs=1, **params, algorithm="brute")
         return neighbors.KNeighborsRegressor(n_jobs=1, **params, algorithm="brute")
 
-    return eval_complete_f(x, y, test_x, test_y, 'knn', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'knn', clf_, metric_used, max_time)
 
 
 # GP
@@ -1073,7 +1073,7 @@ def gp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
         else:
             return GaussianProcessRegressor(kernel=kernel, **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'gp', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'gp', clf_, metric_used, max_time)
 
 # Tabnet
 # https://github.com/dreamquark-ai/tabnet
@@ -1210,7 +1210,7 @@ def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
                 **gpu_params,
                 **params)
 
-    return eval_complete_f(x, y, test_x, test_y, 'catboost', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'catboost', clf_, metric_used, max_time)
 
 
 # XGBoost
@@ -1251,7 +1251,7 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, gp
             return xgb.XGBRegressor(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=tabular_metrics.get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
                                     )
 
-    return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time, no_tune)
+    return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time)
 
 
 def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, gpu_id=None):
