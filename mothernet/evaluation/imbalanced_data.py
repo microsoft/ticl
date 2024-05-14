@@ -47,7 +47,7 @@ if __name__ == '__main__':
     results = defaultdict(list)
     for class_2_ratio in np.linspace(1 / 2, 0.95, 15):
         ratios = np.array([1 - class_2_ratio, class_2_ratio])
-        for seed in range(10):
+        for seed in range(15):
             X, y = make_classification(n_samples=200, n_features=20, n_classes=2,
                                        n_clusters_per_class=1, weights=ratios, random_state=seed)
             X_train, X_test, y_train, y_test = train_test_split(X, y)
@@ -59,6 +59,6 @@ if __name__ == '__main__':
     data = pd.DataFrame.from_dict(results)
     data.to_csv('imbalanced_data.csv', header=False)
 
-    plt.figure(figsize=(3, 4))
+    plt.figure(figsize=(4, 3))
     sns.lineplot(data=data, x='Imbalance Ratio', y='AUC-ROC', hue='Model')
     plt.savefig('imbalanced_data.pdf')
