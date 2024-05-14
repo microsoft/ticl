@@ -214,7 +214,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
         baam, 'baam',
         X, y,
         X_test, y_test,
-        n_splits=n_splits, n_jobs=1, test_size=0.8
+        n_splits=n_splits, n_jobs=1
     )
     print(record)
     record.update(summary_record)
@@ -234,33 +234,35 @@ def benchmark_ebm_num_bins(dataset_name, max_bins: int, n_splits: int):
     print(record)
     return record
 
-results = []
-n_splits = 5
 
-time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+if __name__ == '__main__':
+    results = []
+    n_splits = 5
 
-for dataset_name in ['Adult', 'mimic2', 'mimic3', 'income', 'churn', 'Support2',
-                     'credit', 'microsoft', 'year']:
-    dataset = load_node_gam_data(dataset_name)
-    result = benchmark_models(
-        dataset_name,
-        dataset['full']['X'], dataset['full']['y'],
-        dataset['test']['X'], dataset['test']['y'],
-        n_splits=n_splits
-    )
-    os.makedirs(f"output/{dataset_name}", exist_ok=True)
-    json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
-    results.append(result)
+    time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-    records = [item for result in results for item in result]
-    record_df = pd.DataFrame.from_records(records)
-    record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
+    for dataset_name in ['Adult', 'mimic2', 'mimic3', 'income', 'churn', 'Support2',
+                         'credit', 'microsoft', 'year']:
+        dataset = load_node_gam_data(dataset_name)
+        result = benchmark_models(
+            dataset_name,
+            dataset['full']['X'], dataset['full']['y'],
+            dataset['test']['X'], dataset['test']['y'],
+            n_splits=n_splits
+        )
+        os.makedirs(f"output/{dataset_name}", exist_ok=True)
+        json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
+        results.append(result)
 
-'''
-df = pd.read_csv('ebm-perf-classification-overnight.csv')
-for dataset_name, df_dataset in df.groupby('dataset_name'):
-    print(f'\nDataset: {dataset_name}')
-    for method, df_method in df_dataset.groupby('model_name'):
-        l = eval(df_method['test_node_gam_scores'].to_list()[0])
-        print(f'{method}: {np.mean(l):.5f} +- {np.std(l) / np.sqrt(len(l)):.5f}')
-'''
+        records = [item for result in results for item in result]
+        record_df = pd.DataFrame.from_records(records)
+        record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
+
+    '''
+    df = pd.read_csv('ebm-perf-classification-overnight.csv')
+    for dataset_name, df_dataset in df.groupby('dataset_name'):
+        print(f'\nDataset: {dataset_name}')
+        for method, df_method in df_dataset.groupby('model_name'):
+            l = eval(df_method['test_node_gam_scores'].to_list()[0])
+            print(f'{method}: {np.mean(l):.5f} +- {np.std(l) / np.sqrt(len(l)):.5f}')
+    '''
