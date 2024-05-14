@@ -147,7 +147,7 @@ def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
     return X, y, list(np.where(categorical_indicator)[0]), attribute_names
 
 
-def load_openml_list(dids, classification, filter_for_nan=False, num_feats=100, min_samples=100, max_samples=400,
+def load_openml_list(dids, classification=True, filter_for_nan=False, num_feats=100, min_samples=100, max_samples=400,
                      multiclass=True, max_num_classes=10, shuffled=True, return_capped=False, verbose=0):
     datasets = []
     openml_list = openml.datasets.list_datasets(dids)

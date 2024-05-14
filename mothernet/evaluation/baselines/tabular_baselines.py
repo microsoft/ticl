@@ -51,33 +51,30 @@ def eval_f(params, clf_, x, y, metric_used):
     return -np.nanmean(scores)
 
 
-def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_tune):
+def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time):
     start_time = time.time()
 
     def stop(trial):
         return time.time() - start_time > max_time, []
 
-    if no_tune is None:
-        default = eval_f({}, clf_, x, y, metric_used)
-        trials = Trials()
-        best = fmin(
-            fn=lambda params: eval_f(params, clf_, x, y, metric_used),
-            space=param_grid_hyperopt[key],
-            algo=rand.suggest,
-            rstate=np.random.default_rng(int(y[:].sum()) % 10000),
-            early_stop_fn=stop,
-            trials=trials,
-            catch_eval_exceptions=True,
-            verbose=False,
-            # The seed is deterministic but varies for each dataset and each split of it
-            max_evals=1000)
-        best_score = np.min([t['result']['loss'] for t in trials.trials])
-        if best_score < default:
-            best = space_eval(param_grid_hyperopt[key], best)
-        else:
-            best = {}
+    default = eval_f({}, clf_, x, y, metric_used)
+    trials = Trials()
+    best = fmin(
+        fn=lambda params: eval_f(params, clf_, x, y, metric_used),
+        space=param_grid_hyperopt[key],
+        algo=rand.suggest,
+        rstate=np.random.default_rng(int(y[:].sum()) % 10000),
+        early_stop_fn=stop,
+        trials=trials,
+        catch_eval_exceptions=True,
+        verbose=False,
+        # The seed is deterministic but varies for each dataset and each split of it
+        max_evals=1000)
+    best_score = np.min([t['result']['loss'] for t in trials.trials])
+    if best_score < default:
+        best = space_eval(param_grid_hyperopt[key], best)
     else:
-        best = no_tune.copy()
+        best = {}
 
     start = time.time()
     clf = clf_(**best)
@@ -94,6 +91,7 @@ def eval_complete_f(x, y, test_x, test_y, key, clf_, metric_used, max_time, no_t
     best = {'best': best}
     best['fit_time'] = fit_time
     best['inference_time'] = inference_time
+    best['num_trials'] = len(trials.trials)
 
     return metric, pred, best  # , times
 
@@ -164,7 +162,7 @@ param_grid_hyperopt['hyperfast'] = {
 }
 
 
-def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', no_tune=None, **kwargs):
+def hyperfast_metric_tuning(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device='cpu', **kwargs):
     from hyperfast import HyperFastClassifier
     print(f"device: {device}")
     x = x.numpy()
@@ -856,7 +854,7 @@ param_grid_hyperopt['ridge'] = {
     'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'alpha': hp.loguniform('alpha', -5, math.log(5.0))}  # 'normalize': [False],
 
 
-def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     if is_classification(metric_used):
         raise Exception("Ridge is only applicable to pointwise Regression.")
 
@@ -911,7 +909,7 @@ param_grid_hyperopt['lightgbm'] = {
 }  # 'normalize': [False],
 
 
-def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, impute=False, standardize=False, cat_features=cat_features)
 
     def clf_(**params):
@@ -924,7 +922,7 @@ param_grid_hyperopt['logistic'] = {
     'penalty': hp.choice('penalty', ['l1', 'l2', 'none']), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
 
 
-def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=True, impute=True, standardize=True, cat_features=cat_features)
 
     def clf_(**params):
@@ -942,7 +940,7 @@ param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators
                                         'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])}
 
 
-def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
@@ -961,7 +959,7 @@ def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_ti
 param_grid_hyperopt['gradient_boosting'] = {}
 
 
-def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     from sklearn import ensemble
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
@@ -980,7 +978,7 @@ param_grid_hyperopt['svm'] = {'C': hp.choice('C', [0.1, 1, 10, 100]), 'gamma': h
     'gamma', ['auto', 'scale']), 'kernel': hp.choice('kernel', ['rbf', 'poly', 'sigmoid'])}
 
 
-def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -993,28 +991,6 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time, no_tune)
 
 
-def mlp_rtdl_no_tuning_metric(x, y, test_x, test_y, cat_features, metric_used,  **kwargs):
-    from rtdl_revisiting_models import MLP
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
-                                             one_hot=True, impute=True, standardize=True,
-                                             cat_features=cat_features)
-    classifier = MLP(d_in=x.shape[1], d_out=len(np.unique(y)), n_blocks=2,  d_block=384)
-    tick = time.time()
-    x = x.numpy()
-    y = y.numpy()
-    test_x = test_x.numpy()
-    test_y = test_y.numpy()
-    classifier.fit(x, y)
-    fit_time = time.time() - tick
-    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
-    tick = time.time()
-    pred = classifier.predict_proba(test_x)
-    inference_time = time.time() - tick
-    times = {'fit_time': fit_time, 'inference_time': inference_time}
-    metric = metric_used(test_y, pred)
-
-    return metric, pred, times
-
 
 # MLP
 param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256, 512]), 'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
@@ -1023,7 +999,7 @@ param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 6
                               }
 
 
-def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1045,7 +1021,7 @@ param_grid_hyperopt['mlp_sklearn'] = {'hidden_layer_sizes': hp.choice('hidden_la
                                       'alpha': hp.loguniform('alpha', math.log(0.00001), math.log(0.01))}
 
 
-def mlp_sklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def mlp_sklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1065,7 +1041,7 @@ param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1, 16)
                               }
 
 
-def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1085,7 +1061,7 @@ param_grid_hyperopt['gp'] = {
 }
 
 
-def gp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None):
+def gp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
@@ -1190,7 +1166,7 @@ param_grid_hyperopt['catboost'] = {
 }
 
 
-def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
+def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, gpu_id=None):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, cat_features=cat_features, impute=False, standardize=False)
     from catboost import CatBoostClassifier, CatBoostRegressor
 
@@ -1253,7 +1229,7 @@ param_grid_hyperopt['xgb'] = {
 }
 
 
-def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None, **kwargs):
+def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, gpu_id=None, **kwargs):
     import xgboost as xgb
 
     # XGB Documentation:
@@ -1278,7 +1254,7 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time, no_tune)
 
 
-def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, gpu_id=None):
+def flaml_lgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, gpu_id=None):
     from flaml.default import LGBMClassifier
 
     x, y, test_x, test_y = x.cpu().numpy(), y.cpu().long().numpy(), test_x.cpu().numpy(), test_y.cpu().long().numpy()
