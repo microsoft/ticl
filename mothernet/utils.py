@@ -461,7 +461,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
 
             if epoch != "on_exit":
                 if validate:
-                    validation_score, per_dataset_score = validate_model(model, config, classification=classification)
+                    validation_score, per_dataset_score = validate_model(model, config)
                     print(f"Validation score: {validation_score}")
                     if not no_mlflow:
                         mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
@@ -529,7 +529,7 @@ def get_init_method(init_method):
     return init_weights_inner
 
 
-def validate_model(model, config, classification: bool):
+def validate_model(model, config):
     from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression
 
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
@@ -542,7 +542,7 @@ def validate_model(model, config, classification: bool):
     from mothernet.evaluation import tabular_metrics
     from uuid import uuid4
 
-    if classification:
+    if config['transformer']['classification_task']:
         cc_valid_datasets_multiclass, _ = load_openml_list(
             open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000,
             num_feats=100, return_capped=True, classification=True)
