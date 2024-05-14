@@ -300,11 +300,11 @@ def evaluate_position(X, y, categorical_feats, model, n_samples, eval_position, 
 
     if isinstance(model, nn.Module):  # Two separate predict interfaces for transformer and baselines
         outputs, best_configs = transformer_predict(model, eval_xs, eval_ys, eval_position, metric_used=metric_used, categorical_feats=categorical_feats,
-                                                    inference_mode=True, device=device, extend_features=True,
+                                                    inference_mode=True, device=device, extend_features=True, verbose=verbose,
                                                     **kwargs), None
     else:
         _, outputs, best_configs = baseline_predict(model, eval_xs, eval_ys, categorical_feats, eval_pos=eval_position,
-                                                    device=device, max_time=max_time, metric_used=metric_used, **kwargs)
+                                                    device=device, max_time=max_time, metric_used=metric_used, verbose=verbose, **kwargs)
     eval_ys = eval_ys[eval_position:]
     if outputs is None:
         print('Execution failed', ds_name)
