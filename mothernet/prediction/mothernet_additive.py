@@ -273,10 +273,11 @@ class ExplainableAdditivePredictor:
     
 
 class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdditivePredictor):
-    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None, cat_features: List[int] = None):
+    def __init__(self, path=None, device="cpu", inference_device="cpu", model=None, config=None, cat_features: List[int] = None, regression=False):
         self.path = path
         self.device = device
         self.inference_device = inference_device
+        self.regression = regression
         if model is None and path is None:
             raise ValueError("Either path or model must be provided")
         if model is not None and path is not None:
@@ -316,7 +317,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdd
             self.nan_bin = False
 
         w, b, bin_edges = extract_additive_model(model, X, y, config=config, device=self.device, inference_device=self.inference_device,
-                                                 is_categorical=self.cat_features)
+                                                 is_categorical=self.cat_features, regression=self.regression)
 
         self.w_ = w
         self.b_ = b
@@ -332,7 +333,7 @@ class MotherNetAdditiveClassifier(ClassifierMixin, BaseEstimator, ExplainableAdd
 
     def predict_proba_with_additive_components(self, X):
         return predict_with_additive_model(self.X_train_, X, self.w_, self.b_, self.bin_edges_, nan_bin=self.nan_bin,
-                                           inference_device=self.inference_device)
+                                           inference_device=self.inference_device, regression=self.regression)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]

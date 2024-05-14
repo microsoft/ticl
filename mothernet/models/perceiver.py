@@ -119,6 +119,7 @@ class TabPerceiver(MLPModelPredictor):
         nlayers,
         n_features,
         emsize=512,
+        classification_task=True,
         input_axis=1,
         num_latents=512,
         cross_heads=1,
@@ -173,6 +174,7 @@ class TabPerceiver(MLPModelPredictor):
           final_classifier_head: mean pool and project embeddings to number of classes (num_classes) at the end
         """
         super().__init__()
+        self.classification_task = classification_task
         self.y_encoder = y_encoder_layer
         self.encoder = Linear(n_features, emsize, replace_nan_by_zero=True)
         self.input_axis = input_axis

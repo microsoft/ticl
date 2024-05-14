@@ -86,6 +86,32 @@ def _encode_if_category(column: pd.Series | np.ndarray) -> pd.Series | np.ndarra
     return column
 
 
+def get_openml_regression(did, max_samples, shuffled=True):
+    dataset = openml.datasets.get_dataset(did, download_data=False, download_qualities=False,
+                                          download_features_meta_data=False)
+    X, y, categorical_indicator, attribute_names = dataset.get_data(target=dataset.default_target_attribute,
+                                                                    dataset_format="dataframe")
+    try:
+        X = np.array(X.apply(_encode_if_category), dtype=np.float32)
+    except ValueError as e:
+        print(e)
+    if not shuffled:
+        sort = np.argsort(y) if y.mean() < 0.5 else np.argsort(-y)
+        pos = int(y.sum()) if y.mean() < 0.5 else int((1 - y).sum())
+        X, y = X[sort][-pos * 2:], y[sort][-pos * 2:]
+        y = torch.tensor(y).reshape(2, -1).transpose(0, 1).reshape(-1).flip([0]).float()
+        X = torch.tensor(X).reshape(2, -1, X.shape[1]).transpose(
+            0, 1).reshape(-1, X.shape[1]).flip([0]).float()
+    else:
+        order = np.arange(y.shape[0])
+        np.random.seed(13)
+        np.random.shuffle(order)
+        X, y = torch.tensor(X[order]), torch.tensor(y[order])
+    if max_samples:
+        X, y = X[:max_samples], y[:max_samples]
+    return X, y, list(np.where(categorical_indicator)[0]), attribute_names
+
+
 def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
     dataset = openml.datasets.get_dataset(did, download_data=False, download_qualities=False, download_features_meta_data=False)
     X, y, categorical_indicator, attribute_names = dataset.get_data(target=dataset.default_target_attribute, dataset_format="dataframe")
@@ -121,7 +147,7 @@ def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
     return X, y, list(np.where(categorical_indicator)[0]), attribute_names
 
 
-def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100, max_samples=400,
+def load_openml_list(dids, classification, filter_for_nan=False, num_feats=100, min_samples=100, max_samples=400,
                      multiclass=True, max_num_classes=10, shuffled=True, return_capped=False, verbose=0):
     datasets = []
     openml_list = openml.datasets.list_datasets(dids)
@@ -139,8 +165,7 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
             print('Loading', entry['name'], entry.did, '..')
 
         if entry['NumberOfClasses'] == 0.0:
-            raise Exception("Regression not supported")
-            # X, y, categorical_feats, attribute_names = get_openml_regression(int(entry.did), max_samples)
+            X, y, categorical_feats, attribute_names = get_openml_regression(int(entry.did), max_samples)
         else:
             X, y, categorical_feats, attribute_names = get_openml_classification(
                 int(entry.did), max_samples, multiclass=multiclass, shuffled=shuffled)
@@ -159,17 +184,18 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
             modifications['samples_capped'] = True
 
         if X.shape[0] < min_samples:
-            print('Too few samples left')
+            print(f'Too few samples left for dataset {ds}')
             continue
 
-        if len(np.unique(y)) > max_num_classes:
-            if return_capped:
-                X = X[y < np.unique(y)[10]]
-                y = y[y < np.unique(y)[10]]
-                modifications['classes_capped'] = True
-            else:
-                print('Too many classes')
-                continue
+        if classification:
+            if len(np.unique(y)) > max_num_classes:
+                if return_capped:
+                    X = X[y < np.unique(y)[10]]
+                    y = y[y < np.unique(y)[10]]
+                    modifications['classes_capped'] = True
+                else:
+                    print('Too many classes')
+                    continue
 
         datasets += [[entry['name'], X, y, categorical_feats, attribute_names, modifications]]
 
@@ -210,6 +236,8 @@ open_cc_valid_dids = [
     1443, 1444, 1446, 1447, 1448, 1451, 1453, 1488, 1490, 1495, 1498, 1499, 1506, 1508, 1511, 1512, 1520,
     1523, 4153, 23499, 40496, 40646, 40663, 40669, 40680, 40682, 40686, 40690, 40693, 40705, 40706, 40710,
     40711, 40981, 41430, 41538, 41919, 41976, 42172, 42261, 42544, 42585, 42638]
+
+open_cc_valid_dids_regression = [8, 204, 210, 560, 194, 566, 189, 562, 507, 198, 42821]
 
 grinzstjan_categorical_regression = [44054, 44055, 44056, 44057, 44059, 44061,
                                      44062, 44063, 44064, 44065, 44066, 44068,

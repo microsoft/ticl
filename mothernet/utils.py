@@ -398,7 +398,7 @@ def get_model_string(config, num_gpus, device, parser):
     return model_string
 
 
-def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir, validate):
+def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir, classification, validate):
     from mothernet.model_builder import save_model
     config = config.copy()
 
@@ -530,7 +530,7 @@ def get_init_method(init_method):
 
 
 def validate_model(model, config):
-    from mothernet.datasets import load_openml_list, open_cc_valid_dids
+    from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression
 
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
     from mothernet.models.mothernet_additive import MotherNetAdditive
@@ -542,22 +542,45 @@ def validate_model(model, config):
     from mothernet.evaluation import tabular_metrics
     from uuid import uuid4
 
-    cc_valid_datasets_multiclass, _ = load_openml_list(
-        open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000, num_feats=100, return_capped=True)
-    
-    if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
-        clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
-    elif isinstance(model, MotherNet):
-        clf = MotherNetClassifier(device=config['device'], model=model, config=config)
-    elif isinstance(model, (TabPFN, BiAttentionTabPFN)):
-        clf = TabPFNClassifier(device=config['device'], model=model, config=config, N_ensemble_configurations=1)
+    if config['transformer']['classification_task']:
+        cc_valid_datasets_multiclass, _ = load_openml_list(
+            open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000,
+            num_feats=100, return_capped=True, classification=True)
+
+        if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
+            clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
+        elif isinstance(model, MotherNet):
+            clf = MotherNetClassifier(device=config['device'], model=model, config=config)
+        elif isinstance(model, (TabPFN, BiAttentionTabPFN)):
+            clf = TabPFNClassifier(device=config['device'], model=model, config=config, N_ensemble_configurations=1)
+        else:
+            raise ValueError(f"Model {model} not supported for validation")
+        base_path = 'models_diff/validation'
+        results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
+                                   metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
+                                   max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=1, device=config['device'],
+                                   save=False)
+        mean_auc = np.array([r['mean_metric'] for r in results]).mean()
+        per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
+        return mean_auc, per_dataset_scores
     else:
-        raise ValueError(f"Model {model} not supported for validation")
-    base_path = 'models_diff/validation'
-    results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
-                               metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
-                               max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=1, device=config['device'],
-                               save=False)
-    mean_auc = np.array([r['mean_metric'] for r in results]).mean()
-    per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
-    return mean_auc, per_dataset_scores
+        cc_valid_datasets_regression, _ = load_openml_list(
+            open_cc_valid_dids_regression, multiclass=False, shuffled=True, filter_for_nan=False, max_samples=10000,
+            num_feats=100, return_capped=False, classification=False)
+
+        if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
+            clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config, regression=True)
+        elif isinstance(model, MotherNet):
+            clf = MotherNetClassifier(device=config['device'], model=model, config=config)
+        elif isinstance(model, (TabPFN, BiAttentionTabPFN)):
+            clf = TabPFNClassifier(device=config['device'], model=model, config=config, N_ensemble_configurations=1)
+        else:
+            raise ValueError(f"Model {model} not supported for validation")
+        base_path = 'models_diff/validation'
+        results = eval_on_datasets('regression', clf, f"valid_run_{uuid4()}", cc_valid_datasets_regression,
+                                   metric_used=tabular_metrics.root_mean_squared_error_metric, split_numbers=[1, 2, 3, 4, 5],
+                                   eval_positions=[1000], max_times=[1], n_samples=2000, base_path=base_path,
+                                   overwrite=False, n_jobs=1, device=config['device'], save=False)
+        mean_auc = np.array([r['mean_metric'] for r in results]).mean()
+        per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
+        return mean_auc, per_dataset_scores
