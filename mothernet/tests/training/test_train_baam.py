@@ -225,7 +225,7 @@ def test_train_baam_regression():
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                         'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
                         '--save-every', '8', '-B', tmpdir, '-d', '16',
-                        '--validate', 'True',  '--classification_task', 'False'])
+                        '--validate', 'True',  '--classification-task', 'False'])
         reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
         check_predict_linear(reg)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)

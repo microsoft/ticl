@@ -5,8 +5,9 @@ from sklearn.preprocessing import LabelEncoder
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from mothernet.prediction.tabpfn import TabPFNClassifier
+
 from collections import OrderedDict
+from abc import abstractmethod
 
 
 class NeuralNetwork(nn.Module):
@@ -60,31 +61,26 @@ def _encode_y(y):
     return y, classes
 
 
-class TorchMLP(ClassifierMixin, BaseEstimator):
-    def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
-                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None,
-                 nonlinearity='relu', nn=None):
-        self.hidden_size = hidden_size
+class TorchModelTrainer(ClassifierMixin, BaseEstimator):
+    def __init__(self, n_epochs=10, learning_rate=1e-3,
+                 verbose=0, dropout_rate=0.0, device='cuda',  weight_decay=0.01, batch_size=None, epoch_callback=None,
+                 nonlinearity='relu', init_state=None):
         self.n_epochs = n_epochs
         self.learning_rate = learning_rate
         self.verbose = verbose
-        self.n_layers = n_layers
         self.dropout_rate = dropout_rate
         self.device = device
-        self.layernorm = layernorm
         self.weight_decay = weight_decay
         self.batch_size = batch_size
         self.epoch_callback = epoch_callback
         self.nonlinearity = nonlinearity
-        self.nn = nn
+        self.init_state = init_state
 
     def fit_from_dataloader(self, dataloader, n_features, classes):
-        model = NeuralNetwork(n_features=n_features, n_classes=len(classes), n_layers=self.n_layers,
-                              hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm,
-                              nonlinearity=self.nonlinearity)
+        model = self.make_model(n_features, len(classes))
         # loading the state dict seems the easiest way to ensure all the configs actually match
-        if self.nn is not None:
-            model.load_state_dict(self.nn.state_dict())
+        if self.init_state is not None:
+            model.load_state_dict(self.init_state)
         model.to(self.device)
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
@@ -111,6 +107,10 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
             pass
         self.model_ = model
         self.classes_ = classes
+
+    @abstractmethod
+    def make_model(self, n_features, n_classes):
+        pass
 
     def fit(self, X, y):
         y, classes = _encode_y(y)
@@ -141,3 +141,22 @@ class TorchMLP(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X):
         pred = self._predict(X)
         return pred.softmax(dim=1).detach().cpu().numpy()
+
+
+class TorchMLP(TorchModelTrainer):
+    def __init__(self, hidden_size=128, n_epochs=10, learning_rate=1e-3, n_layers=2,
+                 verbose=0, dropout_rate=0.0, device='cuda', layernorm=False, weight_decay=0.01, batch_size=None, epoch_callback=None,
+                 nonlinearity='relu', init_state=None):
+        self.hidden_size = hidden_size
+        self.n_layers = n_layers
+        self.layernorm = layernorm
+        self.nonlinearity = nonlinearity
+        super().__init__(n_epochs=n_epochs, learning_rate=learning_rate, verbose=verbose,
+                         dropout_rate=dropout_rate, device=device, init_state=init_state, batch_size=batch_size,
+                         epoch_callback=epoch_callback, weight_decay=weight_decay)
+
+    def make_model(self, n_features, n_classes):
+        return NeuralNetwork(n_features=n_features, n_classes=n_classes, n_layers=self.n_layers,
+                             hidden_size=self.hidden_size, dropout_rate=self.dropout_rate, layernorm=self.layernorm,
+                             nonlinearity=self.nonlinearity)
+    

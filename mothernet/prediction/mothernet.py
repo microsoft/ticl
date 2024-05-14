@@ -15,7 +15,7 @@ from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
 from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
-from mothernet.evaluation.baselines.distill_mlp import TorchMLP, NeuralNetwork
+from mothernet.evaluation.baselines.torch_mlp import TorchMLP, NeuralNetwork
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -314,7 +314,7 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
         except (KeyError, TypeError):
             nonlinearity = "relu"
         self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
-                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, nn=nn,
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, init_state=nn.state_dict(),
                             nonlinearity=nonlinearity)
         self.scaler = StandardScaler().fit(X)
         self.mlp.fit(X, y)
