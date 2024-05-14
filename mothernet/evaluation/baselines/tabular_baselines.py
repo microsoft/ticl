@@ -46,7 +46,6 @@ def get_scoring_direction(metric_used):
         raise Exception('No scoring string found for metric')
 
 
-
 def eval_f(params, clf_, x, y, metric_used):
     scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv'))
     return -np.nanmean(scores)
@@ -992,6 +991,29 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
         return sklearn.svm.SVR(**params)
 
     return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time, no_tune)
+
+
+def mlp_rtdl_no_tuning_metric(x, y, test_x, test_y, cat_features, metric_used,  **kwargs):
+    from rtdl_revisiting_models import MLP
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
+                                             one_hot=True, impute=True, standardize=True,
+                                             cat_features=cat_features)
+    classifier = MLP(d_in=x.shape[1], d_out=len(np.unique(y)), n_blocks=2,  d_block=384)
+    tick = time.time()
+    x = x.numpy()
+    y = y.numpy()
+    test_x = test_x.numpy()
+    test_y = test_y.numpy()
+    classifier.fit(x, y)
+    fit_time = time.time() - tick
+    # print('Train data shape', x.shape, ' Test data shape', test_x.shape)
+    tick = time.time()
+    pred = classifier.predict_proba(test_x)
+    inference_time = time.time() - tick
+    times = {'fit_time': fit_time, 'inference_time': inference_time}
+    metric = metric_used(test_y, pred)
+
+    return metric, pred, times
 
 
 # MLP
