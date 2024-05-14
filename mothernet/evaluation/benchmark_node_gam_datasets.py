@@ -223,6 +223,17 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     return records
 
 
+def benchmark_ebm_num_bins(dataset_name, max_bins: int, n_splits: int):
+    random_state = 137
+    dataset = load_node_gam_data(dataset_name)
+    X, y, X_test, y_test = dataset['full']['X'], dataset['full']['y'], dataset['test']['X'], dataset['test']['y']
+    # Main effects only EBM
+    ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0, max_bins=max_bins)
+    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits)
+    record['num_bins'] = max_bins
+    print(record)
+    return record
+
 results = []
 n_splits = 5
 
