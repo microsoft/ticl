@@ -14,8 +14,11 @@ from sklearn.metrics import (accuracy_score, average_precision_score, balanced_a
 
 
 def root_mean_squared_error_metric(target, pred):
-    target = torch.tensor(target) if not torch.is_tensor(target) else target
-    pred = torch.tensor(pred) if not torch.is_tensor(pred) else pred
+    target = torch.tensor(target, dtype=torch.float32) if not torch.is_tensor(target) else target.float()
+    pred = torch.tensor(pred, dtype=torch.float32) if not torch.is_tensor(pred) else pred.float()
+    if len(pred.shape) == 2:
+        assert pred.shape[1] == 1, "If non squeezed prediction ensure its only 1-d"
+        pred = pred.flatten()
     return torch.sqrt(torch.nn.functional.mse_loss(target, pred))
 
 

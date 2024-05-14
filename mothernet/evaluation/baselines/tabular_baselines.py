@@ -20,6 +20,7 @@ from sklearn.model_selection import KFold, cross_val_score
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
 from mothernet.evaluation import tabular_metrics
+from mothernet.evaluation.tabular_evaluation import is_classification
 
 tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
@@ -45,18 +46,9 @@ def get_scoring_direction(metric_used):
         raise Exception('No scoring string found for metric')
 
 
-def is_classification(metric_used):
-    if metric_used.__name__ == tabular_metrics.auc_metric.__name__ or metric_used.__name__ == tabular_metrics.cross_entropy.__name__:
-        return 'classification'
-    elif metric_used.__name__ == tabular_metrics.auc_metric.__name__:
-        return -1
-
 
 def eval_f(params, clf_, x, y, metric_used):
     scores = cross_val_score(clf_(**params), x, y, cv=CV, scoring=tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv'))
-    if tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv') == 'r2' or tabular_metrics.get_scoring_string(metric_used, usage='sklearn_cv') == 'neg_log_loss':
-        return np.nanmean(scores)
-
     return -np.nanmean(scores)
 
 
@@ -202,7 +194,7 @@ def autogluon_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=3
     # AutoGluon automatically infers datatypes, we don't specify the categorical labels
     predictor = TabularPredictor(
         label=train_data.columns[-1],
-        eval_metric=get_scoring_string(metric_used, usage='autogluon', multiclass=(len(np.unique(y)) > 2)),
+        eval_metric=tabular_metrics.get_scoring_string(metric_used, usage='autogluon', multiclass=(len(np.unique(y)) > 2)),
         problem_type=problem_type
         # seed=int(y[:].sum()) doesn't accept seed
     ).fit(
@@ -847,7 +839,7 @@ def autosklearn2_metric(x, y, test_x, test_y, cat_features, metric_used, max_tim
                n_jobs=MULTITHREAD,
                seed=int(y[:].sum()),
                # The seed is deterministic but varies for each dataset and each split of it
-               metric=get_scoring_string(metric_used, usage='autosklearn', multiclass=len(np.unique(y)) > 2))
+               metric=tabular_metrics.get_scoring_string(metric_used, usage='autosklearn', multiclass=len(np.unique(y)) > 2))
 
     # fit model to data
     clf.fit(x, y)
@@ -865,7 +857,7 @@ param_grid_hyperopt['ridge'] = {
     'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'alpha': hp.loguniform('alpha', -5, math.log(5.0))}  # 'normalize': [False],
 
 
-def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
+def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
     if is_classification(metric_used):
         raise Exception("Ridge is only applicable to pointwise Regression.")
 
@@ -874,28 +866,7 @@ def ridge_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
     def clf_(**params):
         return Ridge(tol=1e-4, **params)
 
-    start_time = time.time()
-
-    def stop(trial):
-        return time.time() - start_time > max_time, []
-
-    best = fmin(
-        fn=lambda params: eval_f(params, clf_, x, y, metric_used, start_time, max_time),
-        space=param_grid_hyperopt['ridge'],
-        algo=rand.suggest,
-        rstate=np.random.default_rng(int(y[:].sum()) % 10000),
-        early_stop_fn=stop,
-        # The seed is deterministic but varies for each dataset and each split of it
-        max_evals=10000)
-    best = space_eval(param_grid_hyperopt['ridge'], best)
-
-    clf = clf_(**best)
-    clf.fit(x, y)
-
-    pred = clf.predict(test_x)
-    metric = metric_used(test_y, pred)
-
-    return metric, pred, best
+    return eval_complete_f(x, y, test_x, test_y, 'ridge', clf_, metric_used, max_time, no_tune)
 
 
 def lightautoml_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
@@ -945,7 +916,7 @@ def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y, one_hot=False, impute=False, standardize=False, cat_features=cat_features)
 
     def clf_(**params):
-        return LGBMClassifier(categorical_feature=cat_features, use_missing=True, objective=get_scoring_string(metric_used, usage='lightgbm', multiclass=len(np.unique(y)) > 2), **params)
+        return LGBMClassifier(categorical_feature=cat_features, use_missing=True, objective=tabular_metrics.get_scoring_string(metric_used, usage='lightgbm', multiclass=len(np.unique(y)) > 2), **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'lightgbm', clf_, metric_used, max_time, no_tune)
 
@@ -973,7 +944,7 @@ param_grid_hyperopt['random_forest'] = {'n_estimators': hp.randint('n_estimators
 
 
 def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
-    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=False, impute=True, standardize=False,
@@ -982,7 +953,7 @@ def random_forest_metric(x, y, test_x, test_y, cat_features, metric_used, max_ti
     def clf_(**params):
         if is_classification(metric_used):
             return RandomForestClassifier(n_jobs=MULTITHREAD, **params)
-        return RandomForestClassifier(n_jobs=MULTITHREAD, **params)
+        return RandomForestRegressor(n_jobs=MULTITHREAD, **params)
 
     return eval_complete_f(x, y, test_x, test_y, 'random_forest', clf_, metric_used, max_time, no_tune)
 
@@ -1000,7 +971,7 @@ def gradient_boosting_metric(x, y, test_x, test_y, cat_features, metric_used, ma
     def clf_(**params):
         if is_classification(metric_used):
             return ensemble.GradientBoostingClassifier(**params)
-        return ensemble.GradientBoosting(**params)
+        return ensemble.GradientBoostingRegressor(**params)
 
     return eval_complete_f(x, y, test_x, test_y, 'gradient_boosting', clf_, metric_used, max_time, no_tune)
 
@@ -1039,8 +1010,32 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
     def clf_(**params):
         if is_classification(metric_used):
             return TorchMLP(**params, device="cpu")
+        else:
+            raise ValueError("No Regression MLP yet")
 
     return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time, no_tune)
+
+
+param_grid_hyperopt['mlp_sklearn'] = {'hidden_layer_sizes': hp.choice('hidden_layer_sizes', [(16,), (32,), (64,), (128,), (256,), (512,), (16, 16), (32, 32),
+                                                                                             (64, 64), (128, 128), (256, 256), (512, 512)]),
+                                      'learning_rate_init': hp.loguniform('learning_rate_init', math.log(0.00001), math.log(0.01)),
+                                      'max_iter': hp.choice('max_iter', [10, 100, 1000]),
+                                      'alpha': hp.loguniform('alpha', math.log(0.00001), math.log(0.01))}
+
+
+def mlp_sklearn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no_tune=None, **kwargs):
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
+                                             one_hot=True, impute=True, standardize=True,
+                                             cat_features=cat_features)
+    from sklearn.neural_network import MLPClassifier, MLPRegressor
+
+    def clf_(**params):
+        if is_classification(metric_used):
+            return MLPClassifier(**params)
+        else:
+            return MLPRegressor(**params)
+
+    return eval_complete_f(x, y, test_x, test_y, 'mlp_sklearn', clf_, metric_used, max_time, no_tune)
 
 
 # KNN
@@ -1126,7 +1121,7 @@ def tabnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300)
 
             clf.fit(
                 X_train, y_train,
-                # eval_metric=[get_scoring_string(metric_used, multiclass=len(np.unique(y_train)) > 2, usage='tabnet')],
+                # eval_metric=[tabular_metrics.get_scoring_string(metric_used, multiclass=len(np.unique(y_train)) > 2, usage='tabnet')],
                 # eval_set=[(X_valid, y_valid)],
                 # patience=15,
                 max_epochs=max_epochs
@@ -1198,7 +1193,7 @@ def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
     def clf_(**params):
         if is_classification(metric_used):
             return CatBoostClassifier(
-                loss_function=get_scoring_string(metric_used, usage='catboost'),
+                loss_function=tabular_metrics.get_scoring_string(metric_used, usage='catboost'),
                 thread_count=MULTITHREAD,
                 used_ram_limit='4gb',
                 random_seed=int(y[:].sum()),
@@ -1208,7 +1203,7 @@ def catboost_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
                 **params)
         else:
             return CatBoostRegressor(
-                loss_function=get_scoring_string(metric_used, usage='catboost'),
+                loss_function=tabular_metrics.get_scoring_string(metric_used, usage='catboost'),
                 thread_count=MULTITHREAD,
                 used_ram_limit='4gb',
                 random_seed=int(y[:].sum()),
@@ -1252,10 +1247,10 @@ def xgb_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, no
 
     def clf_(**params):
         if is_classification(metric_used):
-            return xgb.XGBClassifier(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
+            return xgb.XGBClassifier(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=tabular_metrics.get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
                                      )
         else:
-            return xgb.XGBRegressor(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
+            return xgb.XGBRegressor(use_label_encoder=False, nthread=MULTITHREAD, **params, **gpu_params, eval_metric=tabular_metrics.get_scoring_string(metric_used, usage='xgb')  # AUC not implemented
                                     )
 
     return eval_complete_f(x, y, test_x, test_y, 'xgb', clf_, metric_used, max_time, no_tune)
