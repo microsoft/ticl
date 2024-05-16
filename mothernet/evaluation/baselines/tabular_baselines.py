@@ -990,13 +990,34 @@ def svm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300):
 
     return eval_complete_f(x, y, test_x, test_y, 'svm', clf_, metric_used, max_time)
 
+# MLP
+param_grid_hyperopt['resnet'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256, 512]), 'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
+                              'n_epochs': hp.choice('n_epochs', [10, 100, 1000]), 'dropout_rate': hp.choice('dropout_rate', [0, 0.1, 0.3]), 'n_layers': hp.choice('n_layers', [1, 2, 3, 4, 5]),
+                              'weight_decay': hp.loguniform('weight_decay', math.log(0.00001), math.log(0.01)),
+                              'hidden_multiplier': hp.choice('hidden_multiplier', [1, 2, 3, 4])
+                              }
+
+def resnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device="cpu", **kwargs):
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
+                                             one_hot=True, impute=True, standardize=True,
+                                             cat_features=cat_features)
+    from mothernet.evaluation.baselines.resnet import ResNetClassifier
+
+    def clf_(**params):
+        if is_classification(metric_used):
+            return ResNetClassifier(**params, device=device)
+        else:
+            raise ValueError("No Regression ResNetClassifier yet")
+
+    return eval_complete_f(x, y, test_x, test_y, 'resnet', clf_, metric_used, max_time)
+
+
 
 # MLP
 param_grid_hyperopt['mlp'] = {'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256, 512]), 'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
                               'n_epochs': hp.choice('n_epochs', [10, 100, 1000]), 'dropout_rate': hp.choice('dropout_rate', [0, 0.1, 0.3]), 'n_layers': hp.choice('n_layers', [1, 2, 3]),
                               'weight_decay': hp.loguniform('weight_decay', math.log(0.00001), math.log(0.01))
                               }
-
 
 def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device="cpu", **kwargs):
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
