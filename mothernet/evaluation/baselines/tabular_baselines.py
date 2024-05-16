@@ -1006,7 +1006,7 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, de
 
     def clf_(**params):
         if is_classification(metric_used):
-            return TorchMLP(**params, device=device, verbose=kwargs.pop("verbose"))
+            return TorchMLP(**params, device=device, verbose=kwargs["verbose"])
         else:
             raise ValueError("No Regression MLP yet")
 
