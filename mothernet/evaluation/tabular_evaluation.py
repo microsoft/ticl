@@ -94,7 +94,9 @@ def evaluate(datasets, n_samples, eval_positions, metric_used, model, device='cp
             eval_position_n_samples = int(eval_position_real * 2.0)
 
             r = evaluate_position(X, y, model=model, categorical_feats=categorical_feats,
-                                  n_samples=eval_position_n_samples, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device, **kwargs)
+                                  n_samples=eval_position_n_samples, ds_name=ds_name, eval_position=eval_position_real, metric_used=metric_used, device=device,
+                                  verbose=verbose - 1,
+                                  **kwargs)
 
             if r is None:
                 print('Execution failed', ds_name)
@@ -164,7 +166,7 @@ def _eval_single_dataset_wrapper(**kwargs):
 
 
 def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max_times, metric_used, split_numbers, n_samples, base_path, overwrite=False, append_metric=True,
-                     fetch_only=False, verbose=False, n_jobs=-1, device='auto', save=True):
+                     fetch_only=False, verbose=0, n_jobs=-1, device='auto', save=True):
     if callable(model):
         model_callable = model
         if device == 'auto':
