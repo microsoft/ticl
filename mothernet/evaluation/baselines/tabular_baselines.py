@@ -1034,18 +1034,16 @@ def mothernet_init_metric(x, y, test_x, test_y, cat_features, metric_used, max_t
         if is_classification(metric_used):
             model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_2910.cpkt"
             model_path = get_mn_model(model_string)
-            one_hot = params.pop('one_hot')
+            one_hot = params.pop('one_hot', True)
             clf = MotherNetInitMLPClassifier(device=device, path=model_path, **params)
-            ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                    sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+            ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse_output=False) if one_hot else "passthrough"
+            ct = ColumnTransformer(transformers=[('cat', ohe, cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
             skb = SelectKBest(k=100)
-            if not one_hot:
-                ohe['cat'] = "passthrough"
-            return make_pipeline(ohe, skb, clf)
+            return make_pipeline(ct, skb, clf)
         else:
             raise ValueError("No Regression MLP yet")
 
-    return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time)
+    return eval_complete_f(x, y, test_x, test_y, 'mothernet_init', clf_, metric_used, max_time)
 
 
 # MLP
