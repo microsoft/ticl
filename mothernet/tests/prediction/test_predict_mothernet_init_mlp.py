@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 def test_mothernet_init_training_no_learning():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+    model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_2910.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetInitMLPClassifier(device='cpu', path=model_path, verbose=10, learning_rate=0.0, n_epochs=1)
     classifier.fit(X_train, y_train)
@@ -26,7 +26,7 @@ def test_mothernet_init_training_no_learning():
 def test_mothernet_init_training_defaults():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+    model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_2910.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetInitMLPClassifier(device='cpu', path=model_path, verbose=10, n_epochs=100)
     classifier.fit(X_train, y_train)
