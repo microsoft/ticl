@@ -274,7 +274,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
 
 
 class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=10, verbose=0, weight_decay=0):
+    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=0, verbose=0, weight_decay=0, dropout_rate=0):
         self.path = path
         self.device = device
         if path is None:
@@ -285,6 +285,7 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
         self.n_epochs = n_epochs
         self.verbose = verbose
         self.weight_decay = weight_decay
+        self.dropout_rate = dropout_rate
 
     def fit(self, X, y):
         self.X_train_ = X
@@ -300,8 +301,8 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         layers = extract_mlp_model(model, config, X, y, device=self.device,
                                    inference_device=self.device, scale=True)
-        hidden_size = config['predicted_hidden_layer_size']
-        n_layers = config['predicted_hidden_layers']
+        hidden_size = config['mothernet']['predicted_hidden_layer_size']
+        n_layers = config['mothernet']['predicted_hidden_layers']
         assert len(layers) == n_layers + 1  # n_layers counts number of hidden layers
         nn = NeuralNetwork(n_features=X.shape[1], n_classes=len(le.classes_), hidden_size=hidden_size, n_layers=n_layers)
         state_dict = {}
@@ -315,7 +316,7 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
             nonlinearity = "relu"
         self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
                             device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, init_state=nn.state_dict(),
-                            nonlinearity=nonlinearity)
+                            nonlinearity=nonlinearity, dropout_rate=self.dropout_rate, weight_decay=self.weight_decay)
         self.scaler = StandardScaler().fit(X)
         self.mlp.fit(X, y)
         self.parameters_ = layers
