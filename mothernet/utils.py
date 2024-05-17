@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 from mothernet.model_configs import get_model_default_config
 from mothernet.config_utils import flatten_dict
-
+import itertools
 
 class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
@@ -561,7 +561,8 @@ def validate_model(model, config):
                                    max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=1, device=config['device'],
                                    save=False)
         mean_auc = np.array([r['mean_metric'] for r in results]).mean()
-        per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
+        # maybe pandas would be easier lol?
+        per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
         return mean_auc, per_dataset_scores
     else:
         cc_valid_datasets_regression, _ = load_openml_list(
@@ -578,5 +579,6 @@ def validate_model(model, config):
                                    eval_positions=[1000], max_times=[1], n_samples=2000, base_path=base_path,
                                    overwrite=False, n_jobs=1, device=config['device'], save=False)
         mean_auc = np.array([r['mean_metric'] for r in results]).mean()
-        per_dataset_scores = {r['dataset']: r['mean_metric'] for r in results}
+        # maybe pandas would be easier lol?
+        per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
         return mean_auc, per_dataset_scores
