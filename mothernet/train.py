@@ -169,19 +169,19 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 print("LOSS DIVERGED")
                 return total_loss, model.to('cpu'), dl, epoch
             if adaptive_batch_size:
-                if increased_batch_size == 0 and total_loss <= .55:
+                if increased_batch_size == 0 and epoch >= 20:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 1
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-                elif increased_batch_size == 1 and total_loss <= .50:
+                elif increased_batch_size == 1 and epoch >= 50:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 2
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-                elif increased_batch_size == 2 and total_loss <= .45:
+                elif increased_batch_size == 2 and epoch >= 200:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 3
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
-                elif increased_batch_size == 3 and total_loss <= .435:
+                elif increased_batch_size == 3 and total_loss >= 1000:
                     aggregate_k_gradients *= 2
                     increased_batch_size = 4
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
