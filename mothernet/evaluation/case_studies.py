@@ -9,15 +9,17 @@ import numpy as np
 import pandas as pd
 import scienceplots  # noqa
 import seaborn as sns
-from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
+from mothernet.evaluation.imbalanced_data import eval_gamformer_and_ebm
 from mothernet.evaluation.node_gam_data import DATASETS
-from mothernet.evaluation.plot_shape_function import plot_shape_function
+from mothernet.evaluation.plot_shape_function import plot_individual_shape_function
 from mothernet.prediction import MotherNetAdditiveClassifier
 from mothernet.utils import get_mn_model
 
 plt.style.use(['science', 'no-latex', 'light'])
+plt.rcParams["figure.constrained_layout.use"] = True
+plt.savefig('mimic_2_shape_functions.pdf', dpi=300, bbox_inches='tight')
 
 
 def fit_model(model_string: str, X_train: np.ndarray, y_train: np.ndarray):
@@ -69,23 +71,22 @@ def scaling_analysis(model_string: str, dataset: str):
     os.makedirs(f'output/{dataset}', exist_ok=True)
     X_train_full, X_test, y_train_full, y_test = train_test_split(X_train, y_train,
                                                                   train_size=0.95, random_state=42)
-    X_test = X_test[:500]
-    y_test = y_test[:500]
     # Iterate over dataset sizes and sample multiple datasets per size to get an average
     results_dict = defaultdict(list)
-    for size in np.linspace(100, 3000, 15):
+    for size in np.linspace(100, len(X_train_full), 15):
         ratio = size / X_train_full.shape[0]
         for i in range(3):
-            X_train_sub, _, y_train_sub, _ = train_test_split(X_train_full, y_train_full,
-                                                              train_size=ratio,
-                                                              random_state=42 + i)
-            model = fit_model(model_string, X_train_sub, y_train_sub)
-            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
-            results_dict['roc_auc'].append(roc_auc)
-            results_dict['size'].append(size)
+            X_train_sub, _, y_train_sub, _ = train_test_split(
+                X_train_full, y_train_full, train_size=ratio, random_state=42 + i)
+
+            res = eval_gamformer_and_ebm('scaling_analysis', X_train, y_train, X_test, y_test)
+            results_dict['size'].extend([size, size])
+            results_dict['AUC-ROC'].extend([res[0]['test_node_gam_bagging'], res[1]['test_node_gam_bagging']])
+            results_dict['Model'].extend(['EBM', 'GAMFormer'])
             json.dump(results_dict, open(f"output/{dataset}/scaling_analysis_results_{time_stamp}.json", "w"))
 
-            print(f"Dataset: {dataset}, Size (ratio): {size}, Size (abs): {X_train_sub.shape[0]}, Score: {roc_auc}")
+            print(
+                f"Dataset: {dataset}, Size (ratio): {size}, Size (abs): {X_train_sub.shape[0]}  AUC-ROC (EBM / GAM): {res[0]['test_node_gam_bagging']}, {res[1]['test_node_gam_bagging']}")
 
     return time_stamp
 
@@ -113,25 +114,25 @@ def plot_shape_functions(model_string: str, dataset: str):
 
     from imblearn.under_sampling import RandomUnderSampler
     X, y = RandomUnderSampler().fit_resample(X_train, y_train)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, train_size=0.5)
-    model_path = get_mn_model(model_string)
-    classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, train_size=0.2)
+    results = eval_gamformer_and_ebm(dataset, X_train, y_train, X_test, y_test, n_splits=5,
+                                     column_names=data['X_train'].columns, record_shape_functions=True)
 
-    # Plot shape function
-    bin_edges = classifier.bin_edges_
-    w = classifier.w_
-    plot_shape_function(bin_edges, w, feature_names=data['X_train'].columns)
-    plt.show()
+    # Plot shape function per feature
+    plot_individual_shape_function(models={'EBM': {'bin_edges': results[0]['bin_edges'], 'w': results[0]['w']},
+                                           'GAMformer': {'bin_edges': results[1]['bin_edges'], 'w': results[1]['w']}},
+                                   feature_names=data['X_train'].columns)
 
 
 if __name__ == '__main__':
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
+    model_string = "baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
     dataset = "MIMIC2"
     # scaling_analysis_train_test_points(model_string)
     # Scaling analysis
-    # time_stamp = scaling_analysis(model_string, dataset)
+    '''
+    for dataset in ['mimic2', 'mimic3', 'adult']:
+        time_stamp = scaling_analysis(model_string, dataset.upper())
     plot_scaling_analysis(dataset, '05_02_2024_16_08_36')
-
+    '''
     # Shape Function Visualization
     plot_shape_functions(model_string, dataset)

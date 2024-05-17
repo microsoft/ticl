@@ -66,17 +66,15 @@ def format_n(x):
     return "{0:.3f}".format(x)
 
 
-def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None):
+def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None, column_names=None,
+                  record_shape_functions=False):
     # Evaluate model
     ss = StratifiedShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=1337)
     print('Fitting', name)
-    start = time.time()
     scores = cross_validate(
         clf, X, y, scoring='roc_auc', cv=ss,
         n_jobs=n_jobs, return_estimator=True
     )
-    end = time.time()
-    print(f'Done: {end - start}, Testing', name)
     n_train_points = X.shape[0] * (1 - test_size)
     n_test_points = X.shape[0] * test_size
     record = dict()
@@ -96,8 +94,18 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n
     record['test_node_gam_bagging'] = roc_auc_score(
         y_test.flatten(),
         np.array([estimator.predict_proba(X_test)[:, 1].flatten() for estimator in scores['estimator']]).mean(axis=0))
-    end = time.time()
-    print(f'Done: {end - start}')
+
+    if record_shape_functions:
+        if isinstance(clf, ExplainableBoostingClassifier):
+            record['bin_edges'] = [dict(zip(scores['estimator'][i].feature_names,
+                                            scores['estimator'][i].histogram_edges_)) for i in range(n_splits)]
+            record['w'] = [dict(zip(scores['estimator'][i].feature_names,
+                                            scores['estimator'][i].histogram_weights_)) for i in range(n_splits)]
+        elif isinstance(clf, MotherNetAdditiveClassifier):
+            record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].bin_edges_)) for i in range(n_splits)]
+            record['w'] = [dict(zip(column_names, scores['estimator'][i].w_)) for i in range(n_splits)]
+        else:
+            print('Shape function not implemented for this model class.')
     return record
 
 
