@@ -22,6 +22,7 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from mothernet.evaluation import tabular_metrics
 from mothernet.evaluation.tabular_evaluation import is_classification
 
+
 tabpfn_path = '../../'
 sys.path.insert(0, tabpfn_path)
 
@@ -1011,6 +1012,40 @@ def resnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300,
 
     return eval_complete_f(x, y, test_x, test_y, 'resnet', clf_, metric_used, max_time)
 
+
+# mothernet and fine tuning
+param_grid_hyperopt['mothernet_init'] = {'learning_rate': hp.loguniform('learning_rate', math.log(0.00001), math.log(0.01)),
+                                         'n_epochs': hp.choice('n_epochs', [10, 100, 1000]), 'dropout_rate': hp.choice('dropout_rate', [0, 0.1, 0.3]),
+                                        'weight_decay': hp.loguniform('weight_decay', math.log(0.00001), math.log(0.01)),
+                                        'one_hot': hp.choice('one_hot', [True, False]),
+                                        }
+
+
+def mothernet_init_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, device="cpu", **kwargs):
+    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
+                                             one_hot=True, impute=True, standardize=True,
+                                             cat_features=cat_features)
+    from mothernet.prediction.mothernet import MotherNetInitMLPClassifier
+    from mothernet.utils import get_mn_model
+    from sklearn.pipeline import make_pipeline
+    from sklearn.feature_selection import SelectKBest
+
+    def clf_(**params):
+        if is_classification(metric_used):
+            model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_2910.cpkt"
+            model_path = get_mn_model(model_string)
+            one_hot = params.pop('one_hot')
+            clf = MotherNetInitMLPClassifier(device=device, path=model_path, **params)
+            ohe = ColumnTransformer(transformers=[('cat', OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                    sparse_output=False), cat_features)], remainder=SimpleImputer(strategy="constant", fill_value=0))
+            skb = SelectKBest(k=100)
+            if not one_hot:
+                ohe['cat'] = "passthrough"
+            return make_pipeline(ohe, skb, clf)
+        else:
+            raise ValueError("No Regression MLP yet")
+
+    return eval_complete_f(x, y, test_x, test_y, 'mlp', clf_, metric_used, max_time)
 
 
 # MLP
