@@ -1,12 +1,14 @@
 # Adapted from https://nbviewer.org/github/interpretml/interpret/blob/develop/docs/benchmarks/ebm-classification-comparison.ipynb
 import json
 import os
+import pickle
 import time
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from interpret.glassbox import ExplainableBoostingClassifier
+from pygam import LinearGAM, LogisticGAM
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -15,7 +17,6 @@ from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
 from xgboost import XGBClassifier
-from pygam import LinearGAM, LogisticGAM, s
 
 from mothernet.evaluation.node_gam_data import DATASETS
 from mothernet.prediction import MotherNetAdditiveClassifier
@@ -97,19 +98,34 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n
 
     if record_shape_functions:
         if isinstance(clf, ExplainableBoostingClassifier):
-            record['bin_edges'] = [dict(zip(scores['estimator'][i].feature_names,
-                                            scores['estimator'][i].histogram_edges_)) for i in range(n_splits)]
-            record['w'] = [dict(zip(scores['estimator'][i].feature_names,
-                                            scores['estimator'][i].histogram_weights_)) for i in range(n_splits)]
+            ebm_explanations = [estimator.explain_global() for estimator in scores['estimator']]
+            record['bin_edges'] = [
+                dict(zip(ebm_exp.feature_names,
+                         [feature['names'] for feature in ebm_exp._internal_obj['specific']])) for
+                                   ebm_exp in ebm_explanations
+            ]
+            record['w'] = [
+                dict(zip(ebm_exp.feature_names,
+                                    [feature['scores'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
+                           in ebm_explanations
+            ]
+            record['data_density'] = [
+                dict(zip(ebm_exp.feature_names,
+                                    [feature['density'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
+                           in ebm_explanations
+            ]
         elif isinstance(clf, MotherNetAdditiveClassifier):
             record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].bin_edges_)) for i in range(n_splits)]
             record['w'] = [dict(zip(column_names, scores['estimator'][i].w_)) for i in range(n_splits)]
+        elif isinstance(clf, Pipeline) and isinstance(clf['baam'], MotherNetAdditiveClassifier):
+            record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].steps[-1][1].bin_edges_)) for i in range(n_splits)]
+            record['w'] = [dict(zip(column_names, scores['estimator'][i].steps[-1][1].w_)) for i in range(n_splits)]
         else:
             print('Shape function not implemented for this model class.')
     return record
 
 
-def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, random_state=1337):
+def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, random_state=1337, column_names=None):
     if ct is None:
         is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
         cat_cols = X.columns.values[is_cat]
@@ -136,6 +152,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     print(summary_record)
     print()
 
+    '''
     pipe = Pipeline([
         ('ct', ct),
         ('pygam', PyGAMSklearnWrapper(dataset_type='classification')),
@@ -144,7 +161,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
     print(record)
     record.update(summary_record)
     records.append(record)
-
+    '''
     pipe = Pipeline([
         ('ct', ct),
         ('std', StandardScaler()),
@@ -183,14 +200,16 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
 
     # Main effects only EBM
     ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0)
-    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits)
+    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits, record_shape_functions=True,
+                           column_names=column_names)
     print(record)
     record.update(summary_record)
     records.append(record)
 
     # Main effects only EBM with no outer bagging
     ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0, outer_bags=1)
-    record = process_model(ebm_inter, 'ebm-main-effects-1-outer-bagging', X, y, X_test, y_test, n_splits=n_splits)
+    record = process_model(ebm_inter, 'ebm-main-effects-1-outer-bagging', X, y, X_test, y_test, n_splits=n_splits,
+                           column_names=column_names)
     print(record)
     record.update(summary_record)
     records.append(record)
@@ -222,7 +241,9 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
         baam, 'baam',
         X, y,
         X_test, y_test,
-        n_splits=n_splits, n_jobs=1
+        n_splits=n_splits, n_jobs=1,
+        record_shape_functions=True,
+        column_names=column_names
     )
     print(record)
     record.update(summary_record)
@@ -248,23 +269,25 @@ if __name__ == '__main__':
     n_splits = 5
 
     time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+    os.makedirs(f"shape_functions/{time_stamp}", exist_ok=True)
 
-    for dataset_name in ['Adult', 'mimic2', 'mimic3', 'income', 'churn', 'Support2',
+    for dataset_name in ['mimic2', 'mimic3', 'adult', 'income', 'churn', 'Support2',
                          'credit', 'microsoft', 'year']:
         dataset = load_node_gam_data(dataset_name)
         result = benchmark_models(
             dataset_name,
             dataset['full']['X'], dataset['full']['y'],
             dataset['test']['X'], dataset['test']['y'],
-            n_splits=n_splits
+            n_splits=n_splits,
+            column_names=dataset['full']['X'].columns
         )
-        os.makedirs(f"output/{dataset_name}", exist_ok=True)
-        json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
-        results.append(result)
+        # os.makedirs(f"output/{dataset_name}", exist_ok=True)
+        # json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
+        pickle.dump(result, open(f"shape_functions/{time_stamp}/results_{dataset_name}.pkl", "wb"))
 
-        records = [item for result in results for item in result]
-        record_df = pd.DataFrame.from_records(records)
-        record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
+        # records = [item for result in results for item in result]
+        # record_df = pd.DataFrame.from_records(records)
+        # record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
 
     '''
     df = pd.read_csv('ebm-perf-classification-overnight.csv')

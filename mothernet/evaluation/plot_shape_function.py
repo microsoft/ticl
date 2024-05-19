@@ -1,29 +1,83 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import gaussian_kde
+
 
 plt.rcParams["figure.constrained_layout.use"] = True
 
 
-def plot_individual_shape_function(models, feature_names=None):
+def plot_individual_shape_function(models, data_density, dataset_name, feature_names=None, X_train=None, ):
     colors = {'GAMformer': 'red', 'EBM': 'blue'}
     for feature_idx, feature_name in enumerate(feature_names):
-        fig, axs_baam = plt.subplots(1, 1, figsize=(1.9 * 2, 2. * 1))
+        fig, axs_baam = plt.subplots(1, 1, figsize=(2.5 * 2, 2.2 * 1))
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+        ax_density = inset_axes(axs_baam, width="100%", height="25%", loc='lower center',
+                                bbox_to_anchor=(0.0, .98, 1.0, 0.25),
+                                bbox_transform=axs_baam.transAxes)
+        if X_train[feature_name].dtype == 'O':
+            # categorical
+            ax_density.bar(*np.unique(X_train[feature_name], return_counts=True))
+        else:
+            if X_train is None:
+                ax_density.plot(data_density[feature_name]['names'][:-1], data_density[feature_name]['scores'])
+            else:
+                kde = gaussian_kde(X_train[feature_name])
+                xs = np.linspace(X_train[feature_name].min(), X_train[feature_name].max(), 1000)
+                ax_density.plot(xs, kde(xs))
+        ax_density.set_xticks([])
+        ax_density.set_yticks([])
+        ax_density.spines['top'].set_visible(False)
+        ax_density.spines['right'].set_visible(False)
+        ax_density.spines['bottom'].set_visible(False)
+        ax_density.spines['left'].set_visible(False)
+
         # plot ebm on twin y axis
         axs_ebm = axs_baam.twinx()
         for model_idx, (model_name, model) in enumerate(models.items()):
             for bin_edges, w in zip([split[feature_name] for split in model['bin_edges']],
                                     [split[feature_name] for split in model['w']]):
-                w = np.array(w)
-                if model_name == 'GAMformer':
-                    w = w[:, 1]
-                bin_edges = np.array(bin_edges)
-                weights_normalized = w[0:-1] - w[0:-1].mean(axis=-1)
                 if model_name.upper() == 'EBM':
                     ax = axs_ebm
                 else:
                     ax = axs_baam
-                ax.step(bin_edges, weights_normalized, label=model_name, c=colors[model_name],
-                        alpha=1 / len(model['bin_edges']))
+                w = np.array(w)
+                if model_name == 'GAMformer':
+                    w = w[:, 1]
+                bin_edges = np.array(bin_edges)
+                weights_normalized = w - w.mean(axis=-1)
+
+                if X_train[feature_name].dtype == 'O':
+                    if model_name.upper() == 'EBM':
+                        for i in range(len(w)):
+                            bins = np.unique(X_train[feature_name]).astype(np.float32)
+                            bins = (bins[:-1] + bins[1:]) / 2
+                            # Add a bin to the left
+                            bins = np.concatenate([[bins[0] - 1], bins, [bins[-1] + 1]])
+                            ax.hlines(weights_normalized[i], bins[i], bins[i + 1], color=colors[model_name],
+                                      alpha=1 / len(model['bin_edges']), lw=3, label=model_name, )
+                    else:
+                        bins, index = np.unique(bin_edges, return_index=True)
+                        relevant_weights = weights_normalized[index]
+                        custom_bin_edges = (bins[:-1] + bins[1:]) / 2
+                        # Add left and right
+                        custom_bin_edges = np.concatenate([np.array([bins[0] - 1]), custom_bin_edges, np.array([bins[-1] + 1])])
+                        for i in range(len(relevant_weights)):
+                            ax.hlines(weights_normalized[i], custom_bin_edges[i], custom_bin_edges[i + 1], label=model_name,
+                                      color=colors[model_name], alpha=1 / len(model['bin_edges']), lw=3)
+                else:
+                    if model_name == 'GAMformer':
+                        # Add bin edges for GAMformer which extend for the data range of X_train
+                        bin_edges = np.concatenate([np.array([X_train[feature_name].min()]),
+                                                    bin_edges,
+                                                    np.array([X_train[feature_name].max()])])
+                    # Add weight again for the last bin edge
+                    weights_normalized = np.concatenate([weights_normalized, [weights_normalized[-1]]])
+                    ax.step(bin_edges, weights_normalized, label=model_name, c=colors[model_name],
+                            alpha=1 / len(model['bin_edges']))
+                    # for i in range(len(w)):
+                    #     ax.hlines(weights_normalized[i], bin_edges[i], bin_edges[i + 1], color=colors[model_name],
+                    #               alpha=1 / len(model['bin_edges']), lw=3)
         axs_baam.set_ylabel(f'Log-Odds\n(GAMFormer)')
         axs_ebm.set_ylabel(f'Log-Odds\n(EBM)')
         axs_baam.set_xlabel(feature_name)
@@ -35,7 +89,8 @@ def plot_individual_shape_function(models, feature_names=None):
         by_label.update(dict(zip(labels, handles)))
         legend = plt.legend(by_label.values(), by_label.keys(), loc='upper left', bbox_to_anchor=(1.3, 1))
         legend.set_zorder(102)
-        plt.savefig(f'mimic_2_shape_functions_{feature_name}.pdf', bbox_inches='tight')
+        plt.tight_layout()
+        plt.savefig(f'{dataset_name}_shape_functions_{feature_name}.pdf', bbox_inches='tight')
 
 
 def plot_shape_function(models, feature_names=None, feature_subset=None):
