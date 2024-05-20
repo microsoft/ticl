@@ -119,18 +119,19 @@ def plot_shape_functions(model_string: str, dataset: str):
     y_test = data['y_test']
     '''
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, random_state=42, train_size=0.95)
-    results = eval_gamformer_and_ebm(dataset, X_train, y_train, X_test, y_test, n_splits=5,
+    results = eval_gamformer_and_ebm(dataset, X_train, y_train, X_test, y_test, n_splits=3,
                                      column_names=data['X_train'].columns, record_shape_functions=True)
     time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     os.makedirs(f'output/{dataset}', exist_ok=True)
     pickle.dump(results, open(f"output/{dataset}/shape_function_results_{time_stamp}.pkl", "wb"))
     '''
-    results = pickle.load(open(f"/Users/siemsj/projects/mothernet/mothernet/output/MIMIC2/shape_function_results_05_19_2024_11_59_29.pkl", "rb"))
+    results = pickle.load(open(f"/Users/siemsj/projects/mothernet/output/MIMIC2/shape_function_results_05_20_2024_00_40_33.pkl", "rb"))
     # Plot shape function per feature
     plot_individual_shape_function(models={'EBM': {'bin_edges': results[0]['bin_edges'], 'w': results[0]['w']},
                                            'GAMformer': {'bin_edges': results[1]['bin_edges'], 'w': results[1]['w']}},
                                    data_density=results[0]['data_density'][0],
                                    feature_names=data['X_train'].columns, X_train=X_train, dataset_name=dataset)
+
 
 
 if __name__ == '__main__':
