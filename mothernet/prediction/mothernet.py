@@ -8,7 +8,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder, QuantileTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import SelectKBest
 from sklearn.compose import make_column_transformer
@@ -381,8 +381,14 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         X = np.array(X)
         self.n_features_ = X.shape[1]
-        self.n_classes_ = len(np.unique(y))
-        use_power_transformer = [True, False] if self.power else [False]
+        self.classes_ = np.unique(y)
+        self.n_classes_ = len(self.classes_)
+        if self.power == "quantile":
+            use_power_transformer = ["quantile", False]
+        elif self.power:
+            use_power_transformer = [True, False]
+        else:
+            [False]
         use_onehot = [True, False] if self.onehot else [False]
         feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
         label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
@@ -390,28 +396,41 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         rng = random.Random(self.random_state)
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
-        n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
 
         for label_shift, feature_shift, power_transformer, onehot in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
-            if power_transformer:
-                # remove zero-variance features to avoid division by zero
-                cont_processing = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
-                                            ('power_transformer', PowerTransformer())])
-            else:
-                cont_processing = "passthrough"
+            cont_processing, cat_processing = [], []
+            if power_transformer == "quantile":
+                cont_processing.append(QuantileTransformer())
+            elif power_transformer:
+                cont_processing.extend([VarianceThreshold(), StandardScaler(), PowerTransformer()])
+
             if onehot and self.cat_features is not None:
                 ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
                                     sparse_output=False)
-                ct = make_column_transformer((ohe, self.cat_features), remainder=cont_processing)
-                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
-                                      ('select', SelectKBest(k=100)), ('shift_classifier', estimator)])
+                cat_processing = [ohe]
+                pipe = [SimpleImputer(strategy="constant", fill_value=0), SelectKBest(k=100)]
             else:
-                estimator = Pipeline([('cont_processing', cont_processing), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
-                                      ('shift_classifier', estimator)])
-            estimators.append((str((label_shift, feature_shift, power_transformer, onehot)), estimator))
-        self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
-        self.vc_.fit(X, y)
+                pipe = cont_processing + [SimpleImputer(strategy="constant", fill_value=0)]
+            estimators.append((pipe, cat_processing, cont_processing, estimator))
+        self.estimators_ = estimators
+        for pipe, cat_processing, cont_processing, estimator in self.estimators_:
+            Xt = X
+            if len(cat_processing) > 0:
+                mask = np.zeros(X.shape[1], dtype=bool)
+                mask[self.cat_features] = True
+                X_cat = X[:, mask]
+                X_cont = X[:, ~mask]
+                X_cat = cat_processing[0].fit_transform(X_cat, y)
+                for step in cont_processing:
+                    X_cont = step.fit_transform(X_cont, y)
+                Xt = np.concatenate([X_cat, X_cont], axis=1)
+                for step in pipe:
+                    Xt = step.fit_transform(Xt, y)
+            else:
+                for step in pipe:
+                    Xt = step.fit_transform(Xt)
+            estimator.fit(Xt, y)
         return self
 
     @property
@@ -420,15 +439,26 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         X = np.array(X)
-        # numeric instabilities propagate and sklearn's metrics don't like it.
-        probs = self.vc_.predict_proba(X)
-        probs /= probs.sum(axis=1).reshape(-1, 1)
-        return probs
+        predicted_probas = []
+        for pipe, cat_processing, cont_processing, estimator in self.estimators_:
+            Xt = X
+            if len(cat_processing) > 0:
+                mask = np.zeros(X.shape[1], dtype=bool)
+                mask[self.cat_features] = True
+                X_cat = X[:, mask]
+                X_cont = X[:, ~mask]
+                X_cat = cat_processing[0].transform(X_cat)
+                for step in cont_processing:
+                    X_cont = step.transform(X_cont)
+                Xt = np.concatenate([X_cat, X_cont], axis=1)
+                for step in pipe:
+                    Xt = step.transform(Xt)
+            else:
+                for step in pipe:
+                    Xt = step.transform(Xt)
+
+            predicted_probas.append(estimator.predict_proba(Xt))
+        return np.mean(predicted_probas, axis=0)
 
     def predict(self, X):
-        X = np.array(X)
-        return self.vc_.predict(X)
-
-    @property
-    def classes_(self):
-        return self.vc_.classes_
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]

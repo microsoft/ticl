@@ -34,7 +34,7 @@ def test_mothernet_ensemble():
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 3
+    assert len(classifier.estimators_) == 3
 
 
 @pytest.mark.parametrize("categorical", [True, False])
@@ -59,7 +59,7 @@ def test_mothernet_preprocessing_ensemble(categorical):
     assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
     assert pipeline.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 32
+    assert len(classifier.estimators_) == 32
 
 
 def test_mothernet_preprocessing_categorical_pruning():
@@ -80,4 +80,4 @@ def test_mothernet_preprocessing_categorical_pruning():
     assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
     assert pipeline.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 32
+    assert len(classifier.estimators_) == 32
