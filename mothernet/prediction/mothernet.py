@@ -405,7 +405,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
             elif power_transformer:
                 cont_processing.extend([VarianceThreshold(), StandardScaler(), PowerTransformer()])
 
-            if onehot and self.cat_features is not None:
+            if onehot and self.cat_features is not None and len(self.cat_features):
                 ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
                                     sparse_output=False)
                 cat_processing = [ohe]
