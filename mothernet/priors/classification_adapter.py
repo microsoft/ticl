@@ -26,12 +26,13 @@ class RegressionNormalized:
     def __call__(self, x):
         # x has shape (T,B)
 
+        # already gets normalized later
         # TODO: Normalize to -1, 1 or gaussian normal
-        maxima = torch.max(x, 0)[0]
-        minima = torch.min(x, 0)[0]
-        norm = (x - minima) / (maxima-minima)
+        # maxima = torch.max(x, 0)[0]
+        # minima = torch.min(x, 0)[0]
+        # norm = (x - minima) / (maxima-minima)
 
-        return norm
+        return x
 
 
 class MulticlassSteps:
@@ -112,6 +113,7 @@ class ClassificationAdapter:
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
+        info = {}
         # num_features is constant for all batches, num_features_used is passed down to wrapped priors to change number of features
         if self.h['feature_curriculum']:
             num_features = min(num_features, epoch + 1)
@@ -144,12 +146,16 @@ class ClassificationAdapter:
                 if random.random() < p:
                     categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
-
+        info['categorical_features'] = categorical_features
         x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled
+        # In case of regression two normalizations.
         y = self.class_assigner(y).float()
+        if self.h['max_num_classes'] == 0:
+            # Inpute potential nan values after normalization
+            y[y.isnan()] = 0
 
         # Append empty features if enabled
         if self.h['pad_zeros']:
@@ -158,39 +164,45 @@ class ClassificationAdapter:
             x = torch.cat(
                 [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
-        if torch.isnan(y).sum() > 0:
+        if torch.isnan(y).any():
             print('Nans in target!')
+            if self.h['max_num_classes'] == 0:
+                y[torch.isnan(y)] = 0
+            else:
+                y[torch.isnan(y)] = -100
 
-        for b in range(y.shape[1]):
-            is_compatible, N = False, 0
-            while not is_compatible and N < 10:
-                targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
-                targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
+        if self.h['max_num_classes'] != 0:
+            for b in range(y.shape[1]):
+                is_compatible, N = False, 0
+                while not is_compatible and N < 10:
+                    targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
+                    targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
 
-                is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                    targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                    is_compatible = len(targets_in_train) == len(targets_in_eval) and (
+                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
+                    if not is_compatible:
+                        randperm = torch.randperm(x.shape[0])
+                        x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
+                    N = N + 1
                 if not is_compatible:
-                    randperm = torch.randperm(x.shape[0])
-                    x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
-                N = N + 1
-            if not is_compatible:
-                if not is_compatible:
+                    if self.h['max_num_classes'] != 0:
+                        # todo check that it really does this and how many together
+                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
+            for b in range(y.shape[1]):
+                valid_labels = y[:, b] != -100
+                y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-        for b in range(y.shape[1]):
-            valid_labels = y[:, b] != -100
-            y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
+                if y[valid_labels, b].numel() != 0:
+                    num_classes_float = (y[valid_labels, b].max() + 1).cpu()
+                    num_classes = num_classes_float.int().item()
+                    assert num_classes == num_classes_float.item()
+                    random_shift = torch.randint(0, num_classes, (1,), device=device)
+                    y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
-            if y[valid_labels, b].numel() != 0:
-                num_classes_float = (y[valid_labels, b].max() + 1).cpu()
-                num_classes = num_classes_float.int().item()
-                assert num_classes == num_classes_float.item()
-                random_shift = torch.randint(0, num_classes, (1,), device=device)
-                y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
-
-        return x, y, y  # x.shape = (T,B,H)
+        return x, y, y, info  # x.shape = (T,B,H)
 
 
 class ClassificationAdapterPrior:
@@ -201,7 +213,7 @@ class ClassificationAdapterPrior:
     def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_ = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
+            x, y, y_, info = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
-        return x, y, y_
+        return x, y, y_, info

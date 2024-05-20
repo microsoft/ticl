@@ -34,6 +34,7 @@ def get_transformer_config():
         'recompute_attn': True,
         'pre_norm': False,
         'y_encoder': "one_hot",
+        'classification_task': True,
         'efficient_eval_masking': True,
         'input_normalization': False,
         'tabpfn_zero_weights': True,
@@ -133,7 +134,7 @@ def get_mothernet_config():
         'low_rank_weights': True,
         'predicted_hidden_layer_size': 512,
         'predicted_activation': 'relu',
-        'decoder_type': "output_attention",
+        'decoder_type': "class_average",
         'decoder_embed_dim': 1024,
         'predicted_hidden_layers': 2,
         'decoder_hidden_layers': 1,
@@ -155,6 +156,7 @@ def get_additive_config():
         'shape_init': 'constant',
         'n_bins': 64,
         'nan_bin': False,
+        'sklearn_binning': False,
         'fourier_features': 0,
         'marginal_residual': "none",
         'categorical_embedding': False
@@ -205,6 +207,7 @@ def get_perceiver_default_config():
     config = get_shared_defaults()
     config['perceiver'] = {'num_latents': 512}
     config.update(get_mothernet_config())
+    config['mothernet']['decoder_type'] = 'output_attention'
     return config
 
 

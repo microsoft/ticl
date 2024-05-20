@@ -15,7 +15,7 @@ from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
 from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
-from mothernet.evaluation.baselines.distill_mlp import TorchMLP, NeuralNetwork
+from mothernet.evaluation.baselines.torch_mlp import TorchMLP, NeuralNetwork
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -186,7 +186,7 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
             if i != len(layers) - 1:
                 try:
                     activation = config['mothernet']['predicted_activation']
-                except KeyError:
+                except (KeyError, TypeError):
                     activation = "relu"
                 if activation != "relu":
                     raise ValueError(f"Only ReLU activation supported, got {activation}")
@@ -274,7 +274,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
 
 
 class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=10, verbose=0, weight_decay=0):
+    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=0, verbose=0, weight_decay=0, dropout_rate=0):
         self.path = path
         self.device = device
         if path is None:
@@ -285,6 +285,7 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
         self.n_epochs = n_epochs
         self.verbose = verbose
         self.weight_decay = weight_decay
+        self.dropout_rate = dropout_rate
 
     def fit(self, X, y):
         self.X_train_ = X
@@ -300,8 +301,8 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
         model.to(self.device)
         layers = extract_mlp_model(model, config, X, y, device=self.device,
                                    inference_device=self.device, scale=True)
-        hidden_size = config['predicted_hidden_layer_size']
-        n_layers = config['predicted_hidden_layers']
+        hidden_size = config['mothernet']['predicted_hidden_layer_size']
+        n_layers = config['mothernet']['predicted_hidden_layers']
         assert len(layers) == n_layers + 1  # n_layers counts number of hidden layers
         nn = NeuralNetwork(n_features=X.shape[1], n_classes=len(le.classes_), hidden_size=hidden_size, n_layers=n_layers)
         state_dict = {}
@@ -309,9 +310,13 @@ class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
             state_dict[f"model.linear{i}.weight"] = torch.Tensor(layer[1]).T
             state_dict[f"model.linear{i}.bias"] = torch.Tensor(layer[0])
         nn.load_state_dict(state_dict)
+        try:
+            nonlinearity = config['mothernet']['predicted_activation']
+        except (KeyError, TypeError):
+            nonlinearity = "relu"
         self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
-                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, nn=nn,
-                            nonlinearity=config['mothernet']['predicted_activation'])
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, init_state=nn.state_dict(),
+                            nonlinearity=nonlinearity, dropout_rate=self.dropout_rate, weight_decay=self.weight_decay)
         self.scaler = StandardScaler().fit(X)
         self.mlp.fit(X, y)
         self.parameters_ = layers

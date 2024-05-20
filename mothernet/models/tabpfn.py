@@ -13,9 +13,10 @@ from mothernet.models.encoders import Linear
 class TabPFN(nn.Module):
     def __init__(self, *, n_out, emsize, nhead, nhid_factor, nlayers, n_features, dropout=0.0,  y_encoder_layer=None,
                  decoder=None, input_normalization=False, init_method=None, pre_norm=False,
-                 activation='gelu', recompute_attn=False,
+                 activation='gelu', recompute_attn=False, classification_task=True,
                  all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None, tabpfn_zero_weights=False):
         super().__init__()
+        self.classification_task = classification_task
         self.y_encoder = y_encoder_layer
         nhid = emsize * nhid_factor
 

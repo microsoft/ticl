@@ -17,5 +17,5 @@ class BagPrior:
         weights = weights / torch.sum(weights)
         batch_assignments = torch.multinomial(weights, 1, replacement=True).numpy()
 
-        x, y, y_ = self.base_priors[self.prior_names[int(batch_assignments[0])]].get_batch(**args)
-        return x.detach(), y.detach(), y_.detach()
+        x, y, y_, info = self.base_priors[self.prior_names[int(batch_assignments[0])]].get_batch(**args)
+        return x.detach(), y.detach(), y_.detach(), info

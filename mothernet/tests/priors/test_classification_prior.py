@@ -37,7 +37,7 @@ def test_classification_prior_no_sampling(batch_size, num_features, n_samples, n
 
     prior = ClassificationAdapterPrior(MLPPrior(config['prior']['mlp']), **config['prior']['classification'])
 
-    x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
+    x, y, y_, info = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
@@ -58,7 +58,7 @@ def test_classification_adapter_with_sampling():
     config = get_prior_config()
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=config['prior']['classification'])
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, info = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, num_features)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
@@ -80,13 +80,13 @@ def test_classification_adapter_curriculum():
 
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=classification_config)
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features, 'epoch': 0}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, info = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 1)
     args['epoch'] = 1
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, info = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 1)
     args['epoch'] = 100
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, info = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 51)
 
 
@@ -121,7 +121,7 @@ def test_classification_adapter_with_sampling_no_padding():
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, info = adapter(batch_size=batch_size, **args)
     assert x.shape == (n_samples, batch_size, 72)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
@@ -146,7 +146,7 @@ def test_classification_adapter_nan():
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, _ = adapter(batch_size=batch_size, **args)
     assert y.shape == (n_samples, batch_size)
     assert x.isnan().float().mean() > 0.95
 
@@ -155,7 +155,7 @@ def test_classification_adapter_nan():
     adapter = ClassificationAdapter(MLPPrior(config['prior']['mlp']), config=prior_config)
 
     args = {'device': 'cpu', 'n_samples': n_samples, 'num_features': num_features}
-    x, y, y_ = adapter(batch_size=batch_size, **args)
+    x, y, y_, _ = adapter(batch_size=batch_size, **args)
     assert y.shape == (n_samples, batch_size)
     assert y_.shape == (n_samples, batch_size)
     assert x.isnan().float().mean() > 0.45

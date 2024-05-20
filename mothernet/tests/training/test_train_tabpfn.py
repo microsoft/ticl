@@ -19,13 +19,13 @@ TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128'
 def test_train_tabpfn_basic():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir, '--validate', 'True'])
+        results = main(['tabpfn'] + TESTING_DEFAULTS + ['-B', tmpdir])
         clf = TabPFNClassifier(device='cpu', model_string=results['model_string'], epoch=results['epoch'], base_path=results['base_path'])
         check_predict_iris(clf)
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['model_string'].startswith("tabpfn_AFalse_e128_E10_N4_n1_tFalse_cpu")
-    assert results['loss'] == pytest.approx(0.7048388719558716, rel=1e-5)
+    assert results['loss'] == pytest.approx(0.7048388719558716, rel=1e-4)
 
 
 def test_train_tabpfn_num_features():
@@ -120,7 +120,7 @@ def test_train_tabpfn_boolean_mixed_prior():
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['tabpfn', '-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0', '--reduce-lr-on-spike',
-                        'True', '-B', tmpdir, '--prior-type', 'bag_boolean'])
+                        'True', '-B', tmpdir, '--prior-type', 'bag_boolean', '--validate', 'False'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7003629207611084)

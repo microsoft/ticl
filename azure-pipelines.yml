@@ -23,7 +23,7 @@ steps:
     conda activate mothernet
     echo "Running tests..."
     ls
-    pytest -sv mothernet/tests/
+    pytest -sv mothernet/tests/ --durations 40
   displayName: 'Run tests'
 
 - task: Cache@2

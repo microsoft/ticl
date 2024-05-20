@@ -44,7 +44,7 @@ def old_remove_outliers(X, n_sigma=4, normalize_positions=-1):
 
 
 def test_outlier_detection():
-    test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids)
+    test_datasets, cc_test_datasets_multiclass_df = load_openml_list(open_cc_dids, classification=True)
 
     for dataset in test_datasets:
         xs = dataset[1].unsqueeze(1)

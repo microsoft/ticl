@@ -67,10 +67,11 @@ class MotherNet(MLPModelPredictor):
                  input_normalization=False, init_method=None, pre_norm=False,
                  activation='gelu', recompute_attn=False,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_type="output_attention", predicted_hidden_layer_size=None,
-                 decoder_embed_dim=2048,
+                 decoder_embed_dim=2048, classification_task=True,
                  decoder_hidden_layers=1, decoder_hidden_size=None, predicted_hidden_layers=1, weight_embedding_rank=None, y_encoder=None,
                  low_rank_weights=False, tabpfn_zero_weights=True, decoder_activation="relu", predicted_activation="relu"):
         super().__init__()
+        self.classification_task = classification_task
         # decoder activation = "relu" is legacy behavior
         nhid = emsize * nhid_factor
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,

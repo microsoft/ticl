@@ -81,9 +81,13 @@ class AdditiveModelDecoder(nn.Module):
             shape_functions = res.reshape(batch_size, -1, self.n_bins, self.n_out)
             biases = None
         else:
-            assert res.shape[1] == self.num_output_layer_weights
-            shape_functions = res[:, :-self.n_out].reshape(batch_size, self.n_features, self.n_bins, self.n_out)
-            biases = res[:, -self.n_out:]
+            if self.biattention:
+                shape_functions = res.reshape(batch_size, -1, self.n_bins, self.n_out)
+                biases = None
+            else:
+                assert res.shape[1] == self.num_output_layer_weights
+                shape_functions = res[:, :-self.n_out].reshape(batch_size, self.n_features, self.n_bins, self.n_out)
+                biases = res[:, -self.n_out:]
         if not self.biattention:
             assert shape_functions.shape == (batch_size, self.n_features, self.n_bins, self.n_out)
             assert biases.shape == (batch_size, self.n_out)
@@ -211,7 +215,14 @@ class SummaryLayer(nn.Module):
     def forward(self, x, y_src):
         if x.shape[0] != 0:
             if self.decoder_type == "output_attention":
-                res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0].squeeze(0)
+                if x.ndim == 3:
+                    res = self.output_layer(self.query.repeat(1, x.shape[1], 1), x, x, need_weights=False)[0].squeeze(0)
+                elif x.ndim == 4:
+                    x_flat = x.reshape(x.shape[0], -1, x.shape[3])
+                    res = self.output_layer(self.query.repeat(1, x_flat.shape[1], 1), x_flat, x_flat, need_weights=False)[0]
+                    res = res.reshape(x.shape[1], x.shape[2], -1)
+                else:
+                    raise ValueError(f"Unknown x shape: {x.shape}")
             elif self.decoder_type == "special_token":
                 res = self.output_layer(x[[0]], x[1:], x[1:], need_weights=False)[0]
             elif self.decoder_type == "special_token_simple":
@@ -236,7 +247,6 @@ class SummaryLayer(nn.Module):
                     counts = torch.zeros(self.n_out, x.shape[1], device=x.device)
                     indices = y_src
                 elif x.ndim == 4:
-                    # doing feature attention, need to also expand for features
                     indices = y_src.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, x.shape[2], self.emsize)
                     sums = torch.zeros(self.n_out, x.shape[1], x.shape[2], self.emsize, device=x.device)
                     sums.scatter_add_(0, indices, x)
@@ -289,9 +299,14 @@ class MLPModelDecoder(nn.Module):
 
         self.predicted_hidden_layers = predicted_hidden_layers
         self.summary_layer = SummaryLayer(emsize=emsize, n_out=n_out, decoder_type=decoder_type, embed_dim=embed_dim, nhead=nhead)
-
+        mlp_in_size = self.summary_layer.out_size
         if self.predicted_hidden_layers == 0:
-            self.num_output_layer_weights =  n_out * (1 + self.in_size)
+            if decoder_type in ["class_tokens", "class_average"]:
+                # class convolutional
+                self.num_output_layer_weights = 1 + self.in_size
+                mlp_in_size = emsize
+            else:
+                self.num_output_layer_weights =  n_out * (1 + self.in_size)
         elif self.weight_embedding_rank is None:
             self.num_output_layer_weights = (self.predicted_hidden_layer_size + 1) * n_out + (self.in_size + 1) * self.predicted_hidden_layer_size
             if self.predicted_hidden_layers > 1:
@@ -304,15 +319,18 @@ class MLPModelDecoder(nn.Module):
                                                                                        self.weight_embedding_rank + self.predicted_hidden_layer_size)
             self.shared_weights = nn.ParameterList([nn.Parameter(torch.randn(
                 self.weight_embedding_rank, self.predicted_hidden_layer_size) / self.weight_embedding_rank) for _ in range(self.predicted_hidden_layers)])
-        self.mlp = make_decoder_mlp(self.summary_layer.out_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers,
+        self.mlp = make_decoder_mlp(mlp_in_size, hidden_size, self.num_output_layer_weights, n_layers=decoder_hidden_layers,
                                     activation=decoder_activation)
 
     def forward(self, x, y_src):
         # x is samples x batch x emsize
         hidden_size = self.predicted_hidden_layer_size
         # summary layer goes from per-sample to per-dataset representations
-        res = self.mlp(self.summary_layer(x, y_src).reshape(x.shape[1], self.summary_layer.out_size))
-        assert res.shape[1] == self.num_output_layer_weights
+        x_summary = self.summary_layer(x, y_src)
+        if self.predicted_hidden_layers != 0 or self.decoder_type != "class_average":
+            x_summary = x_summary.reshape(x.shape[1], self.summary_layer.out_size)
+        res = self.mlp(x_summary)
+        assert res.shape[-1] == self.num_output_layer_weights
 
         # let's confuse ourselves by storing them in the opposite order!
         def take_weights(res, shape):
@@ -325,10 +343,16 @@ class MLPModelDecoder(nn.Module):
             return res[:, :size].reshape(-1, *shape), res[:, size:]
 
         if self.predicted_hidden_layers == 0:
-            w, next_res = take_weights(res, (self.in_size, self.n_out))
-            b, next_res = take_weights(next_res, (self.n_out,))
-            assert next_res.shape[1] == 0
-            return (b, w), 
+            if self.decoder_type == "class_average":
+                w = res[:, :, :-1]
+                w = w.transpose(1, 2)
+                b = res[:, :, -1]
+                return (b, w),
+            else:
+                w, next_res = take_weights(res, (self.in_size, self.n_out))
+                b, next_res = take_weights(next_res, (self.n_out,))
+                assert next_res.shape[1] == 0
+                return (b, w), 
         if self.weight_embedding_rank is not None:
             second_shape = self.weight_embedding_rank
         else:

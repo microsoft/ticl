@@ -78,10 +78,13 @@ class OneHotAndLinear(nn.Linear):
         self.num_classes = num_classes
         self.emsize = emsize
 
-    def forward(self, x):
+    def forward(self, x, inference: bool = False):
         if (x == -100).any():
             pass
         y = x.squeeze().long()
+        if inference:
+            assert len(y.shape) == 1, "Inference mode only supports batch size 1"
+            y = y.unsqueeze(0)
         mask = y == -100
         y[mask] = 0
         out = torch.nn.functional.one_hot(y, self.num_classes).float()

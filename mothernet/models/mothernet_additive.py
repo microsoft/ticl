@@ -12,14 +12,15 @@ from mothernet.utils import SeqBN, get_init_method
 class MotherNetAdditive(nn.Module):
     def __init__(self, *, n_features, n_out, emsize, nhead, nhid_factor, nlayers, dropout=0.0, y_encoder_layer=None,
                  input_normalization=False, init_method=None, pre_norm=False,
-                 activation='gelu', recompute_attn=False,
+                 activation='gelu', recompute_attn=False, classification_task=True,
                  all_layers_same_init=False, efficient_eval_masking=True, decoder_embed_dim=2048, low_rank_weights=None, weight_embedding_rank=None,
                  decoder_hidden_layers=1, decoder_hidden_size=None, n_bins=64, nan_bin=False, input_bin_embedding=False,
-                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None,
+                 bin_embedding_rank=16, output_rank=16, factorized_output=False, y_encoder=None, sklearn_binning=False,
                  predicted_hidden_layer_size=None, predicted_hidden_layers=None, predicted_activation=None,
                  decoder_type=None, input_layer_norm=False, shape_attention=False, tabpfn_zero_weights=True, shape_attention_heads=1, n_shape_functions=32,
                  shape_init="constant", decoder_activation='relu', fourier_features=0, marginal_residual=False, categorical_embedding=False,):
         super().__init__()
+        self.classification_task = classification_task
         nhid = emsize * nhid_factor
         self.y_encoder = y_encoder_layer
         self.low_rank_weights = low_rank_weights  # ignored for now
@@ -54,6 +55,7 @@ class MotherNetAdditive(nn.Module):
         self.efficient_eval_masking = efficient_eval_masking
         self.n_bins = n_bins
         self.nan_bin = nan_bin
+        self.sklearn_binning = sklearn_binning
         self.n_out = n_out
         self.nhid = nhid
         self.input_bin_embedding = input_bin_embedding
@@ -97,7 +99,7 @@ class MotherNetAdditive(nn.Module):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         _, x_src_org, y_src_org = src
-        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin,
+        X_onehot, _ = bin_data(x_src_org, n_bins=self.n_bins, nan_bin=self.nan_bin, sklearn_binning=self.sklearn_binning,
                                single_eval_pos=single_eval_pos)
         X_onehot = X_onehot.float()
         if self.input_layer_norm:

@@ -99,6 +99,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
     transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
     transformer.add_argument('--pre-norm', action='store_true')
+    transformer.add_argument('--classification-task', type=str2bool, help='Whether to use classification or regression.')
     transformer.set_defaults(**config['transformer'])
 
     if model_type in ['baam', 'batabpfn']:
@@ -128,8 +129,9 @@ def argparser_from_config(parser, description="Train Mothernet"):
         additive.add_argument('--bin-embedding-rank', help="Rank of bin embedding", type=int)
         additive.add_argument('--fourier-features', help="Number of Fourier features to add per feature. A value of 0 means off.", type=int)
         additive.add_argument('--n-bins', help="Number of bins", type=int)
-        additive.add_argument('--nan-bin', help="Whether to use the last bin to denote a nan value.", type=bool)
-        additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=bool)
+        additive.add_argument('--nan-bin', help="Whether to use the last bin to denote a nan value.", type=str2bool)
+        additive.add_argument('--sklearn-binning', help="Whether to bin the features with less num bins features using sklearn method.", type=str2bool)
+        additive.add_argument('--categorical-embedding', help="Whether to embed the categorical features using a separate embedding", type=str2bool)
         additive.add_argument('--marginal-residual', help="Whether to learn the residual of the marginals. 'output', 'decoder' or 'none'.", type=str)
         additive.add_argument('--factorized-output', help="whether to use a factorized output", type=str2bool)
         additive.add_argument('--output-rank', help="Rank of output in factorized output", type=int)
@@ -163,7 +165,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     classification_prior.add_argument('--max-num-classes', help="Maximum number of classes. 0 means regression.", type=int)
     classification_prior.add_argument('--nan-prob-no-reason', help="NaN probability missing at random.", type=float)
     classification_prior.add_argument('--nan-prob-a-reason', help="NaN probability missing not at random.", type=float)
-
+    classification_prior.add_argument('--categorical-feature-p', help="Categorical feature probability.", type=float)
     classification_prior.add_argument('--feature-curriculum', help="Whether to use a curriculum for number of features", type=str2bool)
     classification_prior.set_defaults(**config['prior']['classification'])
 

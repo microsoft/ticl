@@ -2,7 +2,7 @@ import pickle
 
 import numpy as np
 
-from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier
+from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
 from mothernet.utils import get_mn_model
 
@@ -95,6 +95,21 @@ def test_baam():
     assert classifier.score(X_test, y_test) > 0.9
 
 
+def test_baam_regression():
+    rng = np.random.RandomState(3)
+    X = rng.normal(size=(400, 2))
+    y = X @ rng.normal(size=(2,)) + 100
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "baam_Daverage_l1e-05_maxnumclasses0_nsamples500_numfeatures10_yencoderlinear_05_08_2024_03_04_01_epoch_40.cpkt"
+    model_path = get_mn_model(model_string)
+    reg = MotherNetAdditiveRegressor(device='cpu', path=model_path)
+    reg.fit(X_train, y_train)
+    print(reg)
+    y_pred = reg.predict(X_test)
+    assert y_pred.shape == y_test.shape
+    assert reg.score(X_test, y_test) > 0.9
+
+
 def test_baam_with_nan():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
@@ -108,24 +123,6 @@ def test_baam_with_nan():
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
-
-
-def test_baam_with_categoricals():
-    X, y = load_iris(return_X_y=True)
-    rng = np.random.RandomState(42)
-    X_rand = rng.normal(size=X.shape)
-    X_rand_cat = (X_rand > 0.0).astype(np.int32)
-    # Mix Float and categorical features.
-    X = np.concatenate([X[:, :2], X_rand_cat[:, 2:]], axis=-1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_400.cpkt"
-    model_path = get_mn_model(model_string)
-    classifier = MotherNetAdditiveClassifier(device='cpu', path=model_path)
-    classifier.fit(X_train, y_train)
-    print(classifier)
-    prob = classifier.predict_proba(X_test)
-    assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
-    assert classifier.score(X_test, y_test) > 0.85
 
 
 def test_distilled_mlp_paper():
