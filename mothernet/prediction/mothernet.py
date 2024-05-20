@@ -167,17 +167,13 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu", config=None):
-    X_train, X_test = np.array(X_train, dtype=float), np.array(X_test, dtype=float)
+def predict_with_mlp_model(train_mean, train_std, X_test, layers, scale=True, inference_device="cpu", config=None):
     if inference_device == "cpu":
-        mean = np.nanmean(X_train, axis=0)
-        std = np.nanstd(X_train, axis=0, ddof=1) + .000001
+        X_test = np.array(X_test, dtype=float)
         # FIXME replacing nan with 0 as in TabPFN
-        X_train = np.nan_to_num(X_train, 0)
         X_test = np.nan_to_num(X_test, 0)
         if scale:
-            std[np.isnan(std)] = 1
-            X_test_scaled = (X_test - mean) / std
+            X_test_scaled = (X_test - train_mean) / train_std
         else:
             X_test_scaled = X_test
         out = np.clip(X_test_scaled, a_min=-100, a_max=100)
@@ -198,16 +194,14 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
         from scipy.special import softmax
         return softmax(out / .8, axis=1)
     elif "cuda" in inference_device:
-        mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
-        std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
+        mean = torch.Tensor(train_mean).to(inference_device)
+        std = torch.Tensor(train_std).to(inference_device)
         # FIXME replacing nan with 0 as in TabPFN
-        X_train = np.nan_to_num(X_train, 0)
-        X_test = np.nan_to_num(X_test, 0)
-        std[torch.isnan(std)] = 1
+        X_test = torch.Tensor(X_test).to(inference_device).nan_to_num(0)
         if scale:
-            X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
+            X_test_scaled = (X_test - mean) / std
         else:
-            X_test_scaled = torch.Tensor(X_test).to(inference_device)
+            X_test_scaled = X_test
         out = torch.clamp(X_test_scaled, min=-100, max=100)
         for i, (b, w) in enumerate(layers):
             out = torch.matmul(out, w) + b
@@ -264,10 +258,14 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
             *lower_layers, b_last, w_last = layers
             self.parameters_ = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
+        self.mean_ = np.nanmean(X, axis=0)
+        self.std_ = np.nanstd(X, axis=0, ddof=1) + .000001
+        self.std_[np.isnan(self.std_)] = 1
+
         return self
 
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
+        return predict_with_mlp_model(self.mean_, self.std_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
