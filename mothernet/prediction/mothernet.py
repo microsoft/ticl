@@ -422,9 +422,12 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
                 X_cat = X[:, mask]
                 X_cont = X[:, ~mask]
                 X_cat = cat_processing[0].fit_transform(X_cat, y)
-                for step in cont_processing:
-                    X_cont = step.fit_transform(X_cont, y)
-                Xt = np.concatenate([X_cat, X_cont], axis=1)
+                if X_cont.shape[1] > 0:
+                    for step in cont_processing:
+                        X_cont = step.fit_transform(X_cont, y)
+                    Xt = np.concatenate([X_cat, X_cont], axis=1)
+                else:
+                    Xt = X_cat
                 for step in pipe:
                     Xt = step.fit_transform(Xt, y)
             else:
@@ -448,9 +451,12 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
                 X_cat = X[:, mask]
                 X_cont = X[:, ~mask]
                 X_cat = cat_processing[0].transform(X_cat)
-                for step in cont_processing:
-                    X_cont = step.transform(X_cont)
-                Xt = np.concatenate([X_cat, X_cont], axis=1)
+                if X_cont.shape[1] > 0:
+                    for step in cont_processing:
+                        X_cont = step.transform(X_cont)
+                    Xt = np.concatenate([X_cat, X_cont], axis=1)
+                else:
+                    Xt = X_cat
                 for step in pipe:
                     Xt = step.transform(Xt)
             else:
