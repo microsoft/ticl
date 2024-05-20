@@ -174,7 +174,8 @@ def eval_on_datasets(task_type, model, model_name, datasets, eval_positions, max
     elif isinstance(model, BaseEstimator):
         model_callable = partial(transformer_metric, classifier=model)
         device_param = [v for k, v in model.get_params().items() if "device" in k]
-        device = device_param[0] if len(device_param) > 0 else "cpu"
+        if device == "auto":
+            device = device_param[0] if len(device_param) > 0 else "cpu"
     else:
         raise ValueError(f"Got model {model} of type {type(model)} which is not callable or a BaseEstimator")
     print(f"evaluating {model_name} on {device}")
