@@ -258,7 +258,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
             *lower_layers, b_last, w_last = layers
             self.parameters_ = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
-        self.mean_ = np.nanmean(X, axis=0)
+        self.mean_ = np.nan_to_num(np.nanmean(X, axis=0), 0)
         self.std_ = np.nanstd(X, axis=0, ddof=1) + .000001
         self.std_[np.isnan(self.std_)] = 1
 
@@ -387,7 +387,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
             use_power_transformer = [True, False]
         else:
             [False]
-        use_onehot = [True, False] if self.onehot else [False]
+        use_onehot = [True, False] if self.onehot and self.cat_features is not None and len(self.cat_features) else [False]
         feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
         label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
         shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer, use_onehot))
@@ -396,42 +396,60 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         estimators = []
 
         for label_shift, feature_shift, power_transformer, onehot in shifts:
-            estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
-            cont_processing, cat_processing = [], []
-            if power_transformer == "quantile":
-                cont_processing.append(QuantileTransformer())
-            elif power_transformer:
-                cont_processing.extend([VarianceThreshold(), StandardScaler(), PowerTransformer()])
+            clf = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
+            estimators.append((power_transformer, onehot, clf))
 
-            if onehot and self.cat_features is not None and len(self.cat_features):
-                ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                    sparse_output=False)
-                cat_processing = [ohe]
-                pipe = [SimpleImputer(strategy="constant", fill_value=0), SelectKBest(k=100)]
+            # cont_processing, cat_processing = [], []
+            # if power_transformer == "quantile":
+            #     cont_processing.append(QuantileTransformer())
+            # elif power_transformer:
+            #     raise ValueError()
+
+            # if onehot and self.cat_features is not None and len(self.cat_features):
+                
+            #     cat_processing = [ohe]
+            #     pipe = [SimpleImputer(strategy="constant", fill_value=0), ]
+            # else:
+            #     pipe = cont_processing
+
+        if self.cat_features is not None and len(self.cat_features):
+            mask = np.zeros(X.shape[1], dtype=bool)
+            mask[self.cat_features] = True
+            self.cat_mask_ = mask
+            X_cat = X[:, mask]
+            X_cont = X[:, ~mask]
+            self.ohe_ = OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse_output=False)
+            X_cat_ohe = self.ohe_.fit_transform(X_cat)
+        else:
+            X_cont = X
+            X_cat = None
+
+        if X_cont.shape[1] > 0:
+            self.quantile_ = QuantileTransformer()
+            X_cont_quantile = self.quantile_.fit_transform(X_cont)
+
+        self.estimators_ = []
+        for power_transformer, onehot, clf in estimators:
+            if X_cont.shape[1] == 0:
+                X_preprocessed = X_cat_ohe
             else:
-                pipe = cont_processing + [SimpleImputer(strategy="constant", fill_value=0)]
-            estimators.append((pipe, cat_processing, cont_processing, estimator))
-        self.estimators_ = estimators
-        for pipe, cat_processing, cont_processing, estimator in self.estimators_:
-            Xt = X
-            if len(cat_processing) > 0:
-                mask = np.zeros(X.shape[1], dtype=bool)
-                mask[self.cat_features] = True
-                X_cat = X[:, mask]
-                X_cont = X[:, ~mask]
-                X_cat = cat_processing[0].fit_transform(X_cat, y)
-                if X_cont.shape[1] > 0:
-                    for step in cont_processing:
-                        X_cont = step.fit_transform(X_cont, y)
-                    Xt = np.concatenate([X_cat, X_cont], axis=1)
+                if power_transformer:
+                    X_cont_preprocessed = X_cont_quantile
                 else:
-                    Xt = X_cat
-                for step in pipe:
-                    Xt = step.fit_transform(Xt, y)
-            else:
-                for step in pipe:
-                    Xt = step.fit_transform(Xt)
-            estimator.fit(Xt, y)
+                    X_cont_preprocessed = X_cont
+                if onehot:
+                    X_preprocessed = np.concatenate([X_cat_ohe, X_cont_preprocessed], axis=1)
+                elif X_cat is not None:
+                    X_preprocessed = np.concatenate([X_cat, X_cont_preprocessed], axis=1)
+                else:
+                    X_preprocessed = X_cont_preprocessed
+            skb = None
+            if X_preprocessed.shape[1] > 100:
+                skb = SelectKBest(k=100)
+                X_preprocessed = skb.fit_transform(np.nan_to_num(X_preprocessed, 0), y)
+            clf.fit(X_preprocessed, y)
+            self.estimators_.append((power_transformer, onehot, skb, clf))
+
         return self
 
     @property
@@ -441,27 +459,34 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X):
         X = np.array(X)
         predicted_probas = []
-        for pipe, cat_processing, cont_processing, estimator in self.estimators_:
-            Xt = X
-            if len(cat_processing) > 0:
-                mask = np.zeros(X.shape[1], dtype=bool)
-                mask[self.cat_features] = True
-                X_cat = X[:, mask]
-                X_cont = X[:, ~mask]
-                X_cat = cat_processing[0].transform(X_cat)
-                if X_cont.shape[1] > 0:
-                    for step in cont_processing:
-                        X_cont = step.transform(X_cont)
-                    Xt = np.concatenate([X_cat, X_cont], axis=1)
-                else:
-                    Xt = X_cat
-                for step in pipe:
-                    Xt = step.transform(Xt)
-            else:
-                for step in pipe:
-                    Xt = step.transform(Xt)
+        if self.cat_features is not None and len(self.cat_features):
+            X_cat = X[:, self.cat_mask_]
+            X_cont = X[:, ~self.cat_mask_]
+            X_cat_ohe = self.ohe_.transform(X_cat)
+        else:
+            X_cont = X
+            X_cat = None
 
-            predicted_probas.append(estimator.predict_proba(Xt))
+        if X_cont.shape[1] > 0:
+            X_cont_quantile = self.quantile_.transform(X_cont)
+
+        for power_transformer, onehot, skb, clf in self.estimators_:
+            if X_cont.shape[1] == 0:
+                X_preprocessed = X_cat_ohe
+            else:
+                if power_transformer:
+                    X_cont_preprocessed = X_cont_quantile
+                else:
+                    X_cont_preprocessed = X_cont
+                if onehot:
+                    X_preprocessed = np.concatenate([X_cat_ohe, X_cont_preprocessed], axis=1)
+                elif X_cat is not None:
+                    X_preprocessed = np.concatenate([X_cat, X_cont_preprocessed], axis=1)
+                else:
+                    X_preprocessed = X_cont_preprocessed
+            if X_preprocessed.shape[1] > 100:
+                X_preprocessed = skb.transform(np.nan_to_num(X_preprocessed, 0))
+            predicted_probas.append(clf.predict_proba(X_preprocessed))
         return np.mean(predicted_probas, axis=0)
 
     def predict(self, X):
