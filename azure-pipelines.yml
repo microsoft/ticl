@@ -28,5 +28,5 @@ steps:
 
 - task: Cache@2
   inputs:
-    key: '"2/28/2024" | "first_additive" | "not_a_filename"'
+    key: '"6/04/2024" | "first_additive" | "not_a_filename"'
     path: "mothernet/models_diff/"
