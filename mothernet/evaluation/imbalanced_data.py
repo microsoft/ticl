@@ -34,22 +34,6 @@ def eval_gamformer_and_ebm(dataset_name, X, y, X_test, y_test, column_names, ct=
     print(record)
     record.update(summary_record)
     records.append(record)
-
-    # No pipeline for BAAM
-    is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
-    cat_cols = X.columns.values[is_cat]
-    num_cols = X.columns.values[~is_cat]
-
-    cat_ohe_step = ('ohe', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1, dtype='int'))
-
-    cat_pipe = Pipeline([cat_ohe_step])
-    num_pipe = Pipeline([('identity', FunctionTransformer())])
-    transformers = [
-        ('cat', cat_pipe, cat_cols),
-        ('num', num_pipe, num_cols)
-    ]
-    ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
-
     # No pipeline for BAAM
     model_string = "baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
     model_path = get_mn_model(model_string)
@@ -63,7 +47,7 @@ def eval_gamformer_and_ebm(dataset_name, X, y, X_test, y_test, column_names, ct=
     baam = MotherNetAdditiveClassifier(device='cpu', path=model_path)
     record = process_model(
         baam, 'baam',
-        X.to_numpy().astype(np.float32), y, X_test.to_numpy().astype(np.float32), y_test,
+        X, y, X_test, y_test,
         n_splits=n_splits, n_jobs=1, record_shape_functions=record_shape_functions,
         column_names=column_names
     )

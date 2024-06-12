@@ -1,22 +1,22 @@
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import gaussian_kde
-import matplotlib.lines as mlines
-
 
 plt.rcParams["figure.constrained_layout.use"] = True
 
 
-def plot_individual_shape_function(models, data_density, dataset_name, feature_names=None, X_train=None, ):
+def plot_individual_shape_function(models, data_density, dataset_name, feature_names=None, X_train=None):
     colors = {'GAMformer': 'red', 'EBM': 'blue'}
     for feature_idx, feature_name in enumerate(feature_names):
-        fig, axs_baam = plt.subplots(1, 1, figsize=(2.5 * 2, 2.2 * 1))
+        print(f'Plotting shape function for feature {feature_name}')
+        fig, axs_baam = plt.subplots(1, 1, figsize=(2. * 2, 1.85 * 1))
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
         ax_density = inset_axes(axs_baam, width="100%", height="25%", loc='lower center',
                                 bbox_to_anchor=(0.0, .98, 1.0, 0.25),
                                 bbox_transform=axs_baam.transAxes)
-        if X_train[feature_name].dtype == 'O':
+        if X_train[feature_name].dtype == 'O' or len(X_train[feature_name].unique()) < 64:
             # categorical
             bars, counts = np.unique(X_train[feature_name], return_counts=True)
             bin_edges = (bars[:-1] + bars[1:]) / 2
@@ -54,24 +54,28 @@ def plot_individual_shape_function(models, data_density, dataset_name, feature_n
                 if model_name == 'GAMformer':
                     w = w[:, 1]
                 bin_edges = np.array(bin_edges)
-                if X_train[feature_name].dtype == 'O':
+                if X_train[feature_name].dtype == 'O' or len(X_train[feature_name].unique()) < 64:
                     # categorical
                     if model_name.upper() == 'EBM':
-                        bins = bin_edges[1:-1]
-                        bins = np.concatenate([[bins[0] - 1], bins, [bins[-1] + 1]])
-                        w = w - w.mean()
-                        for i in range(len(w)):
-                            ax.hlines(w[i], bins[i], bins[i + 1], color=colors[model_name],
-                                      alpha=1 / len(model['bin_edges']), lw=3, label=model_name, )
+                        if len(bin_edges) > 2:
+                            bins = bin_edges[1:-1]
+                            bins = np.concatenate([[bins[0] - 1], bins, [bins[-1] + 1]])
+                            w = w - w.mean()
+                            for i in range(len(w)):
+                                ax.hlines(w[i], bins[i], bins[i + 1], color=colors[model_name],
+                                          alpha=1 / len(model['bin_edges']), lw=3, label=model_name)
+
                     else:
                         bins, index = np.unique(bin_edges, return_index=True)
                         relevant_weights = w[index]
                         relevant_weights = relevant_weights - relevant_weights.mean()
                         custom_bin_edges = (bins[:-1] + bins[1:]) / 2
                         # Add left and right
-                        custom_bin_edges = np.concatenate([np.array([bins[0] - 0.5]), custom_bin_edges, np.array([bins[-1] + 0.5])])
+                        custom_bin_edges = np.concatenate(
+                            [np.array([bins[0] - 0.5]), custom_bin_edges, np.array([bins[-1] + 0.5])])
                         for i in range(len(relevant_weights)):
-                            ax.hlines(relevant_weights[i], custom_bin_edges[i], custom_bin_edges[i + 1], label=model_name,
+                            ax.hlines(relevant_weights[i], custom_bin_edges[i], custom_bin_edges[i + 1],
+                                      label=model_name,
                                       color=colors[model_name], alpha=1 / len(model['bin_edges']), lw=3)
                 else:
                     weights_normalized = w - w.mean(axis=-1)
@@ -112,7 +116,7 @@ def plot_individual_shape_function(models, data_density, dataset_name, feature_n
         plt.close()
 
 
-def plot_shape_function(models, feature_names=None, feature_subset=None):
+def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray, feature_names=None, feature_subset=None):
     num_classes = w.shape[2]
     num_features = len(feature_subset) if feature_subset is not None else len(bin_edges)
     if num_classes > 2:

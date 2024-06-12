@@ -10,16 +10,16 @@ import numpy as np
 import pandas as pd
 import scienceplots  # noqa
 import seaborn as sns
+from scipy.special import expit as sigmoid
 # from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 
+from mothernet.datasets import linear_correlated_logistic_regression
 from mothernet.evaluation.imbalanced_data import eval_gamformer_and_ebm
 from mothernet.evaluation.node_gam_data import DATASETS
 from mothernet.evaluation.plot_shape_function import plot_individual_shape_function
 from mothernet.prediction import MotherNetAdditiveClassifier
 from mothernet.utils import get_mn_model
-from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
-from xgboost import XGBClassifier
 
 plt.style.use(['science', 'no-latex', 'light'])
 plt.rcParams["figure.constrained_layout.use"] = True
@@ -117,25 +117,73 @@ def plot_shape_functions(model_string: str, dataset: str):
     y_train = data['y_train']
     X_test = data['X_test']
     y_test = data['y_test']
-    '''
+
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, random_state=42, train_size=0.95)
-    results = eval_gamformer_and_ebm(dataset, X_train, y_train, X_test, y_test, n_splits=3,
+    results = eval_gamformer_and_ebm(dataset, X_train, y_train, X_test, y_test, n_splits=30,
                                      column_names=data['X_train'].columns, record_shape_functions=True)
     time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     os.makedirs(f'output/{dataset}', exist_ok=True)
     pickle.dump(results, open(f"output/{dataset}/shape_function_results_{time_stamp}.pkl", "wb"))
     '''
-    results = pickle.load(open(f"/Users/siemsj/projects/mothernet/output/MIMIC2/shape_function_results_05_20_2024_00_40_33.pkl", "rb"))
+    # MIMIC-II shape functions /Users/siemsj/projects/mothernet/output/MIMIC2/shape_function_results_05_20_2024_00_40_33.pkl
+    # MIMIC-III shape functions /Users/siemsj/projects/mothernet/output/MIMIC3/shape_function_results_05_20_2024_17_48_39.pkl
+    results = pickle.load(open(f"/Users/siemsj/projects/mothernet/output/MIMIC3/shape_function_results_05_20_2024_17_48_39.pkl", "rb"))
     # Plot shape function per feature
+    feature_columns_non_constant = []
+    for feature_name in X_train.columns:
+        if len(X_train[feature_name].unique()) > 1:
+            feature_columns_non_constant.append(feature_name)
     plot_individual_shape_function(models={'EBM': {'bin_edges': results[0]['bin_edges'], 'w': results[0]['w']},
                                            'GAMformer': {'bin_edges': results[1]['bin_edges'], 'w': results[1]['w']}},
                                    data_density=results[0]['data_density'][0],
-                                   feature_names=data['X_train'].columns, X_train=X_train, dataset_name=dataset)
+                                   feature_names=feature_columns_non_constant, X_train=X_train, dataset_name=dataset)
+    '''
 
+
+def toy_datasets():
+    # logistic regression
+    column_names = [r'$x_1$', r'$x_2$', r'$x_3$']
+    X, y = linear_correlated_logistic_regression(
+        n_features=3, n_tasks=1, n_datapoints=2000, sampling_correlation=0.0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    results = eval_gamformer_and_ebm('logistic regression', X_train, y_train, X_test, y_test, n_splits=5,
+                                     column_names=column_names, record_shape_functions=True)
+    plot_individual_shape_function(models={'EBM': {'bin_edges': results[0]['bin_edges'], 'w': results[0]['w']},
+                                           'GAMformer': {'bin_edges': results[1]['bin_edges'], 'w': results[1]['w']}},
+                                   data_density=results[0]['data_density'][0],
+                                   feature_names=column_names, X_train=pd.DataFrame(X_train, columns=column_names),
+                                   dataset_name='logistic_regression')
+
+    # polynomial regression
+    column_names = [r'$x_1$', r'$x_2$']
+    X, _ = linear_correlated_logistic_regression(
+        n_features=2, n_tasks=1, n_datapoints=2000, sampling_correlation=0.0)
+    y = np.array(sigmoid(X[:, 0] + X[:, 1] ** 2) > 0.5, dtype=np.float64)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    results = eval_gamformer_and_ebm('polynomial regression', X_train, y_train, X_test, y_test, n_splits=5,
+                                     column_names=column_names, record_shape_functions=True)
+    plot_individual_shape_function(models={'EBM': {'bin_edges': results[0]['bin_edges'], 'w': results[0]['w']},
+                                           'GAMformer': {'bin_edges': results[1]['bin_edges'], 'w': results[1]['w']}},
+                                   data_density=results[0]['data_density'][0],
+                                   feature_names=column_names, X_train=pd.DataFrame(X_train, columns=column_names),
+                                   dataset_name='polynomial_regression')
 
 
 if __name__ == '__main__':
+    # Run Toy Datasets
+    toy_datasets()
+
+    # Scaling Analysis
+    scaling_analysis_train_test_points(model_string)
+    # Scaling analysis
+
+    # for dataset in ['support2']:
+    #    time_stamp = scaling_analysis(model_string, dataset.upper())
+    # plot_scaling_analysis(dataset, '05_02_2024_16_08_36')
+
+
     '''
+    # Scaling Analysis
     mimic_3 = /Users/siemsj/projects/mothernet/output/MIMIC3/scaling_analysis_results_05_18_2024_10_39_40.json
     mimic_2 = /Users/siemsj/projects/mothernet/output/MIMIC2/scaling_analysis_results_05_18_2024_09_36_58.json
     adult = /Users/siemsj/projects/mothernet/output/ADULT/scaling_analysis_results_05_18_2024_12_55_46.json
@@ -151,7 +199,6 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('mimic_2_scaling.pdf')
     '''
-
     model_string = "baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
     dataset = "MIMIC2"
     # scaling_analysis_train_test_points(model_string)

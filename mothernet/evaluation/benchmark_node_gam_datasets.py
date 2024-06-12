@@ -2,6 +2,7 @@
 import json
 import os
 import pickle
+import sys
 import time
 from datetime import datetime
 
@@ -67,7 +68,7 @@ def format_n(x):
     return "{0:.3f}".format(x)
 
 
-def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None, column_names=None,
+def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None, column_names=None, train_size=None,
                   record_shape_functions=False):
     # Evaluate model
     ss = StratifiedShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=1337)
@@ -125,7 +126,7 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n
     return record
 
 
-def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, random_state=1337, column_names=None):
+def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=None, n_splits=3, random_state=1337, column_names=None):
     if ct is None:
         is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
         cat_cols = X.columns.values[is_cat]
@@ -230,7 +231,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, ct=None, n_splits=3, ra
         ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
 
     # No pipeline for BAAM
-    model_string = "baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
+    model_string = baam_model_string
     model_path = get_mn_model(model_string)
     baam = Pipeline([
         ('ct', ct),
@@ -264,30 +265,48 @@ def benchmark_ebm_num_bins(dataset_name, max_bins: int, n_splits: int):
     return record
 
 
+
 if __name__ == '__main__':
+    import torch
+    print('Number of threads:', torch.get_num_threads())
     results = []
     n_splits = 5
 
     time_stamp = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
     os.makedirs(f"shape_functions/{time_stamp}", exist_ok=True)
 
-    for dataset_name in ['mimic2', 'mimic3', 'adult', 'income', 'churn', 'Support2',
-                         'credit', 'microsoft', 'year']:
-        dataset = load_node_gam_data(dataset_name)
-        result = benchmark_models(
-            dataset_name,
-            dataset['full']['X'], dataset['full']['y'],
-            dataset['test']['X'], dataset['test']['y'],
-            n_splits=n_splits,
-            column_names=dataset['full']['X'].columns
-        )
-        # os.makedirs(f"output/{dataset_name}", exist_ok=True)
-        # json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
-        pickle.dump(result, open(f"shape_functions/{time_stamp}/results_{dataset_name}.pkl", "wb"))
+    dataset_name = sys.argv[1]
+    dataset = load_node_gam_data(dataset_name)
+    result = benchmark_models(
+        dataset_name,
+        dataset['full']['X'], dataset['full']['y'],
+        dataset['test']['X'], dataset['test']['y'],
+        n_splits=n_splits,
+        column_names=dataset['full']['X'].columns,
+        baam_model_string="baam_categoricalfeaturep0.9_nsamples500_numfeatures20_numfeaturessamplerdouble_sample_sklearnbinningTrue_05_15_2024_20_58_13_epoch_280.cpkt"
+    )
+    import matplotlib.pyplot as plt
+    import scienceplots  # noqa
 
-        # records = [item for result in results for item in result]
-        # record_df = pd.DataFrame.from_records(records)
-        # record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
+    plt.style.use(['science', 'no-latex', 'light'])
+    plt.rcParams["figure.constrained_layout.use"] = True
+    df = pd.read_csv('/Users/siemsj/projects/mothernet/mothernet/evaluation/test_auc_normalized_per_split_gams.csv')
+    import seaborn as sns
+
+    plt.figure(figsize=(2.5, 2.0))
+    sns.boxplot(data=df, x='mean_metric', y='model',
+                order=['KNN', 'Random Forest', 'Logistic Regression', 'GAMformer', 'XGBoost', 'EBM (main effects)',
+                       'EBM (default)', 'TabPFN'])
+    plt.xlabel('ROC-AUC')
+    plt.ylabel('Model')
+    plt.savefig('roc_auc_tabpfn_datasets.pdf')
+    # os.makedirs(f"output/{dataset_name}", exist_ok=True)
+    # json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
+    pickle.dump(result, open(f"shape_functions/{time_stamp}/results_{dataset_name}.pkl", "wb"))
+
+    # records = [item for result in results for item in result]
+    # record_df = pd.DataFrame.from_records(records)
+    # record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
 
     '''
     df = pd.read_csv('ebm-perf-classification-overnight.csv')
