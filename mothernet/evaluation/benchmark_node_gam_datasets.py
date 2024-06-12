@@ -1,13 +1,11 @@
 # Adapted from https://nbviewer.org/github/interpretml/interpret/blob/develop/docs/benchmarks/ebm-classification-comparison.ipynb
-import json
 import os
-import pickle
 import sys
 import time
 from datetime import datetime
 
 import numpy as np
-import pandas as pd
+import torch
 from interpret.glassbox import ExplainableBoostingClassifier
 from pygam import LinearGAM, LogisticGAM
 from sklearn.compose import ColumnTransformer
@@ -68,7 +66,8 @@ def format_n(x):
     return "{0:.3f}".format(x)
 
 
-def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None, column_names=None, train_size=None,
+def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n_jobs=None, column_names=None,
+                  train_size=None,
                   record_shape_functions=False):
     # Evaluate model
     ss = StratifiedShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=1337)
@@ -103,30 +102,32 @@ def process_model(clf, name, X, y, X_test, y_test, n_splits=3, test_size=0.25, n
             record['bin_edges'] = [
                 dict(zip(ebm_exp.feature_names,
                          [feature['names'] for feature in ebm_exp._internal_obj['specific']])) for
-                                   ebm_exp in ebm_explanations
+                ebm_exp in ebm_explanations
             ]
             record['w'] = [
                 dict(zip(ebm_exp.feature_names,
-                                    [feature['scores'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
-                           in ebm_explanations
+                         [feature['scores'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
+                in ebm_explanations
             ]
             record['data_density'] = [
                 dict(zip(ebm_exp.feature_names,
-                                    [feature['density'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
-                           in ebm_explanations
+                         [feature['density'] for feature in ebm_exp._internal_obj['specific']])) for ebm_exp
+                in ebm_explanations
             ]
         elif isinstance(clf, MotherNetAdditiveClassifier):
             record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].bin_edges_)) for i in range(n_splits)]
             record['w'] = [dict(zip(column_names, scores['estimator'][i].w_)) for i in range(n_splits)]
         elif isinstance(clf, Pipeline) and isinstance(clf['baam'], MotherNetAdditiveClassifier):
-            record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].steps[-1][1].bin_edges_)) for i in range(n_splits)]
+            record['bin_edges'] = [dict(zip(column_names, scores['estimator'][i].steps[-1][1].bin_edges_)) for i in
+                                   range(n_splits)]
             record['w'] = [dict(zip(column_names, scores['estimator'][i].steps[-1][1].w_)) for i in range(n_splits)]
         else:
             print('Shape function not implemented for this model class.')
     return record
 
 
-def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=None, n_splits=3, random_state=1337, column_names=None):
+def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=None, n_splits=3, random_state=1337,
+                     column_names=None):
     if ct is None:
         is_cat = np.array([dt.kind == 'O' for dt in X.dtypes])
         cat_cols = X.columns.values[is_cat]
@@ -143,7 +144,6 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=N
         ct = ColumnTransformer(transformers=transformers, sparse_threshold=0)
 
     records = []
-
     summary_record = {}
     summary_record['dataset_name'] = dataset_name
     print()
@@ -153,16 +153,6 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=N
     print(summary_record)
     print()
 
-    '''
-    pipe = Pipeline([
-        ('ct', ct),
-        ('pygam', PyGAMSklearnWrapper(dataset_type='classification')),
-    ])
-    record = process_model(pipe, 'pygam', X, y, X_test, y_test, n_splits=n_splits, n_jobs=1)
-    print(record)
-    record.update(summary_record)
-    records.append(record)
-    '''
     pipe = Pipeline([
         ('ct', ct),
         ('std', StandardScaler()),
@@ -201,16 +191,8 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=N
 
     # Main effects only EBM
     ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0)
-    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits, record_shape_functions=True,
-                           column_names=column_names)
-    print(record)
-    record.update(summary_record)
-    records.append(record)
-
-    # Main effects only EBM with no outer bagging
-    ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0, outer_bags=1)
-    record = process_model(ebm_inter, 'ebm-main-effects-1-outer-bagging', X, y, X_test, y_test, n_splits=n_splits,
-                           column_names=column_names)
+    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits,
+                           record_shape_functions=True, column_names=column_names)
     print(record)
     record.update(summary_record)
     records.append(record)
@@ -253,22 +235,7 @@ def benchmark_models(dataset_name, X, y, X_test, y_test, baam_model_string, ct=N
     return records
 
 
-def benchmark_ebm_num_bins(dataset_name, max_bins: int, n_splits: int):
-    random_state = 137
-    dataset = load_node_gam_data(dataset_name)
-    X, y, X_test, y_test = dataset['full']['X'], dataset['full']['y'], dataset['test']['X'], dataset['test']['y']
-    # Main effects only EBM
-    ebm_inter = ExplainableBoostingClassifier(n_jobs=-1, random_state=random_state, interactions=0, max_bins=max_bins)
-    record = process_model(ebm_inter, 'ebm-main-effects', X, y, X_test, y_test, n_splits=n_splits)
-    record['num_bins'] = max_bins
-    print(record)
-    return record
-
-
-
 if __name__ == '__main__':
-    import torch
-    print('Number of threads:', torch.get_num_threads())
     results = []
     n_splits = 5
 
@@ -283,36 +250,5 @@ if __name__ == '__main__':
         dataset['test']['X'], dataset['test']['y'],
         n_splits=n_splits,
         column_names=dataset['full']['X'].columns,
-        baam_model_string="baam_categoricalfeaturep0.9_nsamples500_numfeatures20_numfeaturessamplerdouble_sample_sklearnbinningTrue_05_15_2024_20_58_13_epoch_280.cpkt"
+        baam_model_string="baam_nsamples500_numfeatures10_04_07_2024_17_04_53_epoch_1780.cpkt"
     )
-    import matplotlib.pyplot as plt
-    import scienceplots  # noqa
-
-    plt.style.use(['science', 'no-latex', 'light'])
-    plt.rcParams["figure.constrained_layout.use"] = True
-    df = pd.read_csv('/Users/siemsj/projects/mothernet/mothernet/evaluation/test_auc_normalized_per_split_gams.csv')
-    import seaborn as sns
-
-    plt.figure(figsize=(2.5, 2.0))
-    sns.boxplot(data=df, x='mean_metric', y='model',
-                order=['KNN', 'Random Forest', 'Logistic Regression', 'GAMformer', 'XGBoost', 'EBM (main effects)',
-                       'EBM (default)', 'TabPFN'])
-    plt.xlabel('ROC-AUC')
-    plt.ylabel('Model')
-    plt.savefig('roc_auc_tabpfn_datasets.pdf')
-    # os.makedirs(f"output/{dataset_name}", exist_ok=True)
-    # json.dump(result, open(f"output/{dataset_name}/node_gam_benchmark_results_{time_stamp}.json", "w"))
-    pickle.dump(result, open(f"shape_functions/{time_stamp}/results_{dataset_name}.pkl", "wb"))
-
-    # records = [item for result in results for item in result]
-    # record_df = pd.DataFrame.from_records(records)
-    # record_df.to_csv(f'node_gam_benchmark_results_{time_stamp}.csv')
-
-    '''
-    df = pd.read_csv('ebm-perf-classification-overnight.csv')
-    for dataset_name, df_dataset in df.groupby('dataset_name'):
-        print(f'\nDataset: {dataset_name}')
-        for method, df_method in df_dataset.groupby('model_name'):
-            l = eval(df_method['test_node_gam_scores'].to_list()[0])
-            print(f'{method}: {np.mean(l):.5f} +- {np.std(l) / np.sqrt(len(l)):.5f}')
-    '''
