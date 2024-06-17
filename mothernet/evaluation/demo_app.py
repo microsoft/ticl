@@ -84,7 +84,7 @@ ct = make_column_transformer((OneHotEncoder(sparse_output=False, max_categories=
 model_string = "baam_H512_Dclass_average_e128_nsamples500_numfeatures20_padzerosFalse_03_14_2024_15_03_22_epoch_1520.cpkt"
 model_path = get_mn_model(model_string)
 
-additive = MotherNetAdditiveClassifier(path=model_path, device="cuda:1")
+additive = MotherNetAdditiveClassifier(path=model_path, device="cuda:3")
 # calling fit to read the model to memory
 iris = load_iris()
 additive.fit(iris.data, iris.target)
@@ -161,7 +161,7 @@ slice_label = Div(text="Slice By", margin=(10, 2, 0, 20))
 value_label = Div(text="Value", margin=(10, 2, 0, 20))
 some_output = Div(text="", margin=(10, 2, 0, 20))
 
-checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GammaNet'], active=[])
+checkbox_button_group = CheckboxButtonGroup(labels=['EBM', 'GAMformer'], active=[])
 
 
 def pick_feature(event):
