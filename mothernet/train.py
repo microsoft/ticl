@@ -29,14 +29,16 @@ def eval_criterion(criterion, targets, output, device, n_out):
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
 
 
-def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out):
+def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, progress_bar=False):
     model.train()  # Turn on the train mode
     total_loss = 0.
     nan_steps = 0
     ignore_steps = 0
     steps_per_epoch = len(dl)
     assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
-    for batch, (data, targets, single_eval_pos) in enumerate(tqdm(dl)):
+    if progress_bar:
+        dl = tqdm(dl)
+    for batch, (data, targets, single_eval_pos) in enumerate(dl):
         if using_dist and not (batch % aggregate_k_gradients == aggregate_k_gradients - 1):
             cm = model.no_sync()
         else:
@@ -75,7 +77,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
           device='cuda:0',
           aggregate_k_gradients=1, verbose=True, epoch_callback=None, train_mixed_precision=False, adaptive_batch_size=False,
           learning_rate_schedule='cosine', lr_decay=0.99, adam_beta1=0.9, reduce_lr_on_spike=False,
-          spike_tolerance=4
+          spike_tolerance=4, progress_bar=False,
           ):
     using_dist, rank, device = init_dist(device)
     if rank == 0 and verbose:
@@ -148,7 +150,8 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
-            new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out)
+            new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out,
+                                                             progress_bar=progress_bar)
 
             total_loss = new_loss
             if spike_scheduler is not None:
