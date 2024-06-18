@@ -47,7 +47,7 @@ class TabPFN(nn.Module):
                     nn.init.zeros_(attn.out_proj.weight)
                     nn.init.zeros_(attn.out_proj.bias)
 
-    def forward(self, src, src_mask=None, single_eval_pos=None):
+    def forward(self, src, single_eval_pos=None):
         assert isinstance(src, tuple), 'inputs (src) have to be given as (x,y) or (style,x,y) tuple'
 
         if len(src) == 3:  # style is given
@@ -56,13 +56,11 @@ class TabPFN(nn.Module):
             x_src, y_src = src
         x_src = self.encoder(x_src)
         y_src = self.y_encoder(y_src.unsqueeze(-1) if len(y_src.shape) < len(x_src.shape) else y_src)
-
-        if src_mask is None:
-            full_len = len(x_src)
-            if self.efficient_eval_masking:
-                src_mask = single_eval_pos
-            else:
-                src_mask = self.generate_D_q_matrix(full_len, len(x_src) - single_eval_pos).to(x_src.device)
+        full_len = len(x_src)
+        if self.efficient_eval_masking:
+            src_mask = single_eval_pos
+        else:
+            src_mask = self.generate_D_q_matrix(full_len, len(x_src) - single_eval_pos).to(x_src.device)
 
         train_x = x_src[:single_eval_pos] + y_src[:single_eval_pos]
         src = torch.cat([train_x, x_src[single_eval_pos:]], 0)
