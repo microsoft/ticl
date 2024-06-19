@@ -63,7 +63,6 @@ def bin_data(data, n_bins, nan_bin=False, single_eval_pos=None, sklearn_binning:
 
         batch_size, num_features = data_nona.shape[1], data_nona.shape[0]
 
-        old_bin_edges = bin_edges.clone().detach()
         if sklearn_binning:
             sklearn_like_binning(bin_edges, n_bins, batch_size, num_features, data_nona)
 
