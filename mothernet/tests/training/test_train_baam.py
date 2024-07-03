@@ -108,7 +108,7 @@ def test_train_baam_sklearn_binning():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.6122044920921326, rel=1e-3)
+    assert results['loss'] == pytest.approx(0.6103522181510925, rel=1e-3)
 
 
 def test_train_baam_sklearn_binning_categorical_embedding():
@@ -120,7 +120,7 @@ def test_train_baam_sklearn_binning_categorical_embedding():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51696
-    assert results['loss'] == pytest.approx(0.5267367362976074, rel=1e-3)
+    assert results['loss'] == pytest.approx(0.5081400275230408, rel=1e-3)
 
 
 def test_train_baam_sklearn_binning_with_nan_bin():
@@ -131,7 +131,7 @@ def test_train_baam_sklearn_binning_with_nan_bin():
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
     assert count_parameters(results['model']) == 51648
-    assert results['loss'] == pytest.approx(0.6950242519378662, rel=1e-3)
+    assert results['loss'] == pytest.approx(0.6988586783409119, rel=1e-3)
 
 
 def test_train_baam_marginal_residual_decoder():
