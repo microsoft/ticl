@@ -8,10 +8,14 @@ from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.feature_selection import SelectKBest
+from sklearn.compose import make_column_transformer
 
 from mothernet.model_builder import load_model
-from mothernet.utils import normalize_by_used_features_f, normalize_data
+from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
+from mothernet.evaluation.baselines.torch_mlp import TorchMLP, NeuralNetwork
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):
@@ -29,7 +33,7 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
         eval_xs_, X_train.shape[-1], max_features)
     x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
 
-    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
+    x_src = model.encoder(x_all_torch.unsqueeze(1))
     y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
     train_x = x_src + y_src
     output = model.transformer_encoder(train_x)
@@ -42,16 +46,25 @@ def extract_linear_model(model, X_train, y_train, device="cpu"):
     return total_weights.detach().cpu().numpy() / (n_features / max_features), total_biases.detach().cpu().numpy()
 
 
-def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
+def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_device="cpu", scale=True):
     if "cuda" in inference_device and device == "cpu":
         raise ValueError("Cannot run inference on cuda when model is on cpu")
-    max_features = 100
+    try:
+        max_features = config['prior']['num_features']
+    except KeyError:
+        max_features = 100
     eval_position = X_train.shape[0]
     n_classes = len(np.unique(y_train))
     n_features = X_train.shape[1]
+    if torch.is_tensor(X_train):
+        xs = X_train.to(device)
+    else:
+        xs = torch.Tensor(X_train.astype(float)).to(device)
+    if torch.is_tensor(y_train):
+        ys = y_train.to(device)
+    else:
+        ys = torch.Tensor(y_train.astype(float)).to(device)
 
-    ys = torch.Tensor(y_train).to(device)
-    xs = torch.Tensor(X_train).to(device)
     if scale:
         eval_xs_ = normalize_data(xs, eval_position)
     else:
@@ -59,16 +72,23 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     eval_xs = normalize_by_used_features_f(
         eval_xs_, X_train.shape[-1], max_features)
-    if X_train.shape[1] > 100:
-        raise ValueError("Cannot run inference on data with more than 100 features")
-    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], 100 - X_train.shape[1]), device=device)], axis=1)
+    if X_train.shape[1] > max_features:
+        raise ValueError(f"Cannot run inference on data with more than {max_features} features")
+    x_all_torch = torch.concat([eval_xs, torch.zeros((X_train.shape[0], max_features - X_train.shape[1]), device=device)], axis=1)
+    x_src = model.encoder(x_all_torch.unsqueeze(1))
 
-    x_src = model.encoder(x_all_torch.unsqueeze(1)[:len(X_train)])
-    y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
-    train_x = x_src + y_src
+    if model.y_encoder is not None:
+        y_src = model.y_encoder(ys.unsqueeze(1).unsqueeze(-1))
+        train_x = x_src + y_src
+    else:
+        train_x = x_src
+
     if hasattr(model, "transformer_encoder"):
         # tabpfn mlp model maker
         output = model.transformer_encoder(train_x)
+    elif hasattr(model, "ssm"):
+        # ssm model maker
+        output = model.ssm(train_x)
     else:
         # perceiver
         data = rearrange(train_x, 'n b d -> b n d')
@@ -91,7 +111,7 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
 
     w1_data_space = w1_data_space_prenorm / (n_features / max_features)
 
-    if model.decoder.weight_embedding_rank is not None:
+    if model.decoder.weight_embedding_rank is not None and len(layers):
         w1_data_space = torch.matmul(w1_data_space, model.decoder.shared_weights[0])
 
     layers_result = [(b1_data_space, w1_data_space)]
@@ -102,7 +122,10 @@ def extract_mlp_model(model, X_train, y_train, device="cpu", inference_device="c
         layers_result.append((b.squeeze(), w.squeeze()))
 
     # remove extra classes on output layer
-    layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
+    if len(layers):
+        layers_result.append((layers[-1][0].squeeze()[:n_classes], layers[-1][1].squeeze()[:, :n_classes]))
+    else:
+        layers_result = [(b1_data_space[:n_classes], w1_data_space[:, :n_classes])]
 
     if inference_device == "cpu":
         def detach(x):
@@ -148,7 +171,8 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu"):
+def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu", config=None):
+    X_train, X_test = np.array(X_train, dtype=float), np.array(X_test, dtype=float)
     if inference_device == "cpu":
         mean = np.nanmean(X_train, axis=0)
         std = np.nanstd(X_train, axis=0, ddof=1) + .000001
@@ -164,6 +188,12 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
         for i, (b, w) in enumerate(layers):
             out = np.dot(out, w) + b
             if i != len(layers) - 1:
+                try:
+                    activation = config['mothernet']['predicted_activation']
+                except (KeyError, TypeError):
+                    activation = "relu"
+                if activation != "relu":
+                    raise ValueError(f"Only ReLU activation supported, got {activation}")
                 out = np.maximum(out, 0)
         if np.isnan(out).any():
             print("NAN")
@@ -193,26 +223,44 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
 
 
 class MotherNetClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu"):
+    def __init__(self, path=None, device="cpu", label_offset=0, scale=True, inference_device="cpu", model=None, config=None):
         self.path = path
         self.device = device
         self.label_offset = label_offset
         self.inference_device = inference_device
         self.scale = scale
+        if model is not None and path is not None:
+            raise ValueError("Only one of path or model must be provided")
+        if model is not None and config is None:
+            raise ValueError("config must be provided if model is provided")
+        self.model = model
+        self.config = config
+
+        if path is None and model is None:
+            model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+            path = get_mn_model(model_string)
+        self.path = path
 
     def fit(self, X, y):
         self.X_train_ = X
         le = LabelEncoder()
         y = le.fit_transform(y)
-        model, config = load_model(self.path, device=self.device)
+        if len(le.classes_) > 10:
+            raise ValueError(f"Only 10 classes supported, found {len(le.classes_)}")
+        if self.model is not None:
+            model = self.model
+            config = self.config
+        else:
+            model, config = load_model(self.path, device=self.device)
+            self.config = config
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] not in ["mlp", "mothernet"]:
+        if config['model_type'] not in ["mlp", "mothernet", 'ssm_mothernet']:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         n_classes = len(le.classes_)
         indices = np.mod(np.arange(n_classes) + self.label_offset, n_classes)
-        layers = extract_mlp_model(model, X, np.mod(y + self.label_offset, n_classes), device=self.device,
+        layers = extract_mlp_model(model, config, X, np.mod(y + self.label_offset, n_classes), device=self.device,
                                    inference_device=self.inference_device, scale=self.scale)
         if self.label_offset == 0:
             self.parameters_ = layers
@@ -229,28 +277,62 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-class PermutationsMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator):
-        self.base_estimator = base_estimator
+class MotherNetInitMLPClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, path=None, device="cuda", learning_rate=1e-3, n_epochs=0, verbose=0, weight_decay=0, dropout_rate=0):
+        self.path = path
+        self.device = device
+        if path is None:
+            model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+            path = get_mn_model(model_string)
+        self.path = path
+        self.learning_rate = learning_rate
+        self.n_epochs = n_epochs
+        self.verbose = verbose
+        self.weight_decay = weight_decay
+        self.dropout_rate = dropout_rate
 
     def fit(self, X, y):
-        estimators = []
-        for i in range(len(np.unique(y))):
-            estimator = clone(self.base_estimator).set_params(label_offset=i)
-            estimators.append((str(i), estimator))
-        self.vc_ = VotingClassifier(estimators, voting='soft')
-        self.vc_.fit(X, y)
+        self.X_train_ = X
+        le = LabelEncoder()
+        y = le.fit_transform(y)
+        if len(le.classes_) > 10:
+            raise ValueError(f"Only 10 classes supported, found {len(le.classes_)}")
+        model, config = load_model(self.path, device=self.device)
+        if "model_type" not in config:
+            config['model_type'] = config.get("model_maker", 'tabpfn')
+        if config['model_type'] not in ["mlp", "mothernet"]:
+            raise ValueError(f"Incompatible model_type: {config['model_type']}")
+        model.to(self.device)
+        layers = extract_mlp_model(model, config, X, y, device=self.device,
+                                   inference_device=self.device, scale=True)
+        hidden_size = config['mothernet']['predicted_hidden_layer_size']
+        n_layers = config['mothernet']['predicted_hidden_layers']
+        assert len(layers) == n_layers + 1  # n_layers counts number of hidden layers
+        nn = NeuralNetwork(n_features=X.shape[1], n_classes=len(le.classes_), hidden_size=hidden_size, n_layers=n_layers)
+        state_dict = {}
+        for i, layer in enumerate(layers):
+            state_dict[f"model.linear{i}.weight"] = torch.Tensor(layer[1]).T
+            state_dict[f"model.linear{i}.bias"] = torch.Tensor(layer[0])
+        nn.load_state_dict(state_dict)
+        try:
+            nonlinearity = config['mothernet']['predicted_activation']
+        except (KeyError, TypeError):
+            nonlinearity = "relu"
+        self.mlp = TorchMLP(hidden_size=hidden_size, n_layers=n_layers, learning_rate=self.learning_rate,
+                            device=self.device, n_epochs=self.n_epochs, verbose=self.verbose, init_state=nn.state_dict(),
+                            nonlinearity=nonlinearity, dropout_rate=self.dropout_rate, weight_decay=self.weight_decay)
+        self.scaler = StandardScaler().fit(X)
+        self.mlp.fit(X, y)
+        self.parameters_ = layers
+        self.classes_ = le.classes_
         return self
 
     def predict_proba(self, X):
-        return self.vc_.predict_proba(X)
+        X_scaled = self.scaler.transform(X)
+        return self.mlp.predict_proba(X_scaled)
 
     def predict(self, X):
-        return self.vc_.predict(X)
-
-    @property
-    def classes_(self):
-        return self.vc_.classes_
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
 class ShiftClassifier(ClassifierMixin, BaseEstimator):
@@ -288,7 +370,8 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
 
 
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator, n_estimators=32, random_state=None, power=True, label_shift=True, feature_shift=True, n_jobs=-1):
+    def __init__(self, base_estimator, n_estimators=32, cat_features=None, random_state=None, power=True,
+                 label_shift=True, feature_shift=True, onehot=False, n_jobs=-1):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
@@ -296,27 +379,41 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.label_shift = label_shift
         self.feature_shift = feature_shift
         self.n_jobs = n_jobs
+        self.cat_features = cat_features
+        self.onehot = onehot
 
     def fit(self, X, y):
         X = np.array(X)
         self.n_features_ = X.shape[1]
         self.n_classes_ = len(np.unique(y))
         use_power_transformer = [True, False] if self.power else [False]
+        use_onehot = [True, False] if self.onehot else [False]
         feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
         label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
-        shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer))
+        shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer, use_onehot))
         rng = random.Random(self.random_state)
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
         n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
 
-        for label_shift, feature_shift, use_power_transformer in shifts:
+        for label_shift, feature_shift, power_transformer, onehot in shifts:
             estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
-            if use_power_transformer:
+            if power_transformer:
                 # remove zero-variance features to avoid division by zero
-                estimator = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
-                                     ('power_transformer', PowerTransformer()), ('shift_classifier', estimator)])
-            estimators.append((str((label_shift, feature_shift, use_power_transformer)), estimator))
+                cont_processing = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
+                                            ('power_transformer', PowerTransformer())])
+            else:
+                cont_processing = "passthrough"
+            if onehot and self.cat_features is not None:
+                ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
+                                    sparse_output=False)
+                ct = make_column_transformer((ohe, self.cat_features), remainder=cont_processing)
+                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
+                                      ('select', SelectKBest(k=100)), ('shift_classifier', estimator)])
+            else:
+                estimator = Pipeline([('cont_processing', cont_processing), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
+                                      ('shift_classifier', estimator)])
+            estimators.append((str((label_shift, feature_shift, power_transformer, onehot)), estimator))
         self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
         self.vc_.fit(X, y)
         return self

@@ -1,4 +1,5 @@
 from collections.abc import MutableMapping
+from collections import defaultdict
 import torch
 
 
@@ -11,19 +12,48 @@ def str2bool(v):
         raise ValueError("Boolean value expected.")
 
 
-def flatten_dict(dictionary, parent_key='', separator='_', only_last=False):
+def flatten_dict(
+    dictionary, 
+    parent_key='', 
+    separator='_', 
+    only_last=False, 
+    track_keys = False
+):
     if "distribution" in dictionary:
-        return {parent_key: dictionary}
+        if track_keys:
+            return {parent_key: dictionary}, {}
+        else:
+            return {parent_key: dictionary}
     if only_last:
         parent_key = ""
     items = []
+
+    if track_keys: track_key_dict = {}
     for key, value in dictionary.items():
         new_key = parent_key + separator + key if parent_key else key
+        if track_keys: track_key_dict[key] = new_key
         if isinstance(value, MutableMapping):
-            items.extend(flatten_dict(value, new_key, separator=separator, only_last=only_last).items())
+            output = flatten_dict(
+                value, 
+                new_key, 
+                separator=separator, 
+                only_last=only_last,
+                track_keys=track_keys,
+            )
+            if track_keys:
+                new_flat_dict, new_track_key_dict = output
+                track_key_dict.update(new_track_key_dict)
+            else:
+                new_flat_dict = output
+        
+            items.extend(new_flat_dict.items())
         else:
             items.append((new_key, value))
-    return dict(items)
+
+    if track_keys:
+        return dict(items), track_key_dict
+    else:
+        return dict(items)
 
 
 def compare_dicts(left, right, prefix=None, skip=None, return_bool=False):
@@ -68,3 +98,16 @@ def merge_dicts(*dicts):
         else:
             raise ValueError(f"Can't merge {values} for key {k}")
     return merged
+
+
+def update_config(config, extra_config):
+    for k, v in extra_config.items():
+        if isinstance(v, dict):
+            config[k] = update_config(config[k], v)
+        else:
+            config[k] = v
+    return config
+
+
+def nested_dict():
+    return defaultdict(nested_dict)

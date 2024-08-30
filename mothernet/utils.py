@@ -6,16 +6,17 @@ import warnings
 import urllib.request
 from tqdm import tqdm
 import mlflow
+import wandb
 import numpy as np
-import torch
+import torch, time
 
 from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_model_default_config
 from mothernet.config_utils import flatten_dict
-
+import itertools
 
 class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
@@ -39,14 +40,6 @@ def get_module_path():
     return Path(__file__).parent.resolve()
 
 
-def get_uniform_single_eval_pos_sampler(max_len, min_len=0):
-    """
-    Just sample any evaluation position with the same weight
-    :return: Sampler that can be fed to `train()` as `single_eval_pos_gen`.
-    """
-    return lambda: random.choices(range(min_len, max_len))[0]
-
-
 class SeqBN(nn.Module):
     def __init__(self, d_model):
         super().__init__()
@@ -63,24 +56,12 @@ class SeqBN(nn.Module):
 default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
 
-def get_nan_value(v, set_value_to_nan=0.0):
+def get_nan_value(set_value_to_nan=0.0):
     if random.random() < set_value_to_nan:
-        return v
+        return float('nan')
     else:
         return random.choice([-999, 0, 1, 999])
-
-
-def nan_handling_missing_for_unknown_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('nan'), set_value_to_nan)
-
-
-def nan_handling_missing_for_no_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('-inf'), set_value_to_nan)
-
-
-def nan_handling_missing_for_a_reason_value(set_value_to_nan=0.0):
-    return get_nan_value(float('inf'), set_value_to_nan)
-
+    
 
 def torch_masked_mean(x, mask, dim=0, return_share_of_ignored_values=False):
     """
@@ -384,16 +365,16 @@ def init_device(gpu_id, use_cpu):
 
 
 def get_model_string(config, num_gpus, device, parser):
-    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in parser._actions if arg.option_strings}
+    # get the subparser for the model type
+    subparser = parser._actions[1].choices[config['model_type']]
+    config_shorthands = {arg.dest: arg.option_strings[0].replace('-', '') for arg in subparser._actions if arg.option_strings}
     mm = config['model_type']
-    model_type_string = mm if mm in ["perceiver", "additive"] else ('mn' if mm in ["mlp", "mothernet"] else "tabpfn")
-    default_config_flat = flatten_dict(get_base_config(), only_last=True)
-    config_flat = flatten_dict(config, only_last=True)
+    model_type_string = 'mn' if mm in ["mlp", "mothernet"] else mm
+    default_config_flat = flatten_dict(get_model_default_config(config['model_type']), only_last=True)
+    config_flat = flatten_dict({k: v for k, v in config.items() if k != 'orchestration'}, only_last=True)
     config_string = ""
     for k in sorted(config_flat.keys()):
-        if k in ['st_checkpoint_dir', 'save_every', 'run_id', 'warm_start_from', 'use_cpu', 'continue_run', 'restart_scheduler',
-                 'load_strict', 'gpu_id', 'help', 'base_path', 'create_new_run', 'experiment', 'model_type', 'extra_fast_test',
-                 'seed_everything', 'no_mlflow', 'num_gpus', 'device', 'nhead']:
+        if k in ['run_id', 'use_cpu', 'gpu_id', 'help', 'model_type', 'num_gpus', 'device', 'nhead']:
             continue
         v = config_flat[k]
         if k not in default_config_flat:
@@ -417,7 +398,17 @@ def get_model_string(config, num_gpus, device, parser):
     return model_string
 
 
-def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir):
+def make_training_callback(
+    save_every, 
+    model_string, 
+    base_path, 
+    report, 
+    config, 
+    no_mlflow, 
+    checkpoint_dir, 
+    classification, 
+    validate
+):
     from mothernet.model_builder import save_model
     config = config.copy()
 
@@ -442,18 +433,22 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
                 mlflow.log_metric(key="wallclock_ticker", value=wallclock_ticker, step=epoch)
+                mlflow.log_metric(key="epoch", value=epoch, step=epoch)
+            if wandb.run is not None:
+                wandb.log({"loss": model.losses[-1], "learning_rate": model.learning_rates[-1], "wallclock_time": model.wallclock_times[-1],
+                           "wallclock_ticker": wallclock_ticker, "epoch": epoch})
             if report is not None:
                 # synetune callback
                 report(epoch=epoch, loss=model.losses[-1], wallclock_time=wallclock_ticker)  # every 5 minutes
 
-        try:
-            if (epoch == "on_exit") or epoch % save_every == 0:
-                if checkpoint_dir is not None:
-                    if epoch == "on_exit":
-                        return
-                    file_name = f'{base_path}/checkpoint.mothernet'
-                else:
-                    file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+        if (epoch == "on_exit") or epoch % save_every == 0:
+            if checkpoint_dir is not None:
+                if epoch == "on_exit":
+                    return
+                file_name = f'{base_path}/checkpoint.mothernet'
+            else:
+                file_name = f'{base_path}/models_diff/{model_string}_epoch_{epoch}.cpkt'
+            try:
                 os.makedirs(f"{base_path}/models_diff", exist_ok=True)
                 disk_usage = shutil.disk_usage(f"{base_path}/models_diff")
                 if disk_usage.free < 1024 * 1024 * 1024 * 2:
@@ -469,8 +464,48 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 config['wallclock_times'] = model.wallclock_times
 
                 save_model(model, optimizer, scheduler, base_path, file_name, config)
+            
+            except Exception as e:
+                print("WRITING TO MODEL FILE FAILED")
+                print(e)
+
+            if epoch != "on_exit":
+                inference_time = None
+                gpu_start_time = torch.cuda.Event(enable_timing=True)
+                gpu_end_time = torch.cuda.Event(enable_timing=True)
+                if validate:
+                    inference_start = time.time()
+                    gpu_start_time.record()
+                    
+                    validation_score, per_dataset_score = validate_model(model, config)
+                    
+                    inference_end = time.time()
+                    gpu_end_time.record()
+                    torch.cuda.synchronize()
+                    
+                    inference_time = inference_end - inference_start
+                    gpu_inference_time = gpu_start_time.elapsed_time(gpu_end_time)
+
+                    print(f"Validation score: {validation_score}")
+
+                    if not no_mlflow:
+                        mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
+                        for dataset, score in per_dataset_score.items():
+                            mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
+                            
+                    if wandb.run is not None:
+                        val_metrics = {
+                            "val_score": validation_score, 
+                            "epoch": epoch, 
+                            'inference_time': inference_time,
+                            'gpu_inference_time': gpu_inference_time,
+                        }
+                        
+                        for dataset, score in per_dataset_score.items():
+                            val_metrics[f"val_score_{dataset}"] = score
+                        wandb.log(val_metrics)
                 # remove checkpoints that are worse than current
-                if epoch != "on_exit" and epoch - save_every > 0:
+                if epoch - save_every > 0:
                     this_loss = model.losses[-1]
                     for i in range(epoch // save_every):
                         loss = model.losses[i * save_every - 1]  # -1 because we start at epoch 1
@@ -484,10 +519,9 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                                     print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
                                 print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+                if validate: 
+                    return inference_time
 
-        except Exception as e:
-            print("WRITING TO MODEL FILE FAILED")
-            print(e)
     return save_callback
 
 
@@ -527,3 +561,122 @@ def get_init_method(init_method):
             method(layer.weight)
             nn.init.zeros_(layer.bias)
     return init_weights_inner
+
+
+def validate_model(model, config):
+    from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression, open_cc_large_dids, new_valid_dids
+
+    from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
+    from mothernet.models.mothernet_additive import MotherNetAdditive
+    from mothernet.models.mothernet import MotherNet
+    from mothernet.models.ssm_mothernet import SSMMotherNet
+    from mothernet.models.ssm_tabpfn import SSMTabPFN
+    from mothernet.models.tabpfn import TabPFN
+    from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
+    from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor
+    from mothernet.evaluation.tabular_evaluation import eval_on_datasets
+    from mothernet.evaluation import tabular_metrics
+    from uuid import uuid4
+
+    if 'transformer' in config:
+        attention_type = 'transformer'
+    elif 'ssm' in config:
+        attention_type = 'ssm'
+    else:
+        raise ValueError(f"Unknown attention type")
+    
+    if config[attention_type]['classification_task'] or config['openmlloader']['valid_data'] in ['large', 'new']:
+        if config['openmlloader']['valid_data'] == 'new':
+            open_cc_dids = new_valid_dids
+        elif config['openmlloader']['valid_data'] == 'large':
+            open_cc_dids = open_cc_large_dids
+        else:
+            open_cc_dids = open_cc_valid_dids
+        cc_valid_datasets_multiclass, _ = load_openml_list(
+            open_cc_dids, 
+            multiclass=True, 
+            shuffled=True, 
+            filter_for_nan=False, 
+            max_samples=1000000,
+            num_feats=5000, 
+            max_num_classes=100,
+            return_capped=True, 
+            classification=True,
+        )
+
+        if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
+            clf = MotherNetAdditiveClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config
+            )
+        elif isinstance(model, (MotherNet, SSMMotherNet)):
+            clf = MotherNetClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config
+            )
+        elif isinstance(model, (TabPFN, BiAttentionTabPFN, SSMTabPFN)):
+            clf = TabPFNClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config, 
+                N_ensemble_configurations=1
+            )
+        else:
+            raise ValueError(f"Model {model} not supported for validation")
+        base_path = 'models_diff/validation'
+        results = eval_on_datasets(
+            'multiclass', 
+            clf, 
+            f"valid_run_{uuid4()}", 
+            cc_valid_datasets_multiclass,
+            metric_used=tabular_metrics.auc_metric, 
+            split_numbers=[1, 2, 3, 4, 5], 
+            eval_positions=[None],
+            max_times=[1], 
+            n_samples=config['openmlloader']['n_samples'], 
+            base_path=base_path, 
+            overwrite=False, 
+            n_jobs=1, 
+            device=config['device'],
+            save=False,
+            max_features=config['prior']['num_features'],
+            pca = config['openmlloader']['pca'],
+        )
+        mean_auc = np.array([r['mean_metric'] for r in results]).mean()
+        # maybe pandas would be easier lol?
+        per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
+        return mean_auc, per_dataset_scores
+    else:
+        cc_valid_datasets_regression, _ = load_openml_list(
+            open_cc_valid_dids_regression, multiclass=False, shuffled=True, filter_for_nan=False, max_samples=10000,
+            num_feats=100, return_capped=False, classification=False)
+
+        if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
+            clf = MotherNetAdditiveRegressor(device=config['device'], model=model, config=config)
+        else:
+            raise ValueError(f"Model {model} not supported for validation")
+        base_path = 'models_diff/validation'
+        results = eval_on_datasets(
+            'regression', 
+            clf, 
+            f"valid_run_{uuid4()}", 
+            cc_valid_datasets_regression,
+            metric_used=tabular_metrics.root_mean_squared_error_metric, 
+            split_numbers=[1, 2, 3, 4, 5],
+            eval_positions=[1000], 
+            max_times=[1], 
+            n_samples=2000, 
+            base_path=base_path,
+            overwrite=False, 
+            n_jobs=1, 
+            device=config['device'], 
+            save=False, 
+            max_features=config['prior']['num_features'],
+            pca = config['openmlloader']['pca'],
+        )
+        mean_auc = np.array([r['mean_metric'] for r in results]).mean()
+        # maybe pandas would be easier lol?
+        per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
+        return mean_auc, per_dataset_scores

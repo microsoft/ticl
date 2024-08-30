@@ -90,7 +90,7 @@ def plot_exponential_smoothing(loss_df, x='time_days', y='loss', hue='run', extr
             smoothed = this_df[[y, x]].reset_index()
         else:
             try:
-                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df.time_days.max() / 2 * extra_smoothing).mean().reset_index()
+                smoothed = this_df[[y, x]].ewm(span=len(this_df) / this_df[x].max() / 2 * extra_smoothing).mean().reset_index()
             except ValueError as e:
                 print(e)
                 continue
@@ -114,8 +114,8 @@ def get_runs(filter_string, experiment_id):
         run_view_type=ViewType.ACTIVE_ONLY, order_by=["metrics.accuracy DESC"])
 
 
-def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1,
-                    filter_runs=("running", "reference"), mlflow_host=None, legend=False, inactive_legend=False):
+def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", y="loss", verbose=False, logx=True, logy=True, return_df=False, extra_smoothing=1,
+                    filter_runs=("running", "reference"), mlflow_host=None, legend=False, inactive_legend=False, filter_like=None):
     if mlflow_host is None:
         mlflow_host = os.environ.get("MLFLOW_HOSTNAME", None)
     if mlflow_host is None:
@@ -128,14 +128,20 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
     else:
         experiment_id = experiment_id or "0"
 
+    if filter_like is not None:
+        filter_string = f"attributes.run_name LIKE '{filter_like}'"
+        if filter_runs != "all":
+            filter_string += " AND "
+    else:
+        filter_string = ""
     runs = []
     if filter_runs == "all":
-        runs = get_runs("", experiment_id)
+        runs = get_runs(filter_string, experiment_id)
     else:
         if "running" in filter_runs:
-            runs.extend(get_runs("attribute.status='RUNNING'", experiment_id))
+            runs.extend(get_runs("attribute.status='RUNNING'" + filter_string, experiment_id))
         if "reference" in filter_runs:
-            runs.extend(get_runs('tags.reference = "True"', experiment_id))
+            runs.extend(get_runs('tags.reference = "True"' + filter_string, experiment_id))
 
     losses_all = []
     already_seen = set()
@@ -144,11 +150,11 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
             continue
         already_seen.add(run.info.run_id)
         try:
-            losses = MlflowClient().get_metric_history(run.info.run_id, key="loss")
+            losses = MlflowClient().get_metric_history(run.info.run_id, key=y)
             if not len(losses):
                 continue
             adjusted_wallclock = MlflowClient().get_metric_history(run.info.run_id, key="wallclock_time")
-            losses_df = pd.DataFrame.from_dict([dict(l) for l in losses]).rename(columns={'value': 'loss'})
+            losses_df = pd.DataFrame.from_dict([dict(l) for l in losses]).rename(columns={'value': y})
             clock_df = pd.DataFrame.from_dict([dict(t) for t in adjusted_wallclock]).rename(columns={'value': 'clock'})
             losses_df = losses_df.merge(clock_df[['step', 'clock']], on='step')
             losses_df['run'] = run.info.run_name
@@ -161,7 +167,7 @@ def plot_experiment(experiment_name=None, experiment_id=None, x="epoch", verbose
                 print(e)
     losses_all_df = pd.concat(losses_all, ignore_index=True).rename(columns={'step': 'epoch'})
     losses_all_df['timestamp'] -= losses_all_df.timestamp.min()
-    fig = plot_exponential_smoothing(losses_all_df, x=x, y='loss', logx=logx, logy=logy, extra_smoothing=extra_smoothing, inactive_legend=inactive_legend)
+    fig = plot_exponential_smoothing(losses_all_df, x=x, y=y, logx=logx, logy=logy, extra_smoothing=extra_smoothing, inactive_legend=inactive_legend)
     if legend:
         fig.update_layout(legend=dict(
             yanchor="top",

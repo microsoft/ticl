@@ -1,7 +1,14 @@
 import torch
 import torch.nn as nn
+import math
 
 from mothernet.utils import normalize_data
+
+
+def get_fourier_features(x, n_features):
+    div_term = torch.exp(torch.arange(0, n_features, 2, device=x.device) * (-math.log(10000.0) / n_features))
+    x = x.unsqueeze(-1)
+    return torch.cat([x, torch.sin(x * div_term), torch.cos(x * div_term)], -1)
 
 
 class NanHandlingEncoder(nn.Module):
@@ -37,7 +44,7 @@ class Linear(nn.Linear):
 
 
 class BinEmbeddingEncoder(nn.Module):
-    def __init__(self, num_features, emsize, n_bins, rank, nonlinear=True):
+    def __init__(self, num_features, emsize, n_bins, rank, nonlinear=True, decoder_activation='relu'):
         super().__init__()
         self.num_features = num_features
         self.emsize = emsize
@@ -47,13 +54,19 @@ class BinEmbeddingEncoder(nn.Module):
         self.embedding = nn.Parameter(torch.randn(n_bins, rank))
         self.bias = nn.Parameter(torch.randn(1, 1, num_features, rank))
         self.weights = nn.Parameter(torch.randn(num_features, rank, emsize))
+        self.decoder_activation = decoder_activation
 
     def forward(self, x):
         # n samples, b batch, k feature, d bins, r rank
         embedded = torch.einsum('nbkd,dr->nbkr', x, self.embedding)
         if self.nonlinear:
             embedded = embedded + self.bias
-            embedded = torch.nn.functional.relu(embedded)
+            if self.decoder_activation == 'relu':
+                embedded = torch.nn.functional.relu(embedded)
+            elif self.decoder_activation == 'gelu':
+                embedded = torch.nn.functional.gelu(embedded)
+            else:
+                raise ValueError(f"decoder_activation {self.decoder_activation} not supported")
         # n samples, b batch, k feature, r rank, e embedding dim in transformer
         out = torch.einsum('nbkr,kre->nbe', embedded, self.weights)
         return out
@@ -65,10 +78,13 @@ class OneHotAndLinear(nn.Linear):
         self.num_classes = num_classes
         self.emsize = emsize
 
-    def forward(self, x):
+    def forward(self, x, inference: bool = False):
         if (x == -100).any():
             pass
         y = x.squeeze().long()
+        if inference:
+            assert len(y.shape) == 1, "Inference mode only supports batch size 1"
+            y = y.unsqueeze(0)
         mask = y == -100
         y[mask] = 0
         out = torch.nn.functional.one_hot(y, self.num_classes).float()

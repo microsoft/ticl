@@ -2,13 +2,133 @@ import numpy as np
 import openml
 import pandas as pd
 import torch
+from scipy.special import expit as sigmoid
+import os 
+
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+openml.config.set_root_cache_directory(f'{parent_dir}/datasets')
+
+def linear_correlated_logistic_regression(
+        n_features: int,
+        n_tasks: int,
+        n_datapoints: int,
+        seed: int | None = 42,
+        sampling_correlation: float = 0.0,
+        weights: np.array = None,
+        *args,
+        **kwargs,
+) -> tuple[np.array, np.array]:
+    """Sample features with linear contribution that are correlated."""
+    if weights is None:
+        weights = np.array([np.linspace(-1, 1 * i, n_features) for i in range(1, n_tasks + 1)])
+    else:
+        weights = weights.reshape((n_tasks, n_features))
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    inputs_correlated = np.array([np.linspace(-2, 2, n_datapoints) for _ in range(n_features)]).T
+    inputs_uniform = np.random.uniform(-2, 2, size=(n_datapoints, n_features))
+    inputs = sampling_correlation * inputs_correlated + (1 - sampling_correlation) * inputs_uniform
+
+    condition_number = np.linalg.cond(inputs.T @ inputs)
+    targets = np.array(sigmoid(weights.dot(inputs.T)) > 0.5, dtype=np.float64)
+    y, X = targets.flatten(), inputs
+    return X, y
+
+
+def linear_correlated_step_function(
+        n_features: int,
+        n_tasks: int,
+        n_datapoints: int,
+        seed: int | None = 42,
+        sampling_correlation: float = 0.0,
+        weights: np.array = None,
+        plot: bool = False,
+        *args,
+        **kwargs,
+) -> tuple[np.array, np.array]:
+    """Sample features with linear contribution that are correlated."""
+    if weights is None:
+        weights = np.array([np.linspace(-1, 1 * i, n_features) for i in range(1, n_tasks + 1)])
+    else:
+        weights = weights.reshape((n_tasks, n_features))
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    inputs_correlated = np.array([np.linspace(-2, 2, n_datapoints) for _ in range(n_features)]).T
+    inputs_uniform = np.random.uniform(-2, 2, size=(n_datapoints, n_features))
+    inputs = sampling_correlation * inputs_correlated + (1 - sampling_correlation) * inputs_uniform
+
+    steps = np.linspace(np.min(inputs_uniform) * 0.4, np.max(inputs_uniform) * 0.4, n_features)
+    transformed_inputs = np.copy(inputs)
+    for feature_i in range(n_features):
+        transformed_inputs[:, feature_i] = (inputs[:, feature_i] > steps[feature_i]).astype(np.int32)
+
+    targets = (transformed_inputs.sum(axis=1) > 0).astype(np.float32)
+    condition_number = np.linalg.cond(inputs.T @ inputs)
+    if plot:
+        import matplotlib.pyplot as plt
+        fig, axs = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(4, 2))
+        axs.flatten()
+        for i in range(n_features):
+            axs[i].scatter(inputs[:, i], transformed_inputs[:, i], s=2)
+            axs[i].set_title(f'Class {i}')
+        plt.show()
+    y, X = targets, inputs
+    return X, y
+
+
+def _encode_if_category(column: pd.Series | np.ndarray) -> pd.Series | np.ndarray:
+    # copied from old OpenML Python adapter to maintain comparison with tabpfn
+    if column.dtype.name == "category":
+        column = column.cat.codes.astype(np.float32)
+        mask_nan = column == -1
+        column[mask_nan] = np.nan
+    return column
+
+
+def get_openml_regression(did, max_samples, shuffled=True):
+    dataset = openml.datasets.get_dataset(did, download_data=False, download_qualities=False,
+                                          download_features_meta_data=False)
+    X, y, categorical_indicator, attribute_names = dataset.get_data(target=dataset.default_target_attribute,
+                                                                    dataset_format="dataframe")
+    try:
+        X = np.array(X.apply(_encode_if_category), dtype=np.float32)
+    except ValueError as e:
+        print(e)
+    if not shuffled:
+        sort = np.argsort(y) if y.mean() < 0.5 else np.argsort(-y)
+        pos = int(y.sum()) if y.mean() < 0.5 else int((1 - y).sum())
+        X, y = X[sort][-pos * 2:], y[sort][-pos * 2:]
+        y = torch.tensor(y).reshape(2, -1).transpose(0, 1).reshape(-1).flip([0]).float()
+        X = torch.tensor(X).reshape(2, -1, X.shape[1]).transpose(
+            0, 1).reshape(-1, X.shape[1]).flip([0]).float()
+    else:
+        order = np.arange(y.shape[0])
+        np.random.seed(13)
+        np.random.shuffle(order)
+        X, y = torch.tensor(X[order]), torch.tensor(y[order])
+    if max_samples:
+        X, y = X[:max_samples], y[:max_samples]
+    return X, y, list(np.where(categorical_indicator)[0]), attribute_names
 
 
 def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
-    dataset = openml.datasets.get_dataset(did, download_data=False, download_qualities=False, download_features_meta_data=False)
-    X, y, categorical_indicator, attribute_names = dataset.get_data(target=dataset.default_target_attribute, dataset_format="array")
-    X = np.array(X)
-    y = np.array(y)
+    dataset = openml.datasets.get_dataset(
+        did, 
+        download_data=False, 
+        download_qualities=False, 
+        download_features_meta_data=False,
+    )
+    X, y, categorical_indicator, attribute_names = dataset.get_data(
+        target=dataset.default_target_attribute, 
+        dataset_format="dataframe",
+    )
+    X = np.array(X.apply(_encode_if_category), dtype=np.float32)
+    y_categorical = y.dtype.name == "category"
+    y = np.array(_encode_if_category(y), dtype=int if y_categorical else np.float32)
     if not multiclass:
         X = X[y < 2]
         y = y[y < 2]
@@ -38,8 +158,19 @@ def get_openml_classification(did, max_samples, multiclass=True, shuffled=True):
     return X, y, list(np.where(categorical_indicator)[0]), attribute_names
 
 
-def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100, max_samples=400,
-                     multiclass=True, max_num_classes=10, shuffled=True, return_capped=False, verbose=0):
+def load_openml_list(
+    dids, 
+    classification=True, 
+    filter_for_nan=False, 
+    num_feats=100, 
+    min_samples=100, 
+    max_samples=400,
+    multiclass=True, 
+    max_num_classes=10, 
+    shuffled=True, 
+    return_capped=False, 
+    verbose=0,
+):
     datasets = []
     openml_list = openml.datasets.list_datasets(dids)
     print(f'Number of datasets: {len(openml_list)}')
@@ -56,8 +187,7 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
             print('Loading', entry['name'], entry.did, '..')
 
         if entry['NumberOfClasses'] == 0.0:
-            raise Exception("Regression not supported")
-            # X, y, categorical_feats, attribute_names = get_openml_regression(int(entry.did), max_samples)
+            X, y, categorical_feats, attribute_names = get_openml_regression(int(entry.did), max_samples)
         else:
             X, y, categorical_feats, attribute_names = get_openml_classification(
                 int(entry.did), max_samples, multiclass=multiclass, shuffled=shuffled)
@@ -76,17 +206,18 @@ def load_openml_list(dids, filter_for_nan=False, num_feats=100, min_samples=100,
             modifications['samples_capped'] = True
 
         if X.shape[0] < min_samples:
-            print('Too few samples left')
+            print(f'Too few samples left for dataset {ds}')
             continue
 
-        if len(np.unique(y)) > max_num_classes:
-            if return_capped:
-                X = X[y < np.unique(y)[10]]
-                y = y[y < np.unique(y)[10]]
-                modifications['classes_capped'] = True
-            else:
-                print('Too many classes')
-                continue
+        if classification:
+            if len(np.unique(y)) > max_num_classes:
+                if return_capped:
+                    X = X[y < np.unique(y)[max_num_classes]]
+                    y = y[y < np.unique(y)[max_num_classes]]
+                    modifications['classes_capped'] = True
+                else:
+                    print('Too many classes')
+                    continue
 
         datasets += [[entry['name'], X, y, categorical_feats, attribute_names, modifications]]
 
@@ -127,6 +258,266 @@ open_cc_valid_dids = [
     1443, 1444, 1446, 1447, 1448, 1451, 1453, 1488, 1490, 1495, 1498, 1499, 1506, 1508, 1511, 1512, 1520,
     1523, 4153, 23499, 40496, 40646, 40663, 40669, 40680, 40682, 40686, 40690, 40693, 40705, 40706, 40710,
     40711, 40981, 41430, 41538, 41919, 41976, 42172, 42261, 42544, 42585, 42638]
+
+# YZ added 
+open_cc_large_dids = [
+    41168, 
+    4534, 
+    40668, 
+    4135, 
+    41027, 
+    1461, 
+    1590, 
+    41162, 
+    42733, 
+    42734,
+    137,
+    843,
+    846,
+    981, 
+    1220,
+    1459,
+    1531,
+    1532,
+    4135,
+    23512,
+]
+
+# YZ added
+# class ~102, # instances ~850K, # features ~3.1K
+new_valid_dids = [311,
+ 742,
+ 825,
+ 841,
+ 920,
+ 940,
+ 1515,
+ 1549,
+ 40693,
+ 40705,
+ 833,
+ 1039,
+ 1491,
+ 1492,
+ 1541,
+ 40645,
+ 40677,
+ 41082,
+ 41144,
+ 42193,
+ 279,
+ 981,
+ 1536,
+ 40922,
+ 40985,
+ 41986,
+ 41988,
+ 41989,
+ 41990,
+ 42343,
+ 1503,
+ # 4541, commented because of the overflow error
+ 40672,
+ 41991,
+ 42206]
+
+tabzilla_full_dids = [3,
+ 6,
+ 11,
+ 12,
+ 14,
+ 15,
+ 16,
+ 18,
+ 22,
+ 23,
+ 28,
+ 29,
+ 31,
+ 32,
+ 37,
+ 44,
+ 46,
+ 50,
+ 54,
+ 151,
+ 182,
+ 188,
+ 307,
+ 300,
+ 458,
+ 469,
+ 554,
+ 1049,
+ 1050,
+ 1053,
+ 1063,
+ 1067,
+ 1068,
+ 1590,
+ 4134,
+ 1510,
+ 1489,
+ 1494,
+ 1497,
+ 1501,
+ 1480,
+ 1485,
+ 1486,
+ 1487,
+ 1468,
+ 1475,
+ 1462,
+ 1464,
+ 4534,
+ 6332,
+ 1461,
+ 4538,
+ 1478,
+ 23381,
+ 40499,
+ 40668,
+ 40966,
+ 40982,
+ 40994,
+ 40983,
+ 40975,
+ 40984,
+ 40979,
+ 40996,
+ 41027,
+ 23517,
+ 40923,
+ 40927,
+ 40978,
+ 40670,
+ 40701,
+ 44025,
+ 1596,
+ 1119,
+ 4135,
+ 40685,
+ 23512,
+ 40981,
+ 41169,
+ 41168,
+ 41166,
+ 41165,
+ 41150,
+ 41159,
+ 41161,
+ 41138,
+ 41142,
+ 41163,
+ 41164,
+ 41143,
+ 41146,
+ 1169,
+ 41167,
+ 41147,
+ 1044,
+ 5,
+ 1502,
+ 42727,
+ 41145,
+ 1477,
+ 1471,
+ 821,
+ 344,
+ 43466,
+ 23515,
+ 42,
+ 13,
+ 43,
+ 497,
+ 171,
+ 39,
+ 4535,
+ 1592,
+ 1099,
+ 42183,
+ 1,
+ 1509,
+ 1483,
+ 41434,
+ 7,
+ 9,
+ 24,
+ 25,
+ 27,
+ 30,
+ 35,
+ 40,
+ 41,
+ 49,
+ 51,
+ 55,
+ 61,
+ 1455,
+ 258,
+ 43611,
+ 1568,
+ 334,
+ 42855,
+ 1567,
+ 42184,
+ 40733,
+ 40683,
+ 163,
+ 1473,
+ 477,
+ 329,
+ 40664,
+ 40679,
+ 59,
+ 1118,
+ 1043,
+ 1479,
+ 312,
+ 1116,
+ 1038,
+ 1120,
+ 1036,
+ 40536,
+ 451,
+ 470,
+ 40496,
+ 1493,
+ 377,
+ 478,
+ 1459,
+ 375,
+ 1466,
+ 23380,
+ 1476,
+ 4,
+ 40900,
+ 934,
+ 782,
+ 871,
+ 174,
+ 184,
+ 867,
+ 885,
+ 736,
+ 846,
+ 875,
+ 916,
+ 48,
+ 754,
+ 448,
+ 10,
+ 8,
+ 194,
+ 566,
+ 560,
+ 189,
+ 703,
+ 524,
+ 562]
+ 
+
+open_cc_valid_dids_regression = [8, 204, 210, 560, 194, 566, 189, 562, 507, 198, 42821]
 
 grinzstjan_categorical_regression = [44054, 44055, 44056, 44057, 44059, 44061,
                                      44062, 44063, 44064, 44065, 44066, 44068,

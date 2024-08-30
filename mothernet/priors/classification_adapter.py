@@ -2,11 +2,10 @@ import random
 import numpy as np
 import torch
 
-from mothernet.utils import (nan_handling_missing_for_a_reason_value, nan_handling_missing_for_no_reason_value,
-                             nan_handling_missing_for_unknown_reason_value, normalize_by_used_features_f, normalize_data,
+from mothernet.utils import (get_nan_value, normalize_by_used_features_f, normalize_data,
                              remove_outliers)
 
-from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions
+from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions, safe_randint
 from .utils import CategoricalActivation, randomize_classes
 
 
@@ -27,12 +26,13 @@ class RegressionNormalized:
     def __call__(self, x):
         # x has shape (T,B)
 
+        # already gets normalized later
         # TODO: Normalize to -1, 1 or gaussian normal
-        maxima = torch.max(x, 0)[0]
-        minima = torch.min(x, 0)[0]
-        norm = (x - minima) / (maxima-minima)
+        # maxima = torch.max(x, 0)[0]
+        # minima = torch.min(x, 0)[0]
+        # norm = (x - minima) / (maxima-minima)
 
-        return norm
+        return x
 
 
 class MulticlassSteps:
@@ -82,9 +82,8 @@ class ClassificationAdapter:
     # It's instantiated anew for each batch that's created
     def __init__(self, base_prior, config):
         self.h = sample_distributions(parse_distributions(config))
-
         self.base_prior = base_prior
-        if self.h['num_classes'] == 0:
+        if self.h['max_num_classes'] == 0:
             self.class_assigner = RegressionNormalized()
         else:
             if self.h['num_classes'] > 1 and not self.h['balanced']:
@@ -102,12 +101,11 @@ class ClassificationAdapter:
                 raise NotImplementedError("Balanced multiclass training is not possible")
 
     def drop_for_reason(self, x, v):
-        nan_prob_sampler = CategoricalActivation(
-            ordered_p=0.0, categorical_p=1.0, keep_activation_size=False,
-            num_classes_sampler=lambda: 20)
+        nan_prob_sampler = CategoricalActivation(ordered_p=0.0, categorical_p=1.0, num_classes_sampler=lambda: 20)
         d = nan_prob_sampler(x)
         # TODO: Make a different ordering for each activation
-        x[d < torch.rand((1,), device=x.device) * 20 * self.h['nan_prob_no_reason'] * random.random()] = v
+        # actually only half that probability but that's fine
+        x[d < torch.rand((1, d.shape[1], d.shape[2]), device=x.device) * 20 * self.h['nan_prob_a_reason'] - 10] = v
         return x
 
     def drop_for_no_reason(self, x, v):
@@ -115,25 +113,28 @@ class ClassificationAdapter:
         return x
 
     def __call__(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
-        # num_features is constant for all batches, num_features used is passed down to wrapped priors to change number of features
-        args = {'device': device, 'n_samples': n_samples, 'num_features': self.h['num_features_used'],
+        info = {}
+        # num_features is constant for all batches, num_features_used is passed down to wrapped priors to change number of features
+        if self.h['feature_curriculum']:
+            num_features = min(num_features, epoch + 1)
+        if self.h['num_features_sampler'] == 'uniform':
+            num_features_used = safe_randint(1, num_features)
+        elif self.h['num_features_sampler'] == 'double_sample':
+            num_features_used = safe_randint(1, safe_randint(1, num_features))
+        else:
+            raise ValueError(f"Unknown num_features_sampler: {self.h['num_features_sampler']}")
+        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features_used,
                 'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
         x, y, y_ = self.base_prior.get_batch(**args)
 
-        assert x.shape[2] == self.h['num_features_used']
+        assert x.shape[2] == num_features_used
 
-        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason']+self.h['nan_prob_unknown_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
+        if self.h['nan_prob_no_reason']+self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Only one out of two datasets should have nans
             if random.random() < self.h['nan_prob_no_reason']:  # Missing for no reason
-                x = self.drop_for_no_reason(x, nan_handling_missing_for_no_reason_value(self.h['set_value_to_nan']))
+                x = self.drop_for_no_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
-            if self.h['nan_prob_a_reason'] > 0 and random.random() > 0.5:  # Missing for a reason
-                x = self.drop_for_reason(x, nan_handling_missing_for_a_reason_value(self.h['set_value_to_nan']))
-
-            if self.h['nan_prob_unknown_reason'] > 0:  # Missing for unknown reason  and random.random() > 0.5
-                if random.random() < self.h['nan_prob_unknown_reason_reason_prior']:
-                    x = self.drop_for_no_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
-                else:
-                    x = self.drop_for_reason(x, nan_handling_missing_for_unknown_reason_value(self.h['set_value_to_nan']))
+            if random.random() < self.h['nan_prob_a_reason']:  # Missing for a reason
+                x = self.drop_for_reason(x, get_nan_value(self.h['set_value_to_nan']))
 
         # Categorical features
         categorical_features = []
@@ -145,54 +146,63 @@ class ClassificationAdapter:
                 if random.random() < p:
                     categorical_features.append(col)
                     x[:, :, col] = m(x[:, :, col])
-
+        info['categorical_features'] = categorical_features
         x = remove_outliers(x, categorical_features=categorical_features)
         x, y = normalize_data(x), normalize_data(y)
 
         # Cast to classification if enabled
+        # In case of regression two normalizations.
         y = self.class_assigner(y).float()
-
-        x = normalize_by_used_features_f(
-            x, self.h['num_features_used'], num_features)
+        if self.h['max_num_classes'] == 0:
+            # Inpute potential nan values after normalization
+            y[y.isnan()] = 0
 
         # Append empty features if enabled
-        x = torch.cat(
-            [x, torch.zeros((x.shape[0], x.shape[1], num_features - self.h['num_features_used']),
-                            device=device)], -1)
+        if self.h['pad_zeros']:
+            x = normalize_by_used_features_f(
+                x, num_features_used, num_features)
+            x = torch.cat(
+                [x, torch.zeros((x.shape[0], x.shape[1], num_features - num_features_used), device=device)], -1)
 
-        if torch.isnan(y).sum() > 0:
+        if torch.isnan(y).any():
             print('Nans in target!')
+            if self.h['max_num_classes'] == 0:
+                y[torch.isnan(y)] = 0
+            else:
+                y[torch.isnan(y)] = -100
 
-        for b in range(y.shape[1]):
-            is_compatible, N = False, 0
-            while not is_compatible and N < 10:
-                targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
-                targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
+        if self.h['max_num_classes'] != 0:
+            for b in range(y.shape[1]):
+                is_compatible, N = False, 0
+                while not is_compatible and N < 10:
+                    targets_in_train = torch.unique(y[:single_eval_pos, b], sorted=True)
+                    targets_in_eval = torch.unique(y[single_eval_pos:, b], sorted=True)
 
-                is_compatible = len(targets_in_train) == len(targets_in_eval) and (
-                    targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
+                    is_compatible = len(targets_in_train) == len(targets_in_eval) and (
+                        targets_in_train == targets_in_eval).all() and len(targets_in_train) > 1
 
+                    if not is_compatible:
+                        randperm = torch.randperm(x.shape[0])
+                        x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
+                    N = N + 1
                 if not is_compatible:
-                    randperm = torch.randperm(x.shape[0])
-                    x[:, b], y[:, b] = x[randperm, b], y[randperm, b]
-                N = N + 1
-            if not is_compatible:
-                if not is_compatible:
+                    if self.h['max_num_classes'] != 0:
+                        # todo check that it really does this and how many together
+                        y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
                     # todo check that it really does this and how many together
                     y[:, b] = -100  # Relies on CE having `ignore_index` set to -100 (default)
+            for b in range(y.shape[1]):
+                valid_labels = y[:, b] != -100
+                y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
 
-        for b in range(y.shape[1]):
-            valid_labels = y[:, b] != -100
-            y[valid_labels, b] = (y[valid_labels, b] > y[valid_labels, b].unique().unsqueeze(1)).sum(axis=0).unsqueeze(0).float()
+                if y[valid_labels, b].numel() != 0:
+                    num_classes_float = (y[valid_labels, b].max() + 1).cpu()
+                    num_classes = num_classes_float.int().item()
+                    assert num_classes == num_classes_float.item()
+                    random_shift = torch.randint(0, num_classes, (1,), device=device)
+                    y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
 
-            if y[valid_labels, b].numel() != 0:
-                num_classes_float = (y[valid_labels, b].max() + 1).cpu()
-                num_classes = num_classes_float.int().item()
-                assert num_classes == num_classes_float.item()
-                random_shift = torch.randint(0, num_classes, (1,), device=device)
-                y[valid_labels, b] = (y[valid_labels, b] + random_shift) % num_classes
-
-        return x, y, y  # x.shape = (T,B,H)
+        return x, y, y, info  # x.shape = (T,B,H)
 
 
 class ClassificationAdapterPrior:
@@ -203,7 +213,7 @@ class ClassificationAdapterPrior:
     def get_batch(self, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
         with torch.no_grad():
             args = {'device': device, 'n_samples': n_samples, 'num_features': num_features, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
-            x, y, y_ = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
+            x, y, y_, info = ClassificationAdapter(self.base_prior, self.config)(batch_size=batch_size, **args)
             x, y, y_ = x.detach(), y.detach(), y_.detach()
 
-        return x, y, y_
+        return x, y, y_, info

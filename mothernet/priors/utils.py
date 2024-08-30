@@ -23,12 +23,11 @@ def randomize_classes(x, num_classes):
 
 
 class CategoricalActivation(nn.Module):
-    def __init__(self, categorical_p=0.1, ordered_p=0.7, keep_activation_size=False, num_classes_sampler=None):
+    def __init__(self, categorical_p=0.1, ordered_p=0.7, num_classes_sampler=None):
         if num_classes_sampler is None:
             num_classes_sampler = zipf_sampler_f(0.8, 1, 10)
         self.categorical_p = categorical_p
         self.ordered_p = ordered_p
-        self.keep_activation_size = keep_activation_size
         self.num_classes_sampler = num_classes_sampler
 
         super().__init__()
@@ -38,7 +37,6 @@ class CategoricalActivation(nn.Module):
 
         x = nn.Softsign()(x)
         num_classes = self.num_classes_sampler()
-        hid_strength = torch.abs(x).mean(0).unsqueeze(0) if self.keep_activation_size else None
 
         categorical_classes = torch.rand((x.shape[1], x.shape[2])) < self.categorical_p
         class_boundaries = torch.zeros((num_classes - 1, x.shape[1], x.shape[2]), device=x.device, dtype=x.dtype)
@@ -56,7 +54,5 @@ class CategoricalActivation(nn.Module):
         ordered_classes = torch.rand((x.shape[1], x.shape[2])) < self.ordered_p
         ordered_classes = torch.logical_and(ordered_classes, categorical_classes)
         x[:, ordered_classes] = randomize_classes(x[:, ordered_classes], num_classes)
-
-        x = x * hid_strength if self.keep_activation_size else x
 
         return x

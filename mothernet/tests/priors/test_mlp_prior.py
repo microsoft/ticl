@@ -1,5 +1,5 @@
 from mothernet.priors import MLPPrior
-from mothernet.model_configs import get_base_config
+from mothernet.model_configs import get_prior_config
 import lightning as L
 import torch
 import pytest
@@ -11,7 +11,7 @@ import pytest
 def test_mlp_prior(batch_size, num_features, n_samples):
     # test the mlp prior
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     prior = MLPPrior(config['prior']['mlp'])
 
     x, y, y_ = prior.get_batch(batch_size=batch_size, num_features=num_features, n_samples=n_samples, device='cpu')
@@ -26,7 +26,7 @@ def test_mlp_prior(batch_size, num_features, n_samples):
 def test_mlp_prior_no_sampling(batch_size=4, num_features=11, n_samples=128):
     # test the mlp prior
     L.seed_everything(42)
-    config = get_base_config()
+    config = get_prior_config()
     # replace distributions with some values for this test
     hyperparameters = {
         'prior_mlp_activations': torch.nn.ReLU,
