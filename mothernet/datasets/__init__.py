@@ -6,7 +6,10 @@ from scipy.special import expit as sigmoid
 import os 
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-openml.config.set_root_cache_directory(f'{parent_dir}/datasets')
+# Create a folder for storing datasets
+dataset_folder = f'{parent_dir}/datasets'
+os.makedirs(dataset_folder, exist_ok=True)
+openml.config.set_root_cache_directory(dataset_folder)
 
 def linear_correlated_logistic_regression(
         n_features: int,
