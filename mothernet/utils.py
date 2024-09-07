@@ -404,7 +404,7 @@ def make_training_callback(
     base_path, 
     report, 
     config, 
-    no_mlflow, 
+    use_mlflow, 
     checkpoint_dir, 
     classification, 
     validate
@@ -428,7 +428,7 @@ def make_training_callback(
 
         if epoch != "on_exit":
             wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-            if not no_mlflow:
+            if use_mlflow:
                 mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
@@ -488,7 +488,7 @@ def make_training_callback(
 
                     print(f"Validation score: {validation_score}")
 
-                    if not no_mlflow:
+                    if use_mlflow:
                         mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
                         for dataset, score in per_dataset_score.items():
                             mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)

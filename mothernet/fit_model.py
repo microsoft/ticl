@@ -124,7 +124,7 @@ def main(argv, extra_config=None):
         base_path, 
         report, 
         config, 
-        orchestration.no_mlflow,
+        orchestration.use_mlflow,
         orchestration.st_checkpoint_dir, 
         classification=config[attention_type]['classification_task'], 
         validate=orchestration.validate
@@ -179,7 +179,7 @@ def main(argv, extra_config=None):
             config=wandb_config,
         )
 
-    if orchestration.no_mlflow or mlflow_hostname is None:
+    if (not orchestration.use_mlflow) or mlflow_hostname is None:
         print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment to variable enable mlflow.")
         total_loss, model, dl, epoch = get_model(
             config, 

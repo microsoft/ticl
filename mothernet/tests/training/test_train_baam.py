@@ -11,11 +11,11 @@ from mothernet.testing_utils import count_parameters, check_predict_iris, get_mo
 from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
+                    'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
                     '--decoder-activation', 'relu', '--save-every', '8', '--validate', 'False']
 
 TESTING_DEFAULTS_SHORT = ['baam', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
+                          'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
                           '--decoder-activation', 'relu', '--save-every', '2', '--validate', 'False']
 
 
@@ -207,7 +207,7 @@ def test_train_baam_average_decoder():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                    'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
                      '--save-every', '8', '-B', tmpdir, '-D', 'average', '--validate', 'False'])
         #clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         #check_predict_iris(clf)
@@ -223,7 +223,7 @@ def test_train_baam_regression():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                        'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
                         '--save-every', '8', '-B', tmpdir, '-d', '16',
                         '--validate', 'True',  '--classification-task', 'False'])
         reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))
@@ -242,7 +242,7 @@ def test_train_baam_regression_output_attention():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
-                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
+                        'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '10', '--n-samples', '200',
                         '--save-every', '8', '-B', tmpdir, '-D', 'output_attention', '--y-encoder', 'linear', '--max-num-classes', '0', '-d', '16',
                         '--validate', 'False'])
         reg = MotherNetAdditiveRegressor(device='cpu', path=get_model_path(results))

@@ -50,7 +50,7 @@ def test_train_mothernet_no_hidden_output_attention():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
+                        'testing_experiment',  '--train-mixed-precision', 'False', '-L', '0',
                         '--decoder-activation', 'relu', '-D', 'output_attention', '-B', tmpdir, '--validate', 'False'])
         clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
         check_predict_iris(clf)
@@ -65,7 +65,7 @@ def test_train_mothernet_no_hidden_class_average():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['mothernet', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128', '--experiment',
-                        'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '-L', '0',
+                        'testing_experiment',  '--train-mixed-precision', 'False', '-L', '0',
                         '--decoder-activation', 'relu', '-D', 'class_average', '-B', tmpdir, '--validate', 'False'])
         clf = MotherNetClassifier(device='cpu', model=results['model'], config=results['config'])
         check_predict_iris(clf)
@@ -290,7 +290,7 @@ def test_train_low_rank():
     L.seed_everything(42)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['mothernet', '-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '-P', '64', '-H', '128', '-d', '128',
-                        '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--min-lr', '0',
+                        '--experiment', 'testing_experiment',  '--train-mixed-precision', 'False', '--min-lr', '0',
                         '--reduce-lr-on-spike', 'True', '-B', tmpdir, '-W', '16', '--low-rank-weights', 'True', '-L', '2',
                         '--decoder-activation', 'relu'])
         clf = MotherNetClassifier(device='cpu', path=get_model_path(results))

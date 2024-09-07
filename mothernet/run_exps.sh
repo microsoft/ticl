@@ -48,5 +48,5 @@ for i in "${!headers[@]}"; do
 done
 
 # Execute the Python script with the arguments
-echo "Running command: python fit_model.py $model_type $args -g $gpu_index --seed-everything --wandb-overwrite $overwrite --no-mlflow --use-wandb"
-python fit_model.py $model_type $args -g $gpu_index --seed-everything --wandb-overwrite $overwrite --no-mlflow --use-wandb 
+echo "Running command: python fit_model.py $model_type $args -g $gpu_index --seed-everything --wandb-overwrite $overwrite --use-wandb"
+python fit_model.py $model_type $args -g $gpu_index --seed-everything --wandb-overwrite $overwrite --use-wandb 

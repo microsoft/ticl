@@ -38,8 +38,8 @@ def get_transformer_config():
         'efficient_eval_masking': True,
         'input_normalization': False,
         'tabpfn_zero_weights': True,
-        'model': 'standard_attention',
-        'causal_mask': False,
+    #    'model': 'standard_attention',
+    #    'causal_mask': False,
     }
     return {'transformer': transformer}
 
