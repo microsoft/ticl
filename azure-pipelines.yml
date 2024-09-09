@@ -1,6 +1,7 @@
 trigger:
 - main
 - develop
+- ssm_merge
 
 pool:
   vmImage: ubuntu-latest
