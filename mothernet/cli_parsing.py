@@ -106,6 +106,8 @@ def argparser_from_config(parser, description="Train Mothernet"):
     openmlloader = parser.add_argument_group('openmlloader')
     openmlloader.add_argument('--valid-data', default='new', help='whether to use large dataset', choices = ['new', 'large', 'old'])
     openmlloader.add_argument('--pca', default = False, help='whether to use pca', action = 'store_true')
+    openmlloader.set_defaults(**config['openmlloader'])
+
 
     if 'transformer' in config:
         transformer = parser.add_argument_group('transformer')
