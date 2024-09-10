@@ -74,8 +74,9 @@ class MotherNet(MLPModelPredictor):
         self.classification_task = classification_task
         # decoder activation = "relu" is legacy behavior
         nhid = emsize * nhid_factor
+        # mothernet has batch_first=False, unlike all the other models.
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
-                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn, batch_first=False)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         

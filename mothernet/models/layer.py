@@ -14,8 +14,8 @@ class BiAttentionEncoderLayer(Module):
                  layer_norm_eps=1e-5, batch_first=False, pre_norm=False,
                  device=None, dtype=None, recompute_attn=False):
         super().__init__()
-        self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
-        self.cross_sample_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
+        self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, batch_first=batch_first)
+        self.cross_sample_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, batch_first=batch_first)
 
     def forward(self, src: Tensor, src_mask: Optional[Tensor] = None) -> Tensor:
         # src_mask is in with eval position, applies only to samples
@@ -145,6 +145,7 @@ class TransformerEncoderLayer(Module):
             src_ = self.norm1(src)
         else:
             src_ = src
+
         if isinstance(src_mask, tuple):
             return NotImplementedError
         elif isinstance(src_mask, int):

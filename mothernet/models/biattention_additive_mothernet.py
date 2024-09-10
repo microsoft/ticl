@@ -53,7 +53,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         self.fourier_features = fourier_features
 
         def encoder_layer_creator(): return BiAttentionEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
-                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn, batch_first=False)
         self.layers = nn.ModuleList([encoder_layer_creator() for _ in range(nlayers)])
         self.emsize = emsize
 
