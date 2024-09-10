@@ -155,7 +155,7 @@ def get_prior_config(max_features=100, n_samples=1024+128):
     
     openmlloader = {
         'valid_data': 'old',
-        'n_samples': float('inf'),
+        'max_samples': float('inf'),
         'pca': False,
     }
 

@@ -635,7 +635,7 @@ def validate_model(model, config):
             split_numbers=[1, 2, 3, 4, 5], 
             eval_positions=[None],
             max_times=[1], 
-            n_samples=config['openmlloader']['n_samples'], 
+            n_samples=config['openmlloader']['max_samples'], 
             base_path=base_path, 
             overwrite=False, 
             n_jobs=1, 
