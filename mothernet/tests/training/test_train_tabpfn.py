@@ -10,9 +10,9 @@ from mothernet.prediction import TabPFNClassifier
 from mothernet.testing_utils import count_parameters, check_predict_iris
 
 TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
-                    'testing_experiment',  '--train-mixed-precision', 'False', '--validate', 'False']
+                    'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--validate', 'False']
 TESTING_DEFAULTS_SHORT = ['-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
-                          'testing_experiment',  '--train-mixed-precision', 'False',
+                          'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False',
                           '--save-every', '2', '--validate', 'False']
 
 
@@ -119,8 +119,8 @@ def test_train_tabpfn_boolean_mixed_prior():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
         results = main(['tabpfn', '-C', '-E', '30', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
-                       'testing_experiment',  '--train-mixed-precision', 'False', '--min-lr', '0', '--reduce-lr-on-spike',
-                        'True', '-B', tmpdir, '--prior-type', 'bag_boolean', '--validate', 'False'])
+                       'testing_experiment', '--train-mixed-precision', 'False', '--min-lr', '0', '--reduce-lr-on-spike',
+                        'True', '-B', tmpdir, '--prior-type', 'bag_boolean', '--validate', 'False', '--seed-everything', 'False'])
     assert count_parameters(results['model']) == 579850
     assert isinstance(results['model'], TabPFN)
     assert results['loss'] == pytest.approx(0.7003629207611084)
