@@ -11,7 +11,7 @@ from torch.nn import Dropout, LayerNorm, Linear, Module
 
 class BiAttentionEncoderLayer(Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
-                 layer_norm_eps=1e-5, batch_first=False, pre_norm=False,
+                 layer_norm_eps=1e-5, batch_first=True, pre_norm=False,
                  device=None, dtype=None, recompute_attn=False):
         super().__init__()
         self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, batch_first=batch_first)
