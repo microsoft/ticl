@@ -17,7 +17,7 @@ TESTING_DEFAULTS_SHORT_ADDITIVE = ['additive'] + TESTING_DEFAULTS_SHORT
 def test_train_additive_old_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'output_attention'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'output_attention', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -29,7 +29,7 @@ def test_train_additive_old_defaults():
 def test_train_additive_nbins():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--n-bins', '128'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--n-bins', '128', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
         assert clf.w_.shape == (4, 128, 3)
@@ -112,7 +112,7 @@ def test_train_additive_class_average_multihead_shape_attention_shape_functions8
 def test_train_additive_class_tokens():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_tokens'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_tokens', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -123,7 +123,7 @@ def test_train_additive_class_tokens():
 def test_train_additive_class_average():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_average'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_average', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
@@ -134,7 +134,7 @@ def test_train_additive_class_average():
 def test_train_additive_class_average_input_layer_norm():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_average', '--input-layer-norm', 'True'])
+        results = main(TESTING_DEFAULTS_ADDITIVE + ['-B', tmpdir, '--decoder-type', 'class_average', '--input-layer-norm', 'True', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], MotherNetAdditive)
