@@ -475,7 +475,8 @@ def make_training_callback(
                 gpu_end_time = torch.cuda.Event(enable_timing=True)
                 if validate:
                     inference_start = time.time()
-                    gpu_start_time.record()
+                    if "cuda" in model.device:
+                        gpu_start_time.record()
                     
                     validation_score, per_dataset_score = validate_model(model, config)
                     
@@ -484,7 +485,10 @@ def make_training_callback(
                     torch.cuda.synchronize()
                     
                     inference_time = inference_end - inference_start
-                    gpu_inference_time = gpu_start_time.elapsed_time(gpu_end_time)
+                    if "cuda" in model.device:
+                        gpu_inference_time = gpu_start_time.elapsed_time(gpu_end_time)
+                    else:
+                        gpu_inference_time = 0
 
                     print(f"Validation score: {validation_score}")
 

@@ -167,18 +167,19 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     epoch = start_epoch
     if stop_after_epochs is not None:
         epochs = min(epochs, stop_after_epochs)
-        
-    gpu_start_time = torch.cuda.Event(enable_timing=True)
-    gpu_end_time = torch.cuda.Event(enable_timing=True)
+    if "cuda" in device:
+        gpu_start_time = torch.cuda.Event(enable_timing=True)
+        gpu_end_time = torch.cuda.Event(enable_timing=True)
 
     try:
-        train_time, inference_time, train_gpu_time, inference_gpu_time = [], [], [], []
+        train_time, inference_time, train_gpu_time = [], [], []
         for epoch in range(start_epoch, epochs + 1):
             if verbose:
                 print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
-            gpu_start_time.record()
+            if "cuda" in device:
+                gpu_start_time.record()
             
             new_loss, nan_share, ignore_share = train_epoch(
                 model, 
@@ -200,9 +201,12 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 last_lr = scheduler.get_last_lr()[0]
 
             train_time.append(time.time() - epoch_start_time)
-            gpu_end_time.record()
-            torch.cuda.synchronize()
-            train_gpu_time.append(gpu_start_time.elapsed_time(gpu_end_time)/1000)
+            if "cuda" in device:
+                gpu_end_time.record()
+                torch.cuda.synchronize()
+                train_gpu_time.append(gpu_start_time.elapsed_time(gpu_end_time)/1000)
+            else:
+                train_gpu_time.append(0)
 
             if verbose:
                 print('-' * 89)
