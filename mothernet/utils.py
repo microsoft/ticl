@@ -469,13 +469,15 @@ def make_training_callback(
                 print("WRITING TO MODEL FILE FAILED")
                 print(e)
 
+            on_cuda = next(model.parameters()).is_cuda
+
             if epoch != "on_exit":
                 inference_time = None
                 gpu_start_time = torch.cuda.Event(enable_timing=True)
                 gpu_end_time = torch.cuda.Event(enable_timing=True)
                 if validate:
                     inference_start = time.time()
-                    if "cuda" in model.device:
+                    if on_cuda:
                         gpu_start_time.record()
                     
                     validation_score, per_dataset_score = validate_model(model, config)
@@ -485,7 +487,7 @@ def make_training_callback(
                     torch.cuda.synchronize()
                     
                     inference_time = inference_end - inference_start
-                    if "cuda" in model.device:
+                    if on_cuda:
                         gpu_inference_time = gpu_start_time.elapsed_time(gpu_end_time)
                     else:
                         gpu_inference_time = 0

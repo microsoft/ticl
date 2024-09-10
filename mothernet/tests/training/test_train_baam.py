@@ -12,11 +12,11 @@ from mothernet.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                    '--decoder-activation', 'relu', '--save-every', '8', '--validate', 'False']
+                    '--decoder-activation', 'relu', '--save-every', '8', '--validate', 'False', '--seed-everything', 'False']
 
 TESTING_DEFAULTS_SHORT = ['baam', '-C', '-E', '2', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                           'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',
-                          '--decoder-activation', 'relu', '--save-every', '2', '--validate', 'False']
+                          '--decoder-activation', 'relu', '--save-every', '2', '--validate', 'False', '--seed-everything', 'False']
 
 
 def test_train_baam_shape_attention():
@@ -52,7 +52,7 @@ def test_train_baam_nbins():
 def test_train_baam_defaults():
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS + ['-B', tmpdir])
+        results = main(TESTING_DEFAULTS + ['-B', tmpdir, '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
         clf_no_file = MotherNetAdditiveClassifier(device='cpu', model=results['model'], config=results['config'])
@@ -66,7 +66,7 @@ def test_train_baam_validation():
     # FIXME not actually testing that validation worked
     L.seed_everything(0)
     with tempfile.TemporaryDirectory() as tmpdir:
-        results = main(TESTING_DEFAULTS_SHORT[:-2] + ['-B', tmpdir, '--validate', 'True'])
+        results = main(TESTING_DEFAULTS_SHORT[:-2] + ['-B', tmpdir, '--validate', 'True', '--seed-everything', 'False'])
         clf = MotherNetAdditiveClassifier(device='cpu', path=get_model_path(results))
         check_predict_iris(clf)
     assert isinstance(results['model'], BiAttentionMotherNetAdditive)
