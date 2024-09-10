@@ -168,7 +168,7 @@ class BiAttentionMotherNetAdditive(nn.Module):
         output = enc_train
         if len(self.layers):
             for mod in self.layers:
-                output = mod(output, src_mask=single_eval_pos)
+                output = mod(output)
 
         marginals = None
         if self.marginal_residual in [True, "True", "output", "decoder"]:
