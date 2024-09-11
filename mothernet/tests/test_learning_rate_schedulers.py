@@ -54,7 +54,7 @@ def test_min_lr(learning_rate_schedule, min_lr, base_lr):
 
 
 TESTING_DEFAULTS = ['tabpfn', '--extra-fast-test', '-C', '-E', '20', '-U', '3', '-n', '1', '-A', 'False', '-e', '8', '-N', '2',
-                    '--experiment', 'testing_experiment', '--no-mlflow', '--train-mixed-precision', 'False', '--save-every', '1000', '--learning-rate', '0.003']
+                    '--experiment', 'testing_experiment',  '--train-mixed-precision', 'False', '--save-every', '1000', '--learning-rate', '0.003']
 
 
 def test_train_defaults():

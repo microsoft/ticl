@@ -1,7 +1,16 @@
 import numpy as np
 
 
-def baseline_predict(metric_function, eval_xs, eval_ys, categorical_feats, metric_used=None, eval_pos=2, max_time=300, **kwargs):
+def baseline_predict(
+    metric_function, 
+    eval_xs, 
+    eval_ys, 
+    categorical_feats, 
+    metric_used=None, 
+    eval_pos=2, 
+    max_time=300, 
+    **kwargs
+):
     """
     Baseline prediction interface.
     :param metric_function:
@@ -27,7 +36,10 @@ def baseline_predict(metric_function, eval_xs, eval_ys, categorical_feats, metri
         eval_x[eval_pos:],
         eval_y[eval_pos:],
         categorical_feats,
-        metric_used=metric_used, max_time=max_time, **kwargs)
+        metric_used=metric_used, 
+        max_time=max_time, 
+        **kwargs
+    )
     metrics += [metric]
     outputs += [output]
     best_configs += [best_config]

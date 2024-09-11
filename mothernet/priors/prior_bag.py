@@ -9,9 +9,24 @@ class BagPrior:
         self.prior_weights = prior_weights
         self.verbose = verbose
 
-    def get_batch(self, *, batch_size, n_samples, num_features, device, epoch=None, single_eval_pos=None):
-        args = {'device': device, 'n_samples': n_samples, 'num_features': num_features,
-                'batch_size': batch_size, 'epoch': epoch, 'single_eval_pos': single_eval_pos}
+    def get_batch(
+        self, 
+        *, 
+        batch_size, 
+        n_samples, 
+        num_features, 
+        device, 
+        epoch=None, 
+        single_eval_pos=None
+    ):
+        args = {
+            'device': device, 
+            'n_samples': n_samples, 
+            'num_features': num_features,
+            'batch_size': batch_size, 
+            'epoch': epoch, 
+            'single_eval_pos': single_eval_pos
+        }
 
         weights = torch.tensor([self.prior_weights[prior_name] for prior_name in self.prior_names], dtype=torch.float)
         weights = weights / torch.sum(weights)

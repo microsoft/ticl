@@ -1,18 +1,21 @@
 from functools import partial
 
 import torch
-from torch.nn.modules.transformer import (Dropout, LayerNorm, Linear, Module, MultiheadAttention, Optional, Tensor,
+import torch.nn as nn
+from torch.nn.modules.transformer import (Dropout, LayerNorm, Linear, Module, Optional, Tensor,
                                           _get_activation_fn)
 from torch.utils.checkpoint import checkpoint
 
+import torch
+from torch.nn import Dropout, LayerNorm, Linear, Module
 
 class BiAttentionEncoderLayer(Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
-                 layer_norm_eps=1e-5, batch_first=False, pre_norm=False,
+                 layer_norm_eps=1e-5, batch_first=True, pre_norm=False,
                  device=None, dtype=None, recompute_attn=False):
         super().__init__()
-        self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
-        self.cross_sample_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation,)
+        self.cross_feature_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, batch_first=batch_first)
+        self.cross_sample_attention = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, batch_first=batch_first)
 
     def forward(self, src: Tensor, src_mask: Optional[Tensor] = None) -> Tensor:
         # src_mask is in with eval position, applies only to samples
@@ -57,13 +60,56 @@ class TransformerEncoderLayer(Module):
     """
     __constants__ = ['batch_first']
 
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
-                 layer_norm_eps=1e-5, batch_first=False, pre_norm=False,
-                 device=None, dtype=None, recompute_attn=False) -> None:
+    def __init__(
+        self, 
+        d_model, 
+        nhead, 
+        dim_feedforward=2048, 
+        dropout=0.1, 
+        activation="relu",
+        layer_norm_eps=1e-5, 
+        batch_first=True, 
+        pre_norm=False,
+        device=None, 
+        dtype=None, 
+        recompute_attn=False,
+        attn_name = 'default',
+        feature_map='identity',
+        norm_output = False,
+    ) -> None:
+        # batch_first is set to True for using flash attention II
+        # check the details of when flash attention can be triggered here: https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html
+        
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
-        self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first,
-                                            **factory_kwargs)
+
+        if attn_name == 'fla': attn_name = 'flash_linear_attention'
+
+        if (torch.__version__ >= '2.2.0') or (not attn_name in ['default', 'flash_attention']):
+            if attn_name == 'default': attn_name = 'flash_attention'
+            from mothernet.models.flash_transformer import MultiheadAttention
+            self.self_attn = MultiheadAttention(
+                d_model, 
+                nhead, 
+                dropout=dropout, 
+                batch_first=batch_first,
+                attn_name = attn_name,
+                feature_map = feature_map,
+                norm_output = norm_output,
+                **factory_kwargs,
+            )
+        else: 
+            # cannot use 'flash_attention'
+            from torch.nn import MultiheadAttention
+            self.self_attn = MultiheadAttention(
+                d_model, 
+                nhead, 
+                dropout=dropout, 
+                batch_first=batch_first,
+                **factory_kwargs,
+            )
+        self.attn_name = attn_name
+        
         # Implementation of Feedforward model
         self.linear1 = Linear(d_model, dim_feedforward, **factory_kwargs)
         self.dropout = Dropout(dropout)
@@ -78,7 +124,13 @@ class TransformerEncoderLayer(Module):
 
         self.activation = _get_activation_fn(activation)
 
-    def forward(self, src: Tensor, src_mask: Optional[Tensor] = None, src_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(
+        self, 
+        src: Tensor, 
+        src_mask: Optional[Tensor] = None, 
+        src_key_padding_mask: Optional[Tensor] = None,
+        is_causal: bool = False,
+    ) -> Tensor:
         r"""Pass the input through the encoder layer.
 
         Args:
@@ -93,20 +145,88 @@ class TransformerEncoderLayer(Module):
             src_ = self.norm1(src)
         else:
             src_ = src
+
         if isinstance(src_mask, tuple):
-            raise NotImplementedError
+            return NotImplementedError
         elif isinstance(src_mask, int):
             assert src_key_padding_mask is None
+
             single_eval_position = src_mask
-            src_left = self.self_attn(src_[:single_eval_position], src_[:single_eval_position], src_[:single_eval_position])[0]
-            src_right = self.self_attn(src_[single_eval_position:], src_[:single_eval_position], src_[:single_eval_position])[0]
+            if is_causal:
+                if self.attn_name in ['flash_attention', 'default']:
+                    train_mask = nn.Transformer.generate_square_subsequent_mask(single_eval_position).to(dtype=torch.bool,device=src.device)
+                elif self.attn_name == 'flash_linear_attention':
+                    # the causal mask is implemented internally
+                    train_mask = None
+                test_mask = None
+                train_is_causal = True
+                test_is_causal = False
+            else:
+                train_mask = None
+                test_mask = None
+                train_is_causal = False
+                test_is_causal = False
+
+            # split the training and testing samples
+            src_train = src_[:single_eval_position]
+            src_test = src_[single_eval_position:]
+            # since we set batch_first = True, the shape of src_ is (batch, seq, feature)
+            src_train = src_train.permute(1, 0, 2)
+            src_test = src_test.permute(1, 0, 2)
+
+            # the training samples are only attend to themselves
+            src_left = self.self_attn(
+                src_train, 
+                src_train, 
+                src_train, 
+                attn_mask=train_mask,
+                is_causal=train_is_causal,
+                need_weights=False,
+            )[0]
+
+            # the testing samples attend to training samples
+            src_right = self.self_attn(
+                src_test, 
+                src_train, 
+                src_train,
+                attn_mask=test_mask,
+                is_causal=test_is_causal,
+                need_weights=False,
+            )[0]
+
+            # permute them back to (seq, batch, feature)
+            src_left = src_left.permute(1, 0, 2)
+            src_right = src_right.permute(1, 0, 2)
             src2 = torch.cat([src_left, src_right], dim=0)
         else:
             if self.recompute_attn:
-                src2 = checkpoint(self.self_attn, src_, src_, src_, src_key_padding_mask, True, src_mask)[0]
+                # this might have some problems, double check
+                # https://github.com/pytorch/pytorch/issues/99282
+                src2 = checkpoint(
+                    self.self_attn, 
+                    src_, 
+                    src_, 
+                    src_, 
+                    src_key_padding_mask, 
+                    # need_weights if specified returns attn_output_weights 
+                    # in addition to attn_outputs
+                    True, 
+                    src_mask,
+                    True,
+                    is_causal,
+                )[0]
             else:
-                src2 = self.self_attn(src_, src_, src_, attn_mask=src_mask,
-                                      key_padding_mask=src_key_padding_mask)[0]
+                src2 = self.self_attn(
+                    query = src_, 
+                    key = src_, 
+                    value = src_, 
+                    attn_mask = src_mask,
+                    key_padding_mask = src_key_padding_mask,
+                    is_causal = is_causal,
+                    need_weights=False,
+                )[0]
+        
+        # residual connection
         src = src + self.dropout1(src2)
         if not self.pre_norm:
             src = self.norm1(src)
@@ -121,3 +241,113 @@ class TransformerEncoderLayer(Module):
         if not self.pre_norm:
             src = self.norm2(src)
         return src
+
+def get_ssm_layers(
+    d_model: int,
+    n_layer: int,
+    d_intermediate: int,
+    model = 'mamba1',
+    ssm_cfg=None,
+    attn_layer_idx=None,
+    attn_cfg=None,
+    norm_epsilon: float = 1e-5,
+    rms_norm: bool = False,
+    initializer_cfg=None,
+    fused_add_norm=False,
+    residual_in_fp32=False,
+    device=None,
+    dtype=None,
+    nheads = 2,
+    dropout = 0.0,
+    activation = 'gelu',
+    pre_norm = False,
+    recompute_attn = False,
+    all_layers_same_init = False,
+    norm_output = False,
+    feature_map = 'identity',
+):
+    if dtype is None:
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    if 'mamba' in model:
+        from mothernet.models.mamba import MambaLayer
+        if ssm_cfg is None:
+            ssm_cfg = {
+                'layer': model[0].upper()+model[1:].lower(),
+            }
+        else:
+            ssm_cfg = {
+                'layer': model[0].upper()+model[1:].lower(), 
+                **ssm_cfg,
+            }
+        return MambaLayer(
+            d_model,
+            n_layer,
+            d_intermediate,
+            ssm_cfg=ssm_cfg,
+            attn_layer_idx=attn_layer_idx,
+            attn_cfg=attn_cfg,
+            norm_epsilon=norm_epsilon,
+            rms_norm=rms_norm,
+            initializer_cfg=initializer_cfg,
+            fused_add_norm=fused_add_norm,
+            residual_in_fp32=residual_in_fp32,
+            device=device,
+            dtype=dtype,
+        )
+    elif model == 'linear_attention':
+        from mothernet.models.linear_attention import TransformerEncoderBuilder
+
+        if d_model % nheads != 0:
+            raise ValueError(f"nheads {nheads} must divide d_model {d_model}!")
+
+        # Create the builder for our transformers
+        builder = TransformerEncoderBuilder.from_kwargs(
+            n_layers=n_layer,
+            n_heads=nheads,
+            query_dimensions=d_model // nheads,
+            value_dimensions=d_model // nheads,
+            feed_forward_dimensions=d_intermediate,
+        )
+
+        # Build a transformer with linear attention
+        builder.attention_type = "linear"
+        linear_model = builder.get()
+
+        return linear_model
+    
+    elif model in ['fla', 'retnet']:
+        from torch.nn import TransformerEncoder
+        from mothernet.models.tabpfn import TransformerEncoderDiffInit
+        # import os 
+        # os.environ['CUDA_LAUNCH_BLOCKING']="1"
+        # os.environ['TORCH_USE_CUDA_DSA'] = "1"          
+
+        if model == 'fla': 
+            attn_name = 'fla'
+        elif model == 'retnet':
+            attn_name = 'retention'
+        
+        def encoder_layer_creator(): return TransformerEncoderLayer(
+            d_model, 
+            nheads,
+            d_intermediate,
+            dropout, 
+            activation = activation, 
+            pre_norm = pre_norm, 
+            recompute_attn = recompute_attn,  
+            attn_name = model,
+            norm_output = norm_output,
+            feature_map = feature_map,
+        )
+        transformer_encoder = TransformerEncoder(
+            encoder_layer_creator(),
+            n_layer,
+        ) if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, n_layer)
+
+        return transformer_encoder
+    elif model == 'gla':
+        pass
+    elif model == 'retnet':
+        pass
+    else:
+        raise ValueError(f"Unknown model {model}")

@@ -1,4 +1,4 @@
-import time
+import time, wandb
 from contextlib import nullcontext
 
 import torch
@@ -9,6 +9,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 import mothernet.utils as utils
 from mothernet.utils import ExponentialLR, ReduceLROnSpike, init_dist
+
+import pdb
 
 
 def eval_criterion(criterion, targets, output, device, n_out):
@@ -29,11 +31,22 @@ def eval_criterion(criterion, targets, output, device, n_out):
     return utils.torch_nanmean(losses.mean(0), return_nanshare=True)
 
 
-def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out, progress_bar=False):
+def train_epoch(
+    model, 
+    aggregate_k_gradients, 
+    using_dist, 
+    scaler, 
+    dl, 
+    device, 
+    optimizer, 
+    criterion, 
+    n_out, 
+    progress_bar=False
+):
     model.train()  # Turn on the train mode
-    total_loss = 0.
-    nan_steps = 0
-    ignore_steps = 0
+    total_loss = torch.tensor(0., device = device)
+    nan_steps = torch.tensor(0., device = device)
+    ignore_steps = torch.tensor(0., device = device)
     steps_per_epoch = len(dl)
     assert len(dl) % aggregate_k_gradients == 0, 'Please set the number of steps per epoch s.t. `aggregate_k_gradients` divides it.'
     if progress_bar:
@@ -45,20 +58,31 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
             cm = nullcontext()
         with cm:
             with autocast(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16) if scaler is not None else nullcontext():
-                output = model(tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
-                               if isinstance(data, tuple) else data.to(device), single_eval_pos=single_eval_pos)
+                # for mothernet, ssm_mothernet, model is MLPModelPredictor from mothernet.py
+                output = model(
+                    tuple(e.to(device) if torch.is_tensor(e) else e for e in data)
+                    if isinstance(data, tuple) else data.to(device), 
+                    single_eval_pos=single_eval_pos
+                )
 
                 if single_eval_pos is not None:
                     targets = targets[single_eval_pos:]
-                loss, nan_share = eval_criterion(criterion, targets, output, device=device, n_out=n_out)
+                loss, nan_share = eval_criterion(
+                    criterion, 
+                    targets, 
+                    output, 
+                    device=device, 
+                    n_out=n_out
+                )
                 loss = loss / aggregate_k_gradients
 
+            if wandb.run: wandb.log({'batch_loss': loss.mean().cpu().detach().item() * aggregate_k_gradients})
             loss.backward()
 
             if batch % aggregate_k_gradients == aggregate_k_gradients - 1:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1., foreach=True)
                 optimizer.step()
-                optimizer.zero_grad()
+                optimizer.zero_grad()                
 
             if torch.isnan(loss):
                 raise ValueError("NAN loss encountered")
@@ -66,7 +90,7 @@ def train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, op
                 total_loss += loss.mean().cpu().detach().item()
             nan_steps += nan_share
             ignore_steps += (targets == -100).float().mean()
-
+            
     return (total_loss / steps_per_epoch * aggregate_k_gradients,
             nan_steps.cpu().item() / steps_per_epoch,
             ignore_steps.cpu().item()/steps_per_epoch)
@@ -143,15 +167,32 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
     epoch = start_epoch
     if stop_after_epochs is not None:
         epochs = min(epochs, stop_after_epochs)
+    if "cuda" in device:
+        gpu_start_time = torch.cuda.Event(enable_timing=True)
+        gpu_end_time = torch.cuda.Event(enable_timing=True)
 
     try:
+        train_time, inference_time, train_gpu_time = [], [], []
         for epoch in range(start_epoch, epochs + 1):
             if verbose:
                 print(f"start of epoch {epoch}")
 
             epoch_start_time = time.time()
-            new_loss,  nan_share, ignore_share = train_epoch(model, aggregate_k_gradients, using_dist, scaler, dl, device, optimizer, criterion, n_out,
-                                                             progress_bar=progress_bar)
+            if "cuda" in device:
+                gpu_start_time.record()
+            
+            new_loss, nan_share, ignore_share = train_epoch(
+                model, 
+                aggregate_k_gradients, 
+                using_dist, 
+                scaler, 
+                dl, 
+                device, 
+                optimizer, 
+                criterion, 
+                n_out,
+                progress_bar=progress_bar,
+            )
 
             total_loss = new_loss
             if spike_scheduler is not None:
@@ -159,18 +200,32 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
             else:
                 last_lr = scheduler.get_last_lr()[0]
 
+            train_time.append(time.time() - epoch_start_time)
+            if "cuda" in device:
+                gpu_end_time.record()
+                torch.cuda.synchronize()
+                train_gpu_time.append(gpu_start_time.elapsed_time(gpu_end_time)/1000)
+            else:
+                train_gpu_time.append(0)
+
             if verbose:
                 print('-' * 89)
                 print(
-                    f'| end of epoch {epoch:3d} | time: {(time.time() - epoch_start_time):5.2f}s | mean loss {total_loss:5.4f} | ')
+                    f'| end of epoch {epoch:3d} | Wallcolock time: {train_time[-1]:5.2f}s | GPU time: {train_gpu_time[-1]:5.2f}s | mean loss {total_loss:5.4f} | ')
+
+                if wandb.run: 
+                    wandb.log({"avg_train_time": sum(train_time)/len(train_time), "train_time": train_time[-1]})
+                    wandb.log({"avg_train_gpu_time": sum(train_gpu_time)/len(train_gpu_time), "train_gpu_time": train_gpu_time[-1]})
 
                 print(
                     f' lr {last_lr}'
                     f' nan share {nan_share:5.2f} ignore share (for classification tasks) {ignore_share:5.4f}')
                 print('-' * 89)
+                
             if new_loss > 1.5 * total_loss:
                 print("LOSS DIVERGED")
                 return total_loss, model.to('cpu'), dl, epoch
+            
             if adaptive_batch_size:
                 if increased_batch_size == 0 and epoch >= 20:
                     aggregate_k_gradients *= 2
@@ -188,6 +243,7 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                     aggregate_k_gradients *= 2
                     increased_batch_size = 4
                     print("increased aggregate_k_gradients size to", aggregate_k_gradients)
+                    
             scheduler.step()
             if spike_scheduler is not None:
                 spike_scheduler.step(metrics=total_loss)
@@ -196,7 +252,12 @@ def train(dl, model, criterion, optimizer_state=None, scheduler=None,
                 model.learning_rates.append(last_lr)
                 model.losses.append(total_loss)
                 model.wallclock_times.append(time.time() - model.start_time)
-                epoch_callback(model, optimizer, scheduler, epoch)
+                output = epoch_callback(model, optimizer, scheduler, epoch)
+                if output: 
+                    inference_time.append(output)
+                    if wandb.run:
+                        wandb.log({"avg_inference_time": sum(inference_time)/len(inference_time), "inference_time": inference_time[-1]})
+
 
     except KeyboardInterrupt:
         pass

@@ -50,7 +50,7 @@ Scaling of features is handled internally.
 Full model training code is provided. Training ``MotherNet`` is possible with ``python fit_model.py mothernet``. A GPU ID can be specified with ``-g GPU_ID``. See the ``python fit_model.py mothernet -h`` and ``python fit_model.py -h`` for more options.
 The results in the paper correspond to ``python fit_model.py mothernet -L 2``, though default values might change and no longer reflect the values in the paper.
 Data-parallel Multi-GPU training is in principal supported using ``torchrun``.
-By default, experiments are tracked using MLFlow if the ``MLFLOW_HOSTNAME`` environment variable is set. Using MLFlow for a particular run can be disabled with the ``--no-mlflow`` argument.
+By default, experiments are tracked using MLFlow if the ``MLFLOW_HOSTNAME`` environment variable is set. 
 
 ## Papers
 This work is described in [MotherNet: A Foundational Hypernetwork for Tabular Classification](https://arxiv.org/pdf/2312.08598).

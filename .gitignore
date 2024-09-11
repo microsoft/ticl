@@ -127,6 +127,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+environment.py
 
 # Spyder project settings
 .spyderproject
@@ -179,9 +180,13 @@ mothernet/results
 mothernet/joblib_cache
 mothernet/catboost_info
 mothernet/mlruns
-mothernet/models_diff
 tabpfn/mlruns/
 tabpfn/results
 mothernet/results_bak
 
 mlruns
+**/wandb/
+
+# drafts
+
+

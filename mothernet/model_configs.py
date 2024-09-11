@@ -38,9 +38,38 @@ def get_transformer_config():
         'efficient_eval_masking': True,
         'input_normalization': False,
         'tabpfn_zero_weights': True,
-
+    #    'model': 'standard_attention',
+    #    'causal_mask': False,
     }
     return {'transformer': transformer}
+
+def get_ssm_config():
+    ssm = {
+        "emsize": 512,
+        "nlayers": 12,
+        "dropout": 0.0,
+        "nhid_factor": 2,
+        'nhead': 512 // 128,
+        'ssm_cfg': {
+            'd_state': 16,
+            'expand': 1,
+        },
+        'local_nhead': 4,
+        'init_method': None,
+        'recompute_attn': True,
+        'pre_norm': False,
+        'y_encoder': "one_hot",
+        'classification_task': True,
+        'efficient_eval_masking': True,
+        'input_normalization': False,
+        'tabpfn_zero_weights': True,
+        'all_layers_same_init': True,
+        'model': 'mamba1',
+        'causal_mask': False,
+        'feature_map': 'identity',
+        'norm_output': False,
+    }
+    return {'ssm': ssm}
 
 
 def get_prior_config(max_features=100, n_samples=1024+128):
@@ -119,13 +148,23 @@ def get_prior_config(max_features=100, n_samples=1024+128):
     dataloader = {
         "batch_size": 8,
         "num_steps": 8192,
-        'min_eval_pos': 2}
+        'min_eval_pos': 2,
+        'random_n_samples': 0,
+        'n_test_samples': 0,
+    }
+    
+    openmlloader = {
+        'valid_data': 'old',
+        'max_samples': float('inf'),
+        'pca': False,
+    }
 
     prior['boolean'] = {
         'max_fraction_uninformative': 0.5,
-        'p_uninformative': 0.5}
+        'p_uninformative': 0.5
+    }
 
-    return {'prior': prior, 'dataloader': dataloader}
+    return {'prior': prior, 'dataloader': dataloader, 'openmlloader': openmlloader}
 
 
 def get_mothernet_config():
@@ -170,10 +209,15 @@ def get_biattention_config():
     }}
 
 
-def get_shared_defaults():
+def get_shared_defaults(encoder_type = 'transformer'):
     config = get_prior_config()
     config.update(get_optimizer_config())
-    config.update(get_transformer_config())
+    if encoder_type == 'transformer':
+        config.update(get_transformer_config())
+    elif encoder_type == 'ssm':
+        config.update(get_ssm_config())
+    else:
+        raise ValueError(f"Unknown encoder type {encoder_type}")
     return config
 
 
@@ -223,8 +267,16 @@ def get_batabpfn_default_config():
     config['prior']['classification']['pad_zeros'] = False
     return config
 
+def get_ssm_tabpfn_default_config(model = 'mamba1'):
+    config = get_shared_defaults(encoder_type='ssm')
+    return config
 
-def get_model_default_config(model_type):
+def get_ssm_mothernet_default_config(model = 'mamba1'):
+    config = get_shared_defaults(encoder_type='ssm')
+    config.update(get_mothernet_config())
+    return config
+
+def get_model_default_config(model_type, model = None):
     if model_type == 'mothernet':
         config = get_mothernet_default_config()
     elif model_type == 'batabpfn':
@@ -237,6 +289,10 @@ def get_model_default_config(model_type):
         config = get_baam_default_config()
     elif model_type == 'perceiver':
         config = get_perceiver_default_config()
+    elif model_type == 'ssm_tabpfn':
+        config = get_ssm_tabpfn_default_config(model = model)
+    elif model_type == 'ssm_mothernet':
+        config = get_ssm_mothernet_default_config(model = model)
     else:
         raise ValueError(f"Unknown model type {model_type}")
     config['model_type'] = model_type

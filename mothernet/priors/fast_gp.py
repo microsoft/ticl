@@ -3,6 +3,7 @@ import torch
 
 from mothernet.utils import default_device
 from mothernet.distributions import parse_distributions, sample_distributions
+import time
 
 # We will use the simplest form of GP model, exact inference
 
@@ -55,6 +56,7 @@ class GPPrior:
                     model, likelihood = get_model(x, torch.Tensor(), hypers)
                     model.to(device)
 
+                    error_times = 5
                     try:
                         with gpytorch.settings.prior_mode(True):
                             model, likelihood = get_model(x, torch.Tensor(), hypers)
@@ -68,6 +70,13 @@ class GPPrior:
                         print('GP Fitting unsuccessful, retrying.. ')
                         print(x)
                         print(self.config)
+                        # clear the memory
+                        torch.cuda.empty_cache()
+                        del model, likelihood, d
+                        time.sleep(1)
+                        error_times -= 1
+                        assert error_times == 0
+                            
 
             if bool(torch.any(torch.isnan(x)).detach().cpu().numpy()):
                 print({"noise": hypers['noise'], "outputscale": hypers['outputscale'],

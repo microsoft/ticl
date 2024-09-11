@@ -1,11 +1,15 @@
+# import os
+# os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
+
 import socket
 import sys
 import time
 
 import mlflow
-import wandb
+
 import torch
 import os
+root_dir = os.path.dirname(os.path.abspath(__file__))
 
 from git import Repo
 
@@ -16,13 +20,16 @@ from mothernet.cli_parsing import make_model_level_argparser
 from mothernet.model_configs import get_model_default_config
 from argparse import Namespace
 
+import pandas as pd
+import pdb
 
 def main(argv, extra_config=None):
     # extra config is used for testing purposes only
     # this is the generic entry point for training any model, so it has A LOT of options
     parser = make_model_level_argparser()
     args = parser.parse_args(args=argv or ['--help'])
-    config = get_model_default_config(args.model_type)
+    model = args.ssm.model if 'ssm' in args.model_type else None
+    config = get_model_default_config(args.model_type, model)
 
     device, rank, num_gpus = init_device(args.general.gpu_id, args.general.use_cpu)
     # handle syne-tune restarts
@@ -53,26 +60,33 @@ def main(argv, extra_config=None):
         import lightning as L
         L.seed_everything(42)
 
+    if 'transformer' in config:
+        attention_type = 'transformer'
+    elif 'ssm' in config:
+        attention_type = 'ssm'
+    else:
+        raise ValueError(f"Unknown attention type")
+
     # promote general group to top level
     config.update(config.pop('general'))
     config['num_gpus'] = 1
     config['device'] = device
 
-    if not config['transformer']['classification_task']:
+    if not config[attention_type]['classification_task']:
         print('Setting regression parameters')
         config['prior']['classification']['max_num_classes'] = 0
-        config['transformer']['y_encoder'] = 'linear'
+        config[attention_type]['y_encoder'] = 'linear'
         config['mothernet']['decoder_type'] = 'average'
 
     warm_start_weights = orchestration.warm_start_from
-    config['transformer']['nhead'] = config['transformer']['emsize'] // 128
+    config[attention_type]['nhead'] = config[attention_type]['emsize'] // 128
 
     config['dataloader']['num_steps'] = config['dataloader']['num_steps'] or 1024 * \
         64 // config['dataloader']['batch_size'] // config['optimizer']['aggregate_k_gradients']
 
     if args.orchestration.extra_fast_test:
         config['prior']['n_samples'] = 2 * 16
-        config['transformer']['nhead'] = 1
+        config[attention_type]['nhead'] = 1
 
     if extra_config is not None:
         update_config(config, extra_config)
@@ -104,23 +118,80 @@ def main(argv, extra_config=None):
         torch.autograd.set_detect_anomaly(True)
 
     model_string = get_model_string(config, num_gpus, device, parser)
-    save_callback = make_training_callback(save_every, model_string, base_path, report, config, orchestration.no_mlflow,
-                                           orchestration.st_checkpoint_dir, classification=config['transformer']['classification_task'], validate=orchestration.validate)
+    save_callback = make_training_callback(
+        save_every, 
+        model_string, 
+        base_path, 
+        report, 
+        config, 
+        orchestration.use_mlflow,
+        orchestration.st_checkpoint_dir, 
+        classification=config[attention_type]['classification_task'], 
+        validate=orchestration.validate
+    )
 
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
     if orchestration.use_wandb:
+        import wandb
+        from mothernet.environment import WANDB_INFO
+        wandb_data, flatten_key_dict = flatten_dict(config, track_keys=True)
+        wandb_config = {k: v for k, v in wandb_data.items() if k not in ['wallclock_times', 'losses', 'learning_rates']}
+        # check_keys = pd.read_csv(f"{root_dir}/configs/{args.model_type}_configs.csv").columns
+        # flatten_check_keys = [flatten_key_dict[k] for k in check_keys] + ['model_type']
+
+        # api = wandb.Api(timeout=300)
+        # runs = api.runs(f"{WANDB_INFO['entity']}/{WANDB_INFO['project']}")
+        # find_existing_run = None
+        # for run in runs:
+        #     run_config_list = {k: v for k,v in run.config.items() if not k.startswith('_')}
+        #     this_run = True
+        #     for key in flatten_check_keys:
+        #         if key not in wandb_config or key not in run_config_list:
+        #             this_run = False
+        #             break
+        #         if (run_config_list[key] != wandb_config[key]):
+        #             # check whether they are numbers 
+        #             this_run = False
+        #             if (isinstance(run_config_list[key], (int, float))) and (isinstance(wandb_config[key], (int, float))):
+        #                 # check whether the numbers are close
+        #                 if abs(run_config_list[key] - wandb_config[key]) <= 1e-5:
+        #                     this_run = True
+        #             if not this_run: break
+        #     if this_run:
+
+        #         print("########"*3)
+        #         print(f"Find existing run in wandb: {run.name}")
+        #         print("########"*3)
+
+        #         if not orchestration.wandb_overwrite: 
+        #             find_existing_run = run
+        #             print(f'wandb_overwrite is set to {orchestration.wandb_overwrite}, exiting...')
+        #             exit(0)
+                
+            
+        # # initialize wandb
+        # if find_existing_run is None:
         wandb.init(
-            dir='.',
-            project='mothernet',
-            entity='tabpfn_interpretability',
+            dir=WANDB_INFO['dir'],
+            project=WANDB_INFO['project'],
+            entity=WANDB_INFO['entity'],
             id=model_string,
-            config={k: v for k, v in flatten_dict(config).items() if k not in ['wallclock_times', 'losses', 'learning_rates']},
+            config=wandb_config,
         )
-    if orchestration.no_mlflow or mlflow_hostname is None:
+
+    if (not orchestration.use_mlflow) or mlflow_hostname is None:
         print("Not logging run with mlflow, set MLFLOW_HOSTNAME environment to variable enable mlflow.")
-        total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
-                                                 optimizer_state=optimizer_state, scheduler=scheduler,
-                                                 load_model_strict=orchestration.continue_run or orchestration.load_strict)
+        total_loss, model, dl, epoch = get_model(
+            config, 
+            device, 
+            should_train=True,
+            verbose=1, 
+            epoch_callback=save_callback, 
+            model_state=model_state,
+            optimizer_state=optimizer_state, 
+            scheduler=scheduler,
+            load_model_strict=orchestration.continue_run or orchestration.load_strict
+        )
     else:
         print(f"Logging run with mlflow at host {mlflow_hostname}")
         mlflow.set_tracking_uri(f"http://{mlflow_hostname}:5000")
@@ -154,9 +225,17 @@ def main(argv, extra_config=None):
         with mlflow.start_run(**run_args):
             mlflow.log_param('hostname', socket.gethostname())
             mlflow.log_params({k: v for k, v in flatten_dict(config).items() if k not in ['wallclock_times', 'losses', 'learning_rates']})
-            total_loss, model, dl, epoch = get_model(config, device, should_train=True, verbose=1, epoch_callback=save_callback, model_state=model_state,
-                                                     optimizer_state=optimizer_state, scheduler=scheduler,
-                                                     load_model_strict=orchestration.continue_run or orchestration.load_strict)
+            total_loss, model, dl, epoch = get_model(
+                config, 
+                device, 
+                should_train=True, 
+                verbose=1, 
+                epoch_callback=save_callback, 
+                model_state=model_state,
+                optimizer_state=optimizer_state, 
+                scheduler=scheduler,
+                load_model_strict=orchestration.continue_run or orchestration.load_strict
+            )
 
     if rank == 0:
         save_callback(model, None, None, "on_exit")

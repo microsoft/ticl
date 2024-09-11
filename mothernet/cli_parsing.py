@@ -58,6 +58,14 @@ def make_model_level_argparser(description="Train transformer-style model on syn
     baam_parser = subparsers.add_parser('baam', help='Train a bi-attention additive mothernet model')
     baam_parser.set_defaults(model_type='baam')
     baam_parser = argparser_from_config(description="Train baam", parser=baam_parser)
+    
+    ssm_tabpfn_parser = subparsers.add_parser('ssm_tabpfn', help='Train a SSMtabpfn model')
+    ssm_tabpfn_parser.set_defaults(model_type='ssm_tabpfn')
+    ssm_tabpfn_parser = argparser_from_config(description="Train SSMtabpfn", parser=ssm_tabpfn_parser)
+
+    ssm_mothernet_parser = subparsers.add_parser('ssm_mothernet', help='Train a ssm_mothernet model')
+    ssm_mothernet_parser.set_defaults(model_type='ssm_mothernet')
+    ssm_mothernet_parser = argparser_from_config(description="Train SSMMothernet", parser=ssm_mothernet_parser)
 
     return parser
 
@@ -90,24 +98,54 @@ def argparser_from_config(parser, description="Train Mothernet"):
     dataloader = parser.add_argument_group('dataloader')
     dataloader.add_argument('-b', '--batch-size', type=int, help='physical batch size')
     dataloader.add_argument('-n', '--num-steps', type=int, help='number of steps per epoch')
+    dataloader.add_argument('--min-eval-pos', type=int, help='minimum evaluation position')
+    dataloader.add_argument('--random-n-samples', type=int, help='whether to sample n_samples randomly')
+    dataloader.add_argument('--n-test-samples', type=int, help='number of test samples')
     dataloader.set_defaults(**config['dataloader'])
+    
+    openmlloader = parser.add_argument_group('openmlloader')
+    openmlloader.add_argument('--valid-data', default='new', help='whether to use large dataset', choices = ['new', 'large', 'old'])
+    openmlloader.add_argument('--pca', default = False, help='whether to use pca', action = 'store_true')
+    openmlloader.set_defaults(**config['openmlloader'])
 
-    transformer = parser.add_argument_group('transformer')
-    transformer.add_argument('-e', '--emsize', type=int, help='embedding size')
-    transformer.add_argument('-N', '--nlayers', type=int, help='number of transformer layers')
-    transformer.add_argument('--init-method', help='Weight initialization method.')
-    transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
-    transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
-    transformer.add_argument('--pre-norm', action='store_true')
-    transformer.add_argument('--classification-task', type=str2bool, help='Whether to use classification or regression.')
-    transformer.set_defaults(**config['transformer'])
+
+    if 'transformer' in config:
+        transformer = parser.add_argument_group('transformer')
+        transformer.add_argument('-e', '--emsize', type=int, help='embedding size')
+        transformer.add_argument('-N', '--nlayers', type=int, help='number of transformer layers')
+        transformer.add_argument('--init-method', help='Weight initialization method.')
+        transformer.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
+        transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
+        transformer.add_argument('--pre-norm', action='store_true')
+        transformer.add_argument('--classification-task', type=str2bool, help='Whether to use classification or regression.')
+        # transformer.add_argument('--model', type = str, choices = ['standard_attention', 'flash_attention'], help = 'which ssm model to use')
+        # transformer.add_argument('--causal-mask', help='Whether to use causal attention', action='store_true', default=False)
+        transformer.set_defaults(**config['transformer'])
+    elif 'ssm' in config:
+        ssm = parser.add_argument_group('ssm')
+        ssm.add_argument('-e', '--emsize', type=int, help='embedding size')
+        ssm.add_argument('-N', '--nlayers', type=int, help='number of transformer layers')
+        ssm.add_argument('--init-method', help='Weight initialization method.')
+        ssm.add_argument('--y-encoder', help='Encoder for labels. "linear", "onehot" or None.')
+        ssm.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
+        ssm.add_argument('--pre-norm', action='store_true')
+        ssm.add_argument('--classification-task', type=str2bool, help='Whether to use classification or regression.')
+        ssm.add_argument('--model', type = str, choices = ['mamba1', 'mamba2', 'linear_attention', 'fla'], help = 'which ssm model to use')
+        
+        ## specific to fla
+        ssm.add_argument('--feature-map', help='when the model is fla, which feature map to use', type = str, choices = ['identity', 'elu'])
+        ssm.add_argument('--norm-output', help='when the model is fla, whether to normalize the output of the model', action = 'store_true', default = False)
+        ssm.add_argument('--causal-mask', help='when the model is fla, Whether to use causal attention', action='store_true', default=False)
+        ssm.set_defaults(**config['ssm'])
+    else:
+        raise ValueError("No transformer or ssm config found in model config.")
 
     if model_type in ['baam', 'batabpfn']:
         biattention = parser.add_argument_group('biattention')
         biattention.add_argument('--input-embedding', type=str, help='input embedding type')
         biattention.set_defaults(**config['biattention'])
 
-    if model_type in ['mothernet', 'additive', 'baam', 'perceiver']:
+    if model_type in ['mothernet', 'additive', 'baam', 'perceiver', 'ssm_mothernet']:
         mothernet = parser.add_argument_group('mothernet')
         mothernet.add_argument('-d', '--decoder-embed-dim', type=int, help='decoder embedding size')
         mothernet.add_argument('-H', '--decoder-hidden-size', type=int, help='decoder hidden size')
@@ -150,6 +188,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         # perceiver.add_argument('--perceiver-large-dataset', action='store_true')
         perceiver.set_defaults(**config['perceiver'])
 
+
     # Prior and data generation
     prior = parser.add_argument_group('prior')
     prior.add_argument('--num-features', help="Maximum number of features in prior", type=int)
@@ -184,13 +223,13 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration = parser.add_argument_group('orchestration')
     orchestration.add_argument('--extra-fast-test', help="whether to use tiny data", action='store_true')
     orchestration.add_argument('--stop-after-epochs', help="for pausing rungs with synetune", type=int, default=None)
-    orchestration.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", action='store_true')
+    orchestration.add_argument('--seed-everything', help="whether to seed everything for testing and benchmarking", default = True, type=str2bool)
     orchestration.add_argument('--experiment', help="Name of mlflow experiment", default='Default')
     orchestration.add_argument('-R', '--create-new-run', help="Create as new MLFLow run, even if continuing", action='store_true')
     orchestration.add_argument('-B', '--base-path', default='.')
     orchestration.add_argument('--save-every', default=10, type=int)
     orchestration.add_argument('--st_checkpoint_dir', help="checkpoint dir for synetune", type=str, default=None)
-    orchestration.add_argument('--no-mlflow', help="whether to use mlflow", action='store_true')
+    orchestration.add_argument('--use-mlflow', help="whether to use mlflow", action='store_true')
     orchestration.add_argument('--use-wandb', help="whether to use wandb", action='store_true')
     orchestration.add_argument('-f', '--warm-start-from', help='Warm start from this file')
     orchestration.add_argument('-c', '--continue-run', help='Whether to read the old config when warm starting', action='store_true')
@@ -199,6 +238,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
     orchestration.add_argument('--detect-anomaly', help='Whether enable anomaly detection in pytorch. For debugging only.', action='store_true')
     orchestration.add_argument('--validate', type=str2bool, help='Whether to perform validation.', default=True)
     orchestration.add_argument('--progress-bar', type=str2bool, help='Whether to show a progress bar.', default=False)
+    orchestration.add_argument('--wandb-overwrite', help='Whether to overwrite wandb runs.', action='store_true', default=False)
 
     # orchestration options are not part of the default config
     return parser

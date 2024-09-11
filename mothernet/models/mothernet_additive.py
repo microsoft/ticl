@@ -34,7 +34,7 @@ class MotherNetAdditive(nn.Module):
         assert fourier_features == 0, "Fourier features are not supported in this model yet"
 
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
-                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn, batch_first=False)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
         self.emsize = emsize

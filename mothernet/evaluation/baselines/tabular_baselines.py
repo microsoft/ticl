@@ -920,7 +920,7 @@ def lightgbm_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=30
 
 
 param_grid_hyperopt['logistic'] = {
-    'penalty': hp.choice('penalty', ['l1', 'l2', 'none']), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
+    'penalty': hp.choice('penalty', ['l1', 'l2', None]), 'max_iter': hp.randint('max_iter', 50, 500), 'fit_intercept': hp.choice('fit_intercept', [True, False]), 'C': hp.loguniform('C', -5, math.log(5.0))}  # 'normalize': [False],
 
 
 def logistic_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
@@ -1094,10 +1094,26 @@ param_grid_hyperopt['knn'] = {'n_neighbors': hp.randint('n_neighbors', 1, 16)
                               }
 
 
-def knn_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, **kwargs):
-    x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
-                                             one_hot=True, impute=True, standardize=True,
-                                             cat_features=cat_features)
+def knn_metric(
+    x, 
+    y, 
+    test_x, 
+    test_y, 
+    cat_features, 
+    metric_used, 
+    max_time=300,
+    **kwargs
+):
+    x, y, test_x, test_y = preprocess_impute(
+        x, 
+        y, 
+        test_x, 
+        test_y,
+        one_hot=True, 
+        impute=True, 
+        standardize=True,
+        cat_features=cat_features
+    )
 
     def clf_(**params):
         if is_classification(metric_used):

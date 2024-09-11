@@ -82,9 +82,13 @@ def extract_mlp_model(model, config, X_train, y_train, device="cpu", inference_d
         train_x = x_src + y_src
     else:
         train_x = x_src
+
     if hasattr(model, "transformer_encoder"):
         # tabpfn mlp model maker
         output = model.transformer_encoder(train_x)
+    elif hasattr(model, "ssm"):
+        # ssm model maker
+        output = model.ssm(train_x)
     else:
         # perceiver
         data = rearrange(train_x, 'n b d -> b n d')
@@ -251,7 +255,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
             self.config = config
         if "model_type" not in config:
             config['model_type'] = config.get("model_maker", 'tabpfn')
-        if config['model_type'] not in ["mlp", "mothernet"]:
+        if config['model_type'] not in ["mlp", "mothernet", 'ssm_mothernet']:
             raise ValueError(f"Incompatible model_type: {config['model_type']}")
         model.to(self.device)
         n_classes = len(le.classes_)

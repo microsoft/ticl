@@ -4,24 +4,67 @@ from torch.utils.data import DataLoader
 import mothernet.priors as priors
 from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, StepFunctionPrior
 
+import wandb
+from tqdm import tqdm
 
 class PriorDataLoader(DataLoader):
-    def __init__(self, prior, num_steps, batch_size, min_eval_pos, n_samples, device, num_features):
+    def __init__(
+        self, 
+        prior, 
+        num_steps, 
+        batch_size, 
+        min_eval_pos, 
+        n_samples, 
+        device, 
+        num_features,
+        model = None,
+        random_n_samples = False,
+        n_test_samples = False,
+    ):
+
+        if (random_n_samples and not n_test_samples) or (not random_n_samples and n_test_samples):
+            raise ValueError("random_n_samples and test_samples must be set together.")
+        
         self.prior = prior
         self.num_steps = num_steps
         self.batch_size = batch_size
         self.min_eval_pos = min_eval_pos
-        self.n_samples = n_samples
+
+        self.random_n_samples = random_n_samples
+        if random_n_samples:
+            self.n_samples = np.random.randint(min_eval_pos, random_n_samples)
+            self.n_test_samples = n_test_samples
+        else:
+            self.n_samples = n_samples
         self.device = device
         self.num_features = num_features
         self.epoch_count = 0
+        self.model = model
 
-    def gbm(self, epoch=None):
+    def gbm(self, epoch=None, tqdm_bar=None, single_eval_pos = None):
         # Actually can only sample up to n_samples-1
-        single_eval_pos = np.random.randint(self.min_eval_pos, self.n_samples)
-        batch = self.prior.get_batch(batch_size=self.batch_size, n_samples=self.n_samples, num_features=self.num_features, device=self.device,
-                                     epoch=epoch,
-                                     single_eval_pos=single_eval_pos)
+        if self.random_n_samples:
+            single_eval_pos = self.n_samples - self.n_test_samples
+            
+        # comment this for debug
+        if single_eval_pos is None:
+            single_eval_pos = np.random.randint(self.min_eval_pos, self.n_samples)
+        # single_eval_pos = 31496
+        
+        # change the description of the progress bar
+        if tqdm_bar is not None:
+            tqdm_bar.set_description(f'| train sample number: {single_eval_pos} | test sample number: {self.n_samples - single_eval_pos}')
+        if wandb.run is not None:
+            wandb.log({'train_train_sample_number': single_eval_pos, 'train_test_sample_number': self.n_samples - single_eval_pos})
+        
+        batch = self.prior.get_batch(
+            batch_size=self.batch_size, 
+            n_samples=self.n_samples, 
+            num_features=self.num_features, 
+            device=self.device,
+            epoch=epoch,
+            single_eval_pos=single_eval_pos,
+        )
         # we return sampled hyperparameters from get_batch for testing but we don't want to use them as style.
         x, y, target_y, info = batch if len(batch) == 4 else (batch[0], batch[1], batch[2], None)
         return (info, x, y), target_y, single_eval_pos
@@ -31,13 +74,21 @@ class PriorDataLoader(DataLoader):
 
     def get_test_batch(self):  # does not increase epoch_count
         return self.gbm(epoch=self.epoch_count)
+    
+    def iter_safe_gbm(self):
+        tqdm_bar = tqdm(range(self.num_steps))
+        for _ in tqdm_bar:
+            try:
+                yield self.gbm(epoch=self.epoch_count - 1, tqdm_bar = tqdm_bar)
+            except AssertionError:
+                continue
 
     def __iter__(self):
         self.epoch_count += 1
-        return iter(self.gbm(epoch=self.epoch_count - 1) for _ in range(self.num_steps))
+        return iter(self.iter_safe_gbm())
 
 
-def get_dataloader(prior_config, dataloader_config, device):
+def get_dataloader(prior_config, dataloader_config, device, model = None):
 
     prior_type = prior_config['prior_type']
     gp_flexible = ClassificationAdapterPrior(priors.GPPrior(prior_config['gp']), num_features=prior_config['num_features'], **prior_config['classification'])
@@ -58,5 +109,11 @@ def get_dataloader(prior_config, dataloader_config, device):
     else:
         raise ValueError(f"Prior type {prior_type} not supported.")
 
-    return PriorDataLoader(prior=prior, n_samples=prior_config['n_samples'],
-                           device=device, num_features=prior_config['num_features'], **dataloader_config)
+    return PriorDataLoader(
+        prior=prior, 
+        n_samples=prior_config['n_samples'],
+        device=device, 
+        num_features=prior_config['num_features'], 
+        model = model,
+        **dataloader_config
+    )

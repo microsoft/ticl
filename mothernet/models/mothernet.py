@@ -1,4 +1,4 @@
-import torch
+import torch, wandb
 import torch.nn as nn
 from torch.nn import TransformerEncoder
 
@@ -74,10 +74,16 @@ class MotherNet(MLPModelPredictor):
         self.classification_task = classification_task
         # decoder activation = "relu" is legacy behavior
         nhid = emsize * nhid_factor
+        # mothernet has batch_first=False, unlike all the other models.
         def encoder_layer_creator(): return TransformerEncoderLayer(emsize, nhead, nhid, dropout, activation=activation,
-                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn)
+                                                                    pre_norm=pre_norm, recompute_attn=recompute_attn, batch_first=False)
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)
+        
+        backbone_size = sum(p.numel() for p in self.transformer_encoder.parameters())
+        if wandb.run: wandb.log({"backbone_size": backbone_size})
+        print("Number of parameters in backbone: ", backbone_size)
+
         self.decoder_activation = decoder_activation
         self.emsize = emsize
         self.encoder = Linear(n_features, emsize, replace_nan_by_zero=True)

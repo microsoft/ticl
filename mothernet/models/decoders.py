@@ -240,7 +240,7 @@ class SummaryLayer(nn.Module):
                     y_src = y_src.unsqueeze(1)
                 if x.ndim == 3:
                     indices = y_src.unsqueeze(-1).expand(-1, -1, self.emsize)
-                    sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device)
+                    sums = torch.zeros(self.n_out, x.shape[1], self.emsize, device=x.device, dtype = x.dtype)
                     sums.scatter_add_(0, indices, x)
                     # create counts
                     ones = torch.ones(1, device=x.device).expand(x.shape[0], x.shape[1])

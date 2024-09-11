@@ -8,7 +8,7 @@ from tqdm import tqdm
 import mlflow
 import wandb
 import numpy as np
-import torch
+import torch, time
 
 from pathlib import Path
 from torch import nn
@@ -398,7 +398,17 @@ def get_model_string(config, num_gpus, device, parser):
     return model_string
 
 
-def make_training_callback(save_every, model_string, base_path, report, config, no_mlflow, checkpoint_dir, classification, validate):
+def make_training_callback(
+    save_every, 
+    model_string, 
+    base_path, 
+    report, 
+    config, 
+    use_mlflow, 
+    checkpoint_dir, 
+    classification, 
+    validate
+):
     from mothernet.model_builder import save_model
     config = config.copy()
 
@@ -418,7 +428,7 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
 
         if epoch != "on_exit":
             wallclock_ticker = max(1, int(model.wallclock_times[-1]//(60 * 5)))
-            if not no_mlflow:
+            if use_mlflow:
                 mlflow.log_metric(key="wallclock_time", value=model.wallclock_times[-1], step=epoch)
                 mlflow.log_metric(key="loss", value=model.losses[-1], step=epoch)
                 mlflow.log_metric(key="learning_rate", value=model.learning_rates[-1], step=epoch)
@@ -459,16 +469,44 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                 print("WRITING TO MODEL FILE FAILED")
                 print(e)
 
+            on_cuda = next(model.parameters()).is_cuda
+
             if epoch != "on_exit":
+                inference_time = None
+                gpu_start_time = torch.cuda.Event(enable_timing=True)
+                gpu_end_time = torch.cuda.Event(enable_timing=True)
                 if validate:
+                    inference_start = time.time()
+                    if on_cuda:
+                        gpu_start_time.record()
+                    
                     validation_score, per_dataset_score = validate_model(model, config)
+                    
+                    inference_end = time.time()
+                    gpu_end_time.record()
+                    torch.cuda.synchronize()
+                    
+                    inference_time = inference_end - inference_start
+                    if on_cuda:
+                        gpu_inference_time = gpu_start_time.elapsed_time(gpu_end_time)
+                    else:
+                        gpu_inference_time = 0
+
                     print(f"Validation score: {validation_score}")
-                    if not no_mlflow:
+
+                    if use_mlflow:
                         mlflow.log_metric(key="val_score", value=validation_score, step=epoch)
                         for dataset, score in per_dataset_score.items():
                             mlflow.log_metric(key=f"val_score_{dataset}", value=score, step=epoch)
+                            
                     if wandb.run is not None:
-                        val_metrics = {"val_score": validation_score, "epoch": epoch}
+                        val_metrics = {
+                            "val_score": validation_score, 
+                            "epoch": epoch, 
+                            'inference_time': inference_time,
+                            'gpu_inference_time': gpu_inference_time,
+                        }
+                        
                         for dataset, score in per_dataset_score.items():
                             val_metrics[f"val_score_{dataset}"] = score
                         wandb.log(val_metrics)
@@ -487,6 +525,8 @@ def make_training_callback(save_every, model_string, base_path, report, config, 
                                     print(f"Failed to remove old model file {old_file_name}: {e}")
                             else:
                                 print(f"Not removing old model file {old_file_name} because loss is too high ({loss} < {this_loss})")
+                if validate: 
+                    return inference_time
 
     return save_callback
 
@@ -530,11 +570,13 @@ def get_init_method(init_method):
 
 
 def validate_model(model, config):
-    from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression
+    from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression, open_cc_large_dids, new_valid_dids
 
     from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
     from mothernet.models.mothernet_additive import MotherNetAdditive
     from mothernet.models.mothernet import MotherNet
+    from mothernet.models.ssm_mothernet import SSMMotherNet
+    from mothernet.models.ssm_tabpfn import SSMTabPFN
     from mothernet.models.tabpfn import TabPFN
     from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
     from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor
@@ -542,24 +584,72 @@ def validate_model(model, config):
     from mothernet.evaluation import tabular_metrics
     from uuid import uuid4
 
-    if config['transformer']['classification_task']:
+    if 'transformer' in config:
+        attention_type = 'transformer'
+    elif 'ssm' in config:
+        attention_type = 'ssm'
+    else:
+        raise ValueError(f"Unknown attention type")
+    
+    if config[attention_type]['classification_task'] or config['openmlloader']['valid_data'] in ['large', 'new']:
+        if config['openmlloader']['valid_data'] == 'new':
+            open_cc_dids = new_valid_dids
+        elif config['openmlloader']['valid_data'] == 'large':
+            open_cc_dids = open_cc_large_dids
+        else:
+            open_cc_dids = open_cc_valid_dids
         cc_valid_datasets_multiclass, _ = load_openml_list(
-            open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples=10000,
-            num_feats=100, return_capped=True, classification=True)
+            open_cc_dids, 
+            multiclass=True, 
+            shuffled=True, 
+            filter_for_nan=False, 
+            max_samples=1000000,
+            num_feats=5000, 
+            max_num_classes=100,
+            return_capped=True, 
+            classification=True,
+        )
 
         if isinstance(model, (BiAttentionMotherNetAdditive, MotherNetAdditive)):
-            clf = MotherNetAdditiveClassifier(device=config['device'], model=model, config=config)
-        elif isinstance(model, MotherNet):
-            clf = MotherNetClassifier(device=config['device'], model=model, config=config)
-        elif isinstance(model, (TabPFN, BiAttentionTabPFN)):
-            clf = TabPFNClassifier(device=config['device'], model=model, config=config, N_ensemble_configurations=1)
+            clf = MotherNetAdditiveClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config
+            )
+        elif isinstance(model, (MotherNet, SSMMotherNet)):
+            clf = MotherNetClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config
+            )
+        elif isinstance(model, (TabPFN, BiAttentionTabPFN, SSMTabPFN)):
+            clf = TabPFNClassifier(
+                device=config['device'], 
+                model=model, 
+                config=config, 
+                N_ensemble_configurations=1
+            )
         else:
             raise ValueError(f"Model {model} not supported for validation")
         base_path = 'models_diff/validation'
-        results = eval_on_datasets('multiclass', clf, f"valid_run_{uuid4()}", cc_valid_datasets_multiclass,
-                                   metric_used=tabular_metrics.auc_metric, split_numbers=[1, 2, 3, 4, 5], eval_positions=[1000],
-                                   max_times=[1], n_samples=2000, base_path=base_path, overwrite=False, n_jobs=1, device=config['device'],
-                                   save=False)
+        results = eval_on_datasets(
+            'multiclass', 
+            clf, 
+            f"valid_run_{uuid4()}", 
+            cc_valid_datasets_multiclass,
+            metric_used=tabular_metrics.auc_metric, 
+            split_numbers=[1, 2, 3, 4, 5], 
+            eval_positions=[None],
+            max_times=[1], 
+            n_samples=config['openmlloader']['max_samples'], 
+            base_path=base_path, 
+            overwrite=False, 
+            n_jobs=1, 
+            device=config['device'],
+            save=False,
+            max_features=config['prior']['num_features'],
+            pca = config['openmlloader']['pca'],
+        )
         mean_auc = np.array([r['mean_metric'] for r in results]).mean()
         # maybe pandas would be easier lol?
         per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
@@ -574,10 +664,24 @@ def validate_model(model, config):
         else:
             raise ValueError(f"Model {model} not supported for validation")
         base_path = 'models_diff/validation'
-        results = eval_on_datasets('regression', clf, f"valid_run_{uuid4()}", cc_valid_datasets_regression,
-                                   metric_used=tabular_metrics.root_mean_squared_error_metric, split_numbers=[1, 2, 3, 4, 5],
-                                   eval_positions=[1000], max_times=[1], n_samples=2000, base_path=base_path,
-                                   overwrite=False, n_jobs=1, device=config['device'], save=False)
+        results = eval_on_datasets(
+            'regression', 
+            clf, 
+            f"valid_run_{uuid4()}", 
+            cc_valid_datasets_regression,
+            metric_used=tabular_metrics.root_mean_squared_error_metric, 
+            split_numbers=[1, 2, 3, 4, 5],
+            eval_positions=[1000], 
+            max_times=[1], 
+            n_samples=2000, 
+            base_path=base_path,
+            overwrite=False, 
+            n_jobs=1, 
+            device=config['device'], 
+            save=False, 
+            max_features=config['prior']['num_features'],
+            pca = config['openmlloader']['pca'],
+        )
         mean_auc = np.array([r['mean_metric'] for r in results]).mean()
         # maybe pandas would be easier lol?
         per_dataset_scores = {key: np.mean([g['mean_metric'] for g in group]) for key, group in itertools.groupby(results, lambda x: x['dataset'])}
