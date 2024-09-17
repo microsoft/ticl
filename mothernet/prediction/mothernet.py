@@ -8,7 +8,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, PowerTransformer, StandardScaler, OneHotEncoder, QuantileTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import SelectKBest
 from sklearn.compose import make_column_transformer
@@ -167,17 +167,13 @@ class ForwardLinearModel(ClassifierMixin, BaseEstimator):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
 
 
-def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device="cpu", config=None):
-    X_train, X_test = np.array(X_train, dtype=float), np.array(X_test, dtype=float)
+def predict_with_mlp_model(train_mean, train_std, X_test, layers, scale=True, inference_device="cpu", config=None):
     if inference_device == "cpu":
-        mean = np.nanmean(X_train, axis=0)
-        std = np.nanstd(X_train, axis=0, ddof=1) + .000001
+        X_test = np.array(X_test, dtype=float)
         # FIXME replacing nan with 0 as in TabPFN
-        X_train = np.nan_to_num(X_train, 0)
         X_test = np.nan_to_num(X_test, 0)
         if scale:
-            std[np.isnan(std)] = 1
-            X_test_scaled = (X_test - mean) / std
+            X_test_scaled = (X_test - train_mean) / train_std
         else:
             X_test_scaled = X_test
         out = np.clip(X_test_scaled, a_min=-100, a_max=100)
@@ -198,16 +194,14 @@ def predict_with_mlp_model(X_train, X_test, layers, scale=True, inference_device
         from scipy.special import softmax
         return softmax(out / .8, axis=1)
     elif "cuda" in inference_device:
-        mean = torch.Tensor(np.nanmean(X_train, axis=0)).to(inference_device)
-        std = torch.Tensor(np.nanstd(X_train, axis=0, ddof=1) + .000001).to(inference_device)
+        mean = torch.Tensor(train_mean).to(inference_device)
+        std = torch.Tensor(train_std).to(inference_device)
         # FIXME replacing nan with 0 as in TabPFN
-        X_train = np.nan_to_num(X_train, 0)
-        X_test = np.nan_to_num(X_test, 0)
-        std[torch.isnan(std)] = 1
+        X_test = torch.Tensor(X_test).to(inference_device).nan_to_num(0)
         if scale:
-            X_test_scaled = (torch.Tensor(X_test).to(inference_device) - mean) / std
+            X_test_scaled = (X_test - mean) / std
         else:
-            X_test_scaled = torch.Tensor(X_test).to(inference_device)
+            X_test_scaled = X_test
         out = torch.clamp(X_test_scaled, min=-100, max=100)
         for i, (b, w) in enumerate(layers):
             out = torch.matmul(out, w) + b
@@ -264,10 +258,14 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
             *lower_layers, b_last, w_last = layers
             self.parameters_ = (*lower_layers, (b_last[indices], w_last[:, indices]))
         self.classes_ = le.classes_
+        self.mean_ = np.nan_to_num(np.nanmean(X, axis=0), 0)
+        self.std_ = np.nanstd(X, axis=0, ddof=1) + .000001
+        self.std_[np.isnan(self.std_)] = 1
+
         return self
 
     def predict_proba(self, X):
-        return predict_with_mlp_model(self.X_train_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
+        return predict_with_mlp_model(self.mean_, self.std_, X, self.parameters_, scale=self.scale, inference_device=self.inference_device)
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(axis=1)]
@@ -381,37 +379,77 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         X = np.array(X)
         self.n_features_ = X.shape[1]
-        self.n_classes_ = len(np.unique(y))
-        use_power_transformer = [True, False] if self.power else [False]
-        use_onehot = [True, False] if self.onehot else [False]
+        self.classes_ = np.unique(y)
+        self.n_classes_ = len(self.classes_)
+        if self.power == "quantile":
+            use_power_transformer = ["quantile", False]
+        elif self.power:
+            use_power_transformer = [True, False]
+        else:
+            [False]
+        use_onehot = [True, False] if self.onehot and self.cat_features is not None and len(self.cat_features) else [False]
         feature_shifts = list(range(self.n_features_)) if self.feature_shift else [0]
         label_shifts = list(range(self.n_classes_)) if self.label_shift else [0]
         shifts = list(itertools.product(label_shifts, feature_shifts, use_power_transformer, use_onehot))
         rng = random.Random(self.random_state)
         shifts = rng.sample(shifts, min(len(shifts), self.n_estimators))
         estimators = []
-        n_jobs = self.n_jobs if X.shape[0] > 1000 else 1
 
         for label_shift, feature_shift, power_transformer, onehot in shifts:
-            estimator = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
-            if power_transformer:
-                # remove zero-variance features to avoid division by zero
-                cont_processing = Pipeline([('variance_threshold', VarianceThreshold()), ('scale', StandardScaler()),
-                                            ('power_transformer', PowerTransformer())])
+            clf = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
+            estimators.append((power_transformer, onehot, clf))
+
+            # cont_processing, cat_processing = [], []
+            # if power_transformer == "quantile":
+            #     cont_processing.append(QuantileTransformer())
+            # elif power_transformer:
+            #     raise ValueError()
+
+            # if onehot and self.cat_features is not None and len(self.cat_features):
+                
+            #     cat_processing = [ohe]
+            #     pipe = [SimpleImputer(strategy="constant", fill_value=0), ]
+            # else:
+            #     pipe = cont_processing
+
+        if self.cat_features is not None and len(self.cat_features):
+            mask = np.zeros(X.shape[1], dtype=bool)
+            mask[self.cat_features] = True
+            self.cat_mask_ = mask
+            X_cat = X[:, mask]
+            X_cont = X[:, ~mask]
+            self.ohe_ = OneHotEncoder(handle_unknown='ignore', max_categories=10, sparse_output=False)
+            X_cat_ohe = self.ohe_.fit_transform(X_cat)
+        else:
+            X_cont = X
+            X_cat = None
+
+        if X_cont.shape[1] > 0:
+            self.quantile_ = QuantileTransformer()
+            X_cont_quantile = self.quantile_.fit_transform(X_cont)
+
+        self.estimators_ = []
+        for power_transformer, onehot, clf in estimators:
+            if X_cont.shape[1] == 0:
+                X_preprocessed = X_cat_ohe
             else:
-                cont_processing = "passthrough"
-            if onehot and self.cat_features is not None:
-                ohe = OneHotEncoder(handle_unknown='ignore', max_categories=10,
-                                    sparse_output=False)
-                ct = make_column_transformer((ohe, self.cat_features), remainder=cont_processing)
-                estimator = Pipeline([('preprocess', ct), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
-                                      ('select', SelectKBest(k=100)), ('shift_classifier', estimator)])
-            else:
-                estimator = Pipeline([('cont_processing', cont_processing), ('imputer', SimpleImputer(strategy="constant", fill_value=0)),
-                                      ('shift_classifier', estimator)])
-            estimators.append((str((label_shift, feature_shift, power_transformer, onehot)), estimator))
-        self.vc_ = VotingClassifier(estimators, voting='soft', n_jobs=n_jobs)
-        self.vc_.fit(X, y)
+                if power_transformer:
+                    X_cont_preprocessed = X_cont_quantile
+                else:
+                    X_cont_preprocessed = X_cont
+                if onehot:
+                    X_preprocessed = np.concatenate([X_cat_ohe, X_cont_preprocessed], axis=1)
+                elif X_cat is not None:
+                    X_preprocessed = np.concatenate([X_cat, X_cont_preprocessed], axis=1)
+                else:
+                    X_preprocessed = X_cont_preprocessed
+            skb = None
+            if X_preprocessed.shape[1] > 100:
+                skb = SelectKBest(k=100)
+                X_preprocessed = skb.fit_transform(np.nan_to_num(X_preprocessed, 0), y)
+            clf.fit(X_preprocessed, y)
+            self.estimators_.append((power_transformer, onehot, skb, clf))
+
         return self
 
     @property
@@ -420,15 +458,36 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         X = np.array(X)
-        # numeric instabilities propagate and sklearn's metrics don't like it.
-        probs = self.vc_.predict_proba(X)
-        probs /= probs.sum(axis=1).reshape(-1, 1)
-        return probs
+        predicted_probas = []
+        if self.cat_features is not None and len(self.cat_features):
+            X_cat = X[:, self.cat_mask_]
+            X_cont = X[:, ~self.cat_mask_]
+            X_cat_ohe = self.ohe_.transform(X_cat)
+        else:
+            X_cont = X
+            X_cat = None
+
+        if X_cont.shape[1] > 0:
+            X_cont_quantile = self.quantile_.transform(X_cont)
+
+        for power_transformer, onehot, skb, clf in self.estimators_:
+            if X_cont.shape[1] == 0:
+                X_preprocessed = X_cat_ohe
+            else:
+                if power_transformer:
+                    X_cont_preprocessed = X_cont_quantile
+                else:
+                    X_cont_preprocessed = X_cont
+                if onehot:
+                    X_preprocessed = np.concatenate([X_cat_ohe, X_cont_preprocessed], axis=1)
+                elif X_cat is not None:
+                    X_preprocessed = np.concatenate([X_cat, X_cont_preprocessed], axis=1)
+                else:
+                    X_preprocessed = X_cont_preprocessed
+            if X_preprocessed.shape[1] > 100:
+                X_preprocessed = skb.transform(np.nan_to_num(X_preprocessed, 0))
+            predicted_probas.append(clf.predict_proba(X_preprocessed))
+        return np.mean(predicted_probas, axis=0)
 
     def predict(self, X):
-        X = np.array(X)
-        return self.vc_.predict(X)
-
-    @property
-    def classes_(self):
-        return self.vc_.classes_
+        return self.classes_[self.predict_proba(X).argmax(axis=1)]
