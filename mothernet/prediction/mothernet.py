@@ -369,7 +369,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
-        self.power = power
+        self.power = power  # now using quantile transformer, not power transformer, but keeping the name
         self.label_shift = label_shift
         self.feature_shift = feature_shift
         self.n_jobs = n_jobs
@@ -381,9 +381,7 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
         self.n_features_ = X.shape[1]
         self.classes_ = np.unique(y)
         self.n_classes_ = len(self.classes_)
-        if self.power == "quantile":
-            use_power_transformer = ["quantile", False]
-        elif self.power:
+        if self.power:
             use_power_transformer = [True, False]
         else:
             [False]
