@@ -399,19 +399,6 @@ class EnsembleMeta(ClassifierMixin, BaseEstimator):
             clf = ShiftClassifier(self.base_estimator, feature_shift=feature_shift, label_shift=label_shift)
             estimators.append((power_transformer, onehot, clf))
 
-            # cont_processing, cat_processing = [], []
-            # if power_transformer == "quantile":
-            #     cont_processing.append(QuantileTransformer())
-            # elif power_transformer:
-            #     raise ValueError()
-
-            # if onehot and self.cat_features is not None and len(self.cat_features):
-                
-            #     cat_processing = [ohe]
-            #     pipe = [SimpleImputer(strategy="constant", fill_value=0), ]
-            # else:
-            #     pipe = cont_processing
-
         if self.cat_features is not None and len(self.cat_features):
             mask = np.zeros(X.shape[1], dtype=bool)
             mask[self.cat_features] = True
