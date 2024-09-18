@@ -578,8 +578,9 @@ def validate_model(model, config):
     from mothernet.models.ssm_mothernet import SSMMotherNet
     from mothernet.models.ssm_tabpfn import SSMTabPFN
     from mothernet.models.tabpfn import TabPFN
+    from mothernet.models.perceiver import TabPerceiver
     from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
-    from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor
+    from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor 
     from mothernet.evaluation.tabular_evaluation import eval_on_datasets
     from mothernet.evaluation import tabular_metrics
     from uuid import uuid4

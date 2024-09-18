@@ -9,6 +9,12 @@ from sklearn.datasets import load_iris
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import torch
+
+
+@pytest.fixture(autouse=True)
+def set_threads():
+    return torch.set_num_threads(1)
 
 
 def test_mothernet_paper():
@@ -28,13 +34,13 @@ def test_mothernet_ensemble():
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
     model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
     model_path = get_mn_model(model_string)
-    classifier = EnsembleMeta(MotherNetClassifier(device='cpu', path=model_path), n_estimators=3)
+    classifier = EnsembleMeta(MotherNetClassifier(device='cpu', path=model_path), n_estimators=8, power="quantile")
     classifier.fit(X_train, y_train)
     prob = classifier.predict_proba(X_test)
     assert (prob.argmax(axis=1) == classifier.predict(X_test)).all()
     assert classifier.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 3
+    assert len(classifier.estimators_) == 8
 
 
 @pytest.mark.parametrize("categorical", [True, False])
@@ -59,7 +65,26 @@ def test_mothernet_preprocessing_ensemble(categorical):
     assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
     assert pipeline.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 32
+    assert len(classifier.estimators_) == 32
+
+
+def test_mothernet_preprocessing_ensemble_all_categorical():
+    rng = np.random.RandomState(42)
+    X = rng.randint(0, 10, size=(100, 5))
+    y = X[:, 3] > 5
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+    model_path = get_mn_model(model_string)
+    cat_features = np.arange(5)
+    classifier = EnsembleMeta(MotherNetClassifier(device='cpu', path=model_path), n_estimators=32,
+                              onehot=True, cat_features=cat_features)
+    pipeline = make_pipeline(StandardScaler(), classifier)
+    pipeline.fit(X_train, y_train)
+    prob = pipeline.predict_proba(X_test)
+    assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
+    assert pipeline.score(X_test, y_test) > 0.9
+
+    assert len(classifier.estimators_) == 32
 
 
 def test_mothernet_preprocessing_categorical_pruning():
@@ -80,4 +105,11 @@ def test_mothernet_preprocessing_categorical_pruning():
     assert (prob.argmax(axis=1) == pipeline.predict(X_test)).all()
     assert pipeline.score(X_test, y_test) > 0.9
 
-    assert len(classifier.vc_.estimators_) == 32
+    assert len(classifier.estimators_) == 32
+
+
+if __name__ == "__main__":
+    torch.set_num_threads(1)
+    from sklearn import set_config
+    set_config(skip_parameter_validation=True, assume_finite=True)
+    test_mothernet_ensemble()
