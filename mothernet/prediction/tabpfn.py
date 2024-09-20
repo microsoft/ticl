@@ -166,7 +166,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = cls
         return np.asarray(y, dtype=np.float64, order="C")
     
-    def preprocess(self, X, y, overwrite_warning = False):
+    def preprocess(self, X, y, overwrite_warning=False):
         self.features_mode, self.classes_mode = 'full', 'full'
 
         if X.shape[1] > self.max_num_features:
@@ -174,7 +174,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             print('Only randomly take ', self.max_num_features, ' features.')
             feature_selected = np.random.choice(X.shape[1], self.max_num_features, replace=False)
             X = X[:, feature_selected]
-            self.features_mode = 'croped'
+            self.features_mode = 'cropped'
             
         if len(np.unique(y)) > self.max_num_classes:
             Warning("The number of classes for this classifier is restricted to ", self.max_num_classes)
@@ -192,7 +192,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
             self.label_encoder3.fit(y[y<0])
             # y[y<0] = self.label_encoder3.transform(y[y<0]) + self.max_num_classes - 1
             y[y<0] = self.max_num_classes - 1
-            self.classes_mode = 'croped'
+            self.classes_mode = 'cropped'
             
         if X.shape[0] > 1024 and not overwrite_warning:
             Warning("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable."
@@ -261,7 +261,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         # Input validation
         if self.no_grad:
             X = check_array(X, force_all_finite=False)
-            if self.features_mode == 'croped':
+            if self.features_mode == 'cropped':
                 X = X[:, :self.max_num_features]
             X_full = np.concatenate([self.X_, X], axis=0)
             X_full = torch.tensor(X_full, device=self.device).float().unsqueeze(1)
@@ -303,7 +303,7 @@ class TabPFNClassifier(BaseEstimator, ClassifierMixin):
         )
         
         # add zeros to make the dimension same as the number of classes
-        if self.classes_mode == 'croped':
+        if self.classes_mode == 'cropped':
             prediction = torch.cat(
                 [
                     prediction, 
