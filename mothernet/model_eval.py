@@ -7,26 +7,10 @@ import numpy as np
 import warnings
 warnings.simplefilter("ignore", FutureWarning)  # openml deprecation of array return type
 from mothernet.datasets import load_openml_list, open_cc_large_dids, open_cc_valid_dids, new_valid_dids
-from mothernet.evaluation.baselines.tabular_baselines import knn_metric, catboost_metric, logistic_metric, xgb_metric, random_forest_metric, mlp_metric, hyperfast_metric, hyperfast_metric_tuning, resnet_metric, mothernet_init_metric
-from mothernet.evaluation.tabular_evaluation import evaluate, eval_on_datasets, transformer_metric
+from mothernet.evaluation.tabular_evaluation import eval_on_datasets
 from mothernet.evaluation import tabular_metrics
 from mothernet.prediction.tabpfn import TabPFNClassifier
 import os
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
-from mothernet.prediction.mothernet import MotherNetClassifier
-from functools import partial
-from mothernet.evaluation.tabular_evaluation import eval_on_datasets
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import BaggingClassifier
-from mothernet.prediction.mothernet import ShiftClassifier, EnsembleMeta, MotherNetClassifier
-from sklearn.impute import SimpleImputer
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
-
-from interpret.glassbox import ExplainableBoostingClassifier
-
-
-from hyperfast import HyperFastClassifier
 
 # transformers don't have max times
 import pandas as pd
@@ -35,12 +19,11 @@ import datetime
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', type = str, default = 'ssm_tabpfn_b4_largedatasetTrue_modellinear_attention_nsamples10000_08_01_2024_20_58_55') # _on_exit.cpkt
+parser.add_argument('--model', type = str, default = 'tabflex') 
 parser.add_argument('--fetch_only', action='store_true', default = False)
-parser.add_argument('--split_numbers', type = int, default = 1)
+parser.add_argument('--split_numbers', type = int, default = 5)
 parser.add_argument('--dataset_num', type = int, default = 10000)
-parser.add_argument('--datasets', type=str, default = 'large', choices = ['large', 'default', 'new'])
-parser.add_argument('--epoch', type = str, default = 'on_exit')
+parser.add_argument('--datasets', type=str, default = 'new', choices = ['large', 'default', 'new'])
 parser.add_argument('--overwrite', action='store_true', default = False)
 parser.add_argument('--max_features', type = int, default = 5000)
 parser.add_argument('--n_samples', type = int, default = 1000000)
@@ -82,44 +65,46 @@ device_dict = {
     'mlp': 'cuda',
     'logistic': 'cuda',
     'ssm_tabpfn': 'cuda',
+    'tabfast': 'cuda',
+    'tabsmall': 'cuda',
+    'tabflex': 'cuda',
 }
 
-clf_dict= {
-    'knn': knn_metric,
-    'rf': random_forest_metric,
-    'xgb': xgb_metric,
-    'logistic': logistic_metric,
-    'mlp': mlp_metric,
-    'resnet': resnet_metric,
-}
-
-if 'ssm_tabpfn' in args.model:
-    model_name = 'ssm_tabpfn'
-    ssm_tabpfn = TabPFNClassifier(
-        device = device_dict.get(model_name, 'cpu'),
-        model_string = args.model,
-        epoch = str(args.epoch),
+clf_dict = {}
+if args.model in ['tabflex', 'tabsmall', 'tabfast']:
+    if args.model == 'tabflex':
+        model_string = 'ssm_tabpfn_b4_maxnumclasses100_modellinear_attention_numfeatures1000_n1024_validdatanew_warm_08_23_2024_19_25_40'
+        epoch = '1410'
+    elif args.model == 'tabfast':
+        model_string = 'ssm_tabpfn_b4_largedatasetTrue_modellinear_attention_nsamples50000_08_01_2024_22_05_50'
+        epoch = '110'
+    elif args.model == 'tabsmall':
+        model_string = 'ssm_tabpfn_modellinear_attention_08_28_2024_19_00_44'
+        epoch = '1210'
+    clf_dict[args.model] = TabPFNClassifier(
+        device = device_dict.get(args.model, 'cpu'),
+        model_string = model_string,
+        epoch = epoch,
         N_ensemble_configurations=3,
+        dimension_reduction = 'random_proj',
     )
-    clf_dict[model_name] = ssm_tabpfn
-elif 'tabpfn' in args.model:
-    model_name = 'tabpfn'
+elif 'tabpfn' == args.model:
+    model_string = 'prior_diff_real_checkpoint_n_0'
+    epoch = '100'
     tabpfn = TabPFNClassifier(
-        device = device_dict.get(model_name, 'cpu'),
-        model_string = args.model,
-        epoch = str(args.epoch),
+        device = device_dict.get(args.model, 'cpu'),
+        model_string = model_string,
+        epoch = epoch,
         N_ensemble_configurations=3,
     )
-    clf_dict[model_name] = tabpfn
-else:
-    model_name = args.model
+    clf_dict[args.model] = tabpfn
 
     
 
 results_baselines = [
     eval_on_datasets(
         'multiclass', 
-        clf_dict[model_name], 
+        clf_dict[args.model], 
         args.model, 
         cc_test_datasets_multiclass, 
         eval_positions=eval_positions, 
@@ -128,7 +113,7 @@ results_baselines = [
         split_numbers=list(range(1,args.split_numbers+1)),
         n_samples=args.n_samples, 
         fetch_only=args.fetch_only,
-        device=device_dict.get(model_name, 'cpu'),
+        device=device_dict.get(args.model, 'cpu'),
         base_path=base_path,
         overwrite=args.overwrite,
         n_jobs=args.n_jobs,
