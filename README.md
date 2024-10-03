@@ -1,7 +1,10 @@
-# MotherNet
+# ticl - Tabular In-Context Learning
 
-The MotherNet is a hypernetwork foundational model (or conditional neural process) for tabular data classification.
-Both the architecture and the code is based on the [TabPFN](https://github.com/automl/TabPFN) by the [Freiburg AutoML group](https://www.automl.org/).
+This repository contains code for training and prediction of several models for tabular in-context learning, including MotherNet and GAMformer.
+MotherNet is a hypernetwork foundational model (or conditional neural process) for tabular data classification that creates a small neural network.
+GAMformer is a model trained to output an interpretable, additive model using in-context learning.
+
+Both the architecture and the code in this repository is based on the [TabPFN](https://github.com/automl/TabPFN) by the [Freiburg AutoML group](https://www.automl.org/).
 
 This is a research prototype, shared for research use, and not meant for real-world applications. Responsibility for using the models contained in this repository,
 as well monitoring and assessing potential impact of the models lies with the user of the code.
