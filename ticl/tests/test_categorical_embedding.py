@@ -1,9 +1,9 @@
-from mothernet.priors.classification_adapter import MulticlassSteps
+from ticl.priors.classification_adapter import MulticlassSteps
 import torch
 import pytest
 import lightning as L
 
-from mothernet.models.biattention_additive_mothernet import _determine_is_categorical
+from ticl.models.biattention_additive_mothernet import _determine_is_categorical
 
 
 def test_categorical_embedding():

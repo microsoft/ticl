@@ -58,7 +58,7 @@ def get_scores_rank(length, rank, models):
 def compare_models():
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import RandomForestClassifier
-    from mothernet.prediction.tabpfn import TabPFNClassifier
+    from ticl.prediction.tabpfn import TabPFNClassifier
 
     torch.set_num_threads(1)
     prototypes = np.arange(1, 200, 5)

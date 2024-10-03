@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 
-from mothernet.models.layer import BiAttentionEncoderLayer
-from mothernet.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder, SummaryLayer
-from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
-from mothernet.models.utils import bin_data
+from ticl.models.layer import BiAttentionEncoderLayer
+from ticl.models.decoders import FactorizedAdditiveModelDecoder, AdditiveModelDecoder, SummaryLayer
+from ticl.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear, get_fourier_features
+from ticl.models.utils import bin_data
 
-from mothernet.utils import SeqBN, get_init_method
+from ticl.utils import SeqBN, get_init_method
 
 
 def _determine_is_categorical(x_src: torch.Tensor, info: dict) -> torch.Tensor:

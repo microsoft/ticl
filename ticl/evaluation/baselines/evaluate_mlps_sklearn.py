@@ -3,9 +3,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
-from mothernet.models.mothernet import ForwardLinearModel, MotherNetClassifier, PermutationsMeta
-from mothernet.prediction.tabpfn import TabPFNClassifier
+from ticl.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
+from ticl.models.mothernet import ForwardLinearModel, MotherNetClassifier, PermutationsMeta
+from ticl.prediction.tabpfn import TabPFNClassifier
 
 
 def add_forward_mlp_model(model_name, model_path, current_models=None, permutations=False):

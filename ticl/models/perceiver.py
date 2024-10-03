@@ -5,9 +5,9 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 from torch import einsum, nn
 
-from mothernet.models.decoders import MLPModelDecoder
-from mothernet.models.mothernet import MLPModelPredictor
-from mothernet.models.encoders import Linear
+from ticl.models.decoders import MLPModelDecoder
+from ticl.models.mothernet import MLPModelPredictor
+from ticl.models.encoders import Linear
 
 # helpers
 

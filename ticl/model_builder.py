@@ -4,17 +4,17 @@ import subprocess as sp
 import torch, wandb
 from torch import nn
 
-import mothernet.models.encoders as encoders
-from mothernet.dataloader import get_dataloader
-from mothernet.train import train
-from mothernet.model_configs import get_model_default_config
-from mothernet.models.mothernet_additive import MotherNetAdditive
-from mothernet.models.perceiver import TabPerceiver
-from mothernet.models.tabpfn import TabPFN
-from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
-from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-from mothernet.models.mothernet import MotherNet
-from mothernet.config_utils import nested_dict
+import ticl.models.encoders as encoders
+from ticl.dataloader import get_dataloader
+from ticl.train import train
+from ticl.model_configs import get_model_default_config
+from ticl.models.mothernet_additive import MotherNetAdditive
+from ticl.models.perceiver import TabPerceiver
+from ticl.models.tabpfn import TabPFN
+from ticl.models.biattention_tabpfn import BiAttentionTabPFN
+from ticl.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
+from ticl.models.mothernet import MotherNet
+from ticl.config_utils import nested_dict
 
 try:
     from functools import cache
@@ -253,7 +253,7 @@ def get_model(
             n_out=n_out, n_features=config['prior']['num_features'],
             y_encoder_layer=y_encoder, **config['transformer'], **config['mothernet'], **config['additive'])
     elif model_type == 'ssm_tabpfn':
-        from mothernet.models.ssm_tabpfn import SSMTabPFN
+        from ticl.models.ssm_tabpfn import SSMTabPFN
         model = SSMTabPFN(
             n_out=n_out, 
             n_features=n_features, 
@@ -261,7 +261,7 @@ def get_model(
             **config['ssm']
         )
     elif model_type == 'ssm_mothernet':
-        from mothernet.models.ssm_mothernet import SSMMotherNet
+        from ticl.models.ssm_mothernet import SSMMotherNet
         model = SSMMotherNet(
             n_out=n_out, 
             y_encoder_layer=y_encoder, 

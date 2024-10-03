@@ -3,11 +3,11 @@ import tempfile
 import lightning as L
 import pytest
 
-from mothernet.fit_model import main
+from ticl.fit_model import main
 # from tabpfn.fit_tabpfn import main as tabpfn_main
-from mothernet.models.perceiver import TabPerceiver
+from ticl.models.perceiver import TabPerceiver
 
-from mothernet.testing_utils import TESTING_DEFAULTS, count_parameters
+from ticl.testing_utils import TESTING_DEFAULTS, count_parameters
 
 
 def test_train_perceiver_defaults():

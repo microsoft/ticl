@@ -14,8 +14,8 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from torch.utils.checkpoint import checkpoint
 
-from mothernet.model_builder import load_model
-from mothernet.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers
+from ticl.model_builder import load_model
+from ticl.utils import NOP, normalize_by_used_features_f, normalize_data, remove_outliers
 import pandas as pd
 
 

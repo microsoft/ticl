@@ -13,11 +13,11 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 
 from git import Repo
 
-from mothernet.model_builder import get_model
-from mothernet.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
-from mothernet.config_utils import compare_dicts, flatten_dict, update_config
-from mothernet.cli_parsing import make_model_level_argparser
-from mothernet.model_configs import get_model_default_config
+from ticl.model_builder import get_model
+from ticl.utils import init_device, get_model_string, synetune_handle_checkpoint, make_training_callback
+from ticl.config_utils import compare_dicts, flatten_dict, update_config
+from ticl.cli_parsing import make_model_level_argparser
+from ticl.model_configs import get_model_default_config
 from argparse import Namespace
 
 import pandas as pd
@@ -133,7 +133,7 @@ def main(argv, extra_config=None):
     mlflow_hostname = os.environ.get("MLFLOW_HOSTNAME", None)
     if orchestration.use_wandb:
         import wandb
-        from mothernet.environment import WANDB_INFO
+        from ticl.environment import WANDB_INFO
         wandb_data, flatten_key_dict = flatten_dict(config, track_keys=True)
         wandb_config = {k: v for k, v in wandb_data.items() if k not in ['wallclock_times', 'losses', 'learning_rates']}
         # check_keys = pd.read_csv(f"{root_dir}/configs/{args.model_type}_configs.csv").columns

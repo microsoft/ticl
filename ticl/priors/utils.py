@@ -3,7 +3,7 @@ import random
 import torch
 from torch import nn
 
-from mothernet.distributions import zipf_sampler_f
+from ticl.distributions import zipf_sampler_f
 
 
 def order_by_y(x, y):

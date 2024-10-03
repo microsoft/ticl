@@ -1,7 +1,7 @@
 import pandas as pd
 
-from mothernet.plot_code.cd_plot_code import cd_evaluation
-from mothernet.plot_code.ni_plot_code import ni_evaluation
+from ticl.plot_code.cd_plot_code import cd_evaluation
+from ticl.plot_code.ni_plot_code import ni_evaluation
 
 
 def eval_am():

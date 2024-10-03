@@ -3,10 +3,10 @@ import torch.nn as nn
 
 import numpy as np
 
-from mothernet.models.encoders import Linear
-from mothernet.models.layer import get_ssm_layers
+from ticl.models.encoders import Linear
+from ticl.models.layer import get_ssm_layers
 
-from mothernet.utils import SeqBN
+from ticl.utils import SeqBN
 
 import pdb
 

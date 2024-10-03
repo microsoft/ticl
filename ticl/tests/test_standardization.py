@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from mothernet.datasets import load_openml_list, open_cc_dids
-from mothernet.utils import remove_outliers
+from ticl.datasets import load_openml_list, open_cc_dids
+from ticl.utils import remove_outliers
 
 
 def old_torch_nanmean(x, axis=0, return_nanshare=False):

@@ -1,7 +1,7 @@
 import torch
 
-from mothernet.distributions import parse_distributions, sample_distributions
-from mothernet.utils import default_device
+from ticl.distributions import parse_distributions, sample_distributions
+from ticl.utils import default_device
 
 
 class StepFunctionPrior:

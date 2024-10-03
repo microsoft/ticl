@@ -87,7 +87,7 @@ class TransformerEncoderLayer(Module):
 
         if (torch.__version__ >= '2.2.0') or (not attn_name in ['default', 'flash_attention']):
             if attn_name == 'default': attn_name = 'flash_attention'
-            from mothernet.models.flash_transformer import MultiheadAttention
+            from ticl.models.flash_transformer import MultiheadAttention
             self.self_attn = MultiheadAttention(
                 d_model, 
                 nhead, 
@@ -269,7 +269,7 @@ def get_ssm_layers(
     if dtype is None:
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     if 'mamba' in model:
-        from mothernet.models.mamba import MambaLayer
+        from ticl.models.mamba import MambaLayer
         if ssm_cfg is None:
             ssm_cfg = {
                 'layer': model[0].upper()+model[1:].lower(),
@@ -295,7 +295,7 @@ def get_ssm_layers(
             dtype=dtype,
         )
     elif model == 'linear_attention':
-        from mothernet.models.linear_attention import TransformerEncoderBuilder
+        from ticl.models.linear_attention import TransformerEncoderBuilder
 
         if d_model % nheads != 0:
             raise ValueError(f"nheads {nheads} must divide d_model {d_model}!")
@@ -317,7 +317,7 @@ def get_ssm_layers(
     
     elif model in ['fla', 'retnet']:
         from torch.nn import TransformerEncoder
-        from mothernet.models.tabpfn import TransformerEncoderDiffInit
+        from ticl.models.tabpfn import TransformerEncoderDiffInit
         # import os 
         # os.environ['CUDA_LAUNCH_BLOCKING']="1"
         # os.environ['TORCH_USE_CUDA_DSA'] = "1"          

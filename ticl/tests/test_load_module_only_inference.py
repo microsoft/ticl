@@ -1,5 +1,5 @@
-from mothernet.datasets import load_openml_list, open_cc_dids
-from mothernet.prediction.tabpfn import TabPFNClassifier
+from ticl.datasets import load_openml_list, open_cc_dids
+from ticl.prediction.tabpfn import TabPFNClassifier
 
 
 def test_main():

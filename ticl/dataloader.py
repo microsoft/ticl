@@ -1,8 +1,8 @@
 import numpy as np
 from torch.utils.data import DataLoader
 
-import mothernet.priors as priors
-from mothernet.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, StepFunctionPrior
+import ticl.priors as priors
+from ticl.priors import ClassificationAdapterPrior, BagPrior, BooleanConjunctionPrior, StepFunctionPrior
 
 import wandb
 from tqdm import tqdm

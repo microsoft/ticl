@@ -1,5 +1,5 @@
-from mothernet.priors import MLPPrior
-from mothernet.model_configs import get_prior_config
+from ticl.priors import MLPPrior
+from ticl.model_configs import get_prior_config
 import lightning as L
 import torch
 import pytest

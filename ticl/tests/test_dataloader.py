@@ -1,7 +1,7 @@
-from mothernet.dataloader import get_dataloader
-from mothernet.model_configs import get_prior_config
-from mothernet.priors import BagPrior, ClassificationAdapterPrior
-from mothernet.distributions import LogUniformHyperparameter
+from ticl.dataloader import get_dataloader
+from ticl.model_configs import get_prior_config
+from ticl.priors import BagPrior, ClassificationAdapterPrior
+from ticl.distributions import LogUniformHyperparameter
 
 import lightning as L
 

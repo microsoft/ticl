@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from mothernet.models.layer import BiAttentionEncoderLayer
-from mothernet.utils import SeqBN, get_init_method
-from mothernet.models.encoders import Linear, get_fourier_features
+from ticl.models.layer import BiAttentionEncoderLayer
+from ticl.utils import SeqBN, get_init_method
+from ticl.models.encoders import Linear, get_fourier_features
 
 
 class BiAttentionTabPFN(nn.Module):

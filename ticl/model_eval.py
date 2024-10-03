@@ -1,27 +1,27 @@
 import matplotlib.pyplot as plt
 
-from mothernet.evaluation.baselines import tabular_baselines
+from ticl.evaluation.baselines import tabular_baselines
 
 import seaborn as sns
 import numpy as np
 import warnings
 warnings.simplefilter("ignore", FutureWarning)  # openml deprecation of array return type
-from mothernet.datasets import load_openml_list, open_cc_large_dids, open_cc_valid_dids, new_valid_dids
-from mothernet.evaluation.baselines.tabular_baselines import knn_metric, catboost_metric, logistic_metric, xgb_metric, random_forest_metric, mlp_metric, hyperfast_metric, hyperfast_metric_tuning, resnet_metric, mothernet_init_metric
-from mothernet.evaluation.tabular_evaluation import evaluate, eval_on_datasets, transformer_metric
-from mothernet.evaluation import tabular_metrics
-from mothernet.prediction.tabpfn import TabPFNClassifier
+from ticl.datasets import load_openml_list, open_cc_large_dids, open_cc_valid_dids, new_valid_dids
+from ticl.evaluation.baselines.tabular_baselines import knn_metric, catboost_metric, logistic_metric, xgb_metric, random_forest_metric, mlp_metric, hyperfast_metric, hyperfast_metric_tuning, resnet_metric, mothernet_init_metric
+from ticl.evaluation.tabular_evaluation import evaluate, eval_on_datasets, transformer_metric
+from ticl.evaluation import tabular_metrics
+from ticl.prediction.tabpfn import TabPFNClassifier
 import os
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
-from mothernet.prediction.mothernet import MotherNetClassifier
+from ticl.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
+from ticl.prediction.mothernet import MotherNetClassifier
 from functools import partial
-from mothernet.evaluation.tabular_evaluation import eval_on_datasets
+from ticl.evaluation.tabular_evaluation import eval_on_datasets
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import BaggingClassifier
-from mothernet.prediction.mothernet import ShiftClassifier, EnsembleMeta, MotherNetClassifier
+from ticl.prediction.mothernet import ShiftClassifier, EnsembleMeta, MotherNetClassifier
 from sklearn.impute import SimpleImputer
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from ticl.prediction.mothernet_additive import MotherNetAdditiveClassifier
 
 from interpret.glassbox import ExplainableBoostingClassifier
 

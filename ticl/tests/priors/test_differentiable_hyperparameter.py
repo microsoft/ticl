@@ -1,4 +1,4 @@
-from mothernet.distributions import parse_distribution as DifferentiableHyperparameter
+from ticl.distributions import parse_distribution as DifferentiableHyperparameter
 import lightning as L
 
 

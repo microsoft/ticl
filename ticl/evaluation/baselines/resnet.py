@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, cast
 import torch.nn as nn
 from torch import Tensor
 
-from mothernet.evaluation.baselines.torch_mlp import TorchModelTrainer
+from ticl.evaluation.baselines.torch_mlp import TorchModelTrainer
 
 
 def _named_sequential(*modules) -> nn.Sequential:

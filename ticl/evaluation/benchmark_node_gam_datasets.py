@@ -17,9 +17,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler, OrdinalEncoder
 from xgboost import XGBClassifier
 
-from mothernet.evaluation.node_gam_data import DATASETS
-from mothernet.prediction import MotherNetAdditiveClassifier
-from mothernet.utils import get_mn_model
+from ticl.evaluation.node_gam_data import DATASETS
+from ticl.prediction import MotherNetAdditiveClassifier
+from ticl.utils import get_mn_model
 
 
 class PyGAMSklearnWrapper:

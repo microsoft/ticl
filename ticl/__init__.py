@@ -1,3 +1,3 @@
-from mothernet.prediction.tabpfn import TabPFNClassifier
+from ticl.prediction.tabpfn import TabPFNClassifier
 
 __all__ = ["TabPFNClassifier"]

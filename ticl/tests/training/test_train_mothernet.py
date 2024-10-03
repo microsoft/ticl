@@ -5,13 +5,13 @@ import lightning as L
 import numpy as np
 import pytest
 
-from mothernet.fit_model import main
+from ticl.fit_model import main
 
-from mothernet.models.mothernet import MotherNet
-from mothernet.config_utils import compare_dicts
-from mothernet.prediction import MotherNetClassifier
+from ticl.models.mothernet import MotherNet
+from ticl.config_utils import compare_dicts
+from ticl.prediction import MotherNetClassifier
 
-from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
+from ticl.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
 
 DEFAULT_LOSS = pytest.approx(0.7590433359146118)
 

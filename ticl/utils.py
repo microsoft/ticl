@@ -14,8 +14,8 @@ from pathlib import Path
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
-from mothernet.model_configs import get_model_default_config
-from mothernet.config_utils import flatten_dict
+from ticl.model_configs import get_model_default_config
+from ticl.config_utils import flatten_dict
 import itertools
 
 class DownloadProgressBar(tqdm):
@@ -409,7 +409,7 @@ def make_training_callback(
     classification, 
     validate
 ):
-    from mothernet.model_builder import save_model
+    from ticl.model_builder import save_model
     config = config.copy()
 
     def save_callback(model, optimizer, scheduler, epoch):
@@ -570,19 +570,19 @@ def get_init_method(init_method):
 
 
 def validate_model(model, config):
-    from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression, open_cc_large_dids, new_valid_dids
+    from ticl.datasets import load_openml_list, open_cc_valid_dids, open_cc_valid_dids_regression, open_cc_large_dids, new_valid_dids
 
-    from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-    from mothernet.models.mothernet_additive import MotherNetAdditive
-    from mothernet.models.mothernet import MotherNet
-    from mothernet.models.ssm_mothernet import SSMMotherNet
-    from mothernet.models.ssm_tabpfn import SSMTabPFN
-    from mothernet.models.tabpfn import TabPFN
-    from mothernet.models.perceiver import TabPerceiver
-    from mothernet.models.biattention_tabpfn import BiAttentionTabPFN
-    from mothernet.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor 
-    from mothernet.evaluation.tabular_evaluation import eval_on_datasets
-    from mothernet.evaluation import tabular_metrics
+    from ticl.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
+    from ticl.models.mothernet_additive import MotherNetAdditive
+    from ticl.models.mothernet import MotherNet
+    from ticl.models.ssm_mothernet import SSMMotherNet
+    from ticl.models.ssm_tabpfn import SSMTabPFN
+    from ticl.models.tabpfn import TabPFN
+    from ticl.models.perceiver import TabPerceiver
+    from ticl.models.biattention_tabpfn import BiAttentionTabPFN
+    from ticl.prediction import MotherNetAdditiveClassifier, MotherNetClassifier, TabPFNClassifier, MotherNetAdditiveRegressor 
+    from ticl.evaluation.tabular_evaluation import eval_on_datasets
+    from ticl.evaluation import tabular_metrics
     from uuid import uuid4
 
     if 'transformer' in config:

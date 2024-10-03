@@ -13,9 +13,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import SelectKBest
 from sklearn.compose import make_column_transformer
 
-from mothernet.model_builder import load_model
-from mothernet.utils import normalize_by_used_features_f, normalize_data, get_mn_model
-from mothernet.evaluation.baselines.torch_mlp import TorchMLP, NeuralNetwork
+from ticl.model_builder import load_model
+from ticl.utils import normalize_by_used_features_f, normalize_data, get_mn_model
+from ticl.evaluation.baselines.torch_mlp import TorchMLP, NeuralNetwork
 
 
 def extract_linear_model(model, X_train, y_train, device="cpu"):

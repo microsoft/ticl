@@ -2,10 +2,10 @@ import random
 import numpy as np
 import torch
 
-from mothernet.utils import (get_nan_value, normalize_by_used_features_f, normalize_data,
+from ticl.utils import (get_nan_value, normalize_by_used_features_f, normalize_data,
                              remove_outliers)
 
-from mothernet.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions, safe_randint
+from ticl.distributions import sample_distributions, uniform_int_sampler_f, parse_distributions, safe_randint
 from .utils import CategoricalActivation, randomize_classes
 
 

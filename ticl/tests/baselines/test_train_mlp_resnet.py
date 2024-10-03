@@ -1,6 +1,6 @@
-from mothernet.evaluation.baselines.torch_mlp import TorchMLP
-from mothernet.evaluation.baselines.resnet import ResNetClassifier
-from mothernet.testing_utils import check_predict_iris
+from ticl.evaluation.baselines.torch_mlp import TorchMLP
+from ticl.evaluation.baselines.resnet import ResNetClassifier
+from ticl.testing_utils import check_predict_iris
 
 
 def test_train_mlp():

@@ -4,11 +4,11 @@ import lightning as L
 import pytest
 import torch
 
-from mothernet.fit_model import main
-from mothernet.models.mothernet_additive import MotherNetAdditive
-from mothernet.prediction import MotherNetAdditiveClassifier
+from ticl.fit_model import main
+from ticl.models.mothernet_additive import MotherNetAdditive
+from ticl.prediction import MotherNetAdditiveClassifier
 
-from mothernet.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
+from ticl.testing_utils import TESTING_DEFAULTS, TESTING_DEFAULTS_SHORT, count_parameters, check_predict_iris, get_model_path
 
 TESTING_DEFAULTS_ADDITIVE = ['additive'] + TESTING_DEFAULTS
 TESTING_DEFAULTS_SHORT_ADDITIVE = ['additive'] + TESTING_DEFAULTS_SHORT

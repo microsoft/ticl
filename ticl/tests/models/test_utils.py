@@ -1,5 +1,5 @@
 import torch
-from mothernet.models.utils import bin_data
+from ticl.models.utils import bin_data
 
 
 def test_bin_data():

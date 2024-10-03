@@ -2,13 +2,13 @@ import torch, wandb
 import torch.nn as nn
 from torch.nn import TransformerEncoder
 
-from mothernet.models.encoders import OneHotAndLinear
-from mothernet.models.decoders import MLPModelDecoder
-from mothernet.models.layer import TransformerEncoderLayer
-from mothernet.models.tabpfn import TransformerEncoderDiffInit
-from mothernet.models.encoders import Linear
+from ticl.models.encoders import OneHotAndLinear
+from ticl.models.decoders import MLPModelDecoder
+from ticl.models.layer import TransformerEncoderLayer
+from ticl.models.tabpfn import TransformerEncoderDiffInit
+from ticl.models.encoders import Linear
 
-from mothernet.utils import SeqBN, get_init_method
+from ticl.utils import SeqBN, get_init_method
 
 
 class MLPModelPredictor(nn.Module):

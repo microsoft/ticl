@@ -5,9 +5,9 @@ import torch.nn as nn
 from torch import Tensor
 from torch.nn import Module, TransformerEncoder
 
-from mothernet.models.layer import TransformerEncoderLayer
-from mothernet.utils import SeqBN, get_init_method
-from mothernet.models.encoders import Linear
+from ticl.models.layer import TransformerEncoderLayer
+from ticl.utils import SeqBN, get_init_method
+from ticl.models.encoders import Linear
 
 
 class TabPFN(nn.Module):

@@ -2,9 +2,9 @@ import pickle
 
 import numpy as np
 
-from mothernet.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
-from mothernet.utils import get_mn_model
+from ticl.prediction import TabPFNClassifier, MotherNetClassifier, MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
+from ticl.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
+from ticl.utils import get_mn_model
 
 from sklearn.datasets import load_iris
 from sklearn.pipeline import make_pipeline

@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
-from mothernet.prediction.tabpfn import TabPFNClassifier
-from mothernet.evaluation.baselines.torch_mlp import TorchMLP, _encode_y
+from ticl.prediction.tabpfn import TabPFNClassifier
+from ticl.evaluation.baselines.torch_mlp import TorchMLP, _encode_y
 
 
 class DistilledTabPFNMLP(ClassifierMixin, BaseEstimator):

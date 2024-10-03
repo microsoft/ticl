@@ -1,4 +1,4 @@
-from mothernet.fit_model import main
+from ticl.fit_model import main
 
 
 def test_fit_model_help():

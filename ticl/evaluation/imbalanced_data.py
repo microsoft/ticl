@@ -15,8 +15,8 @@ from sklearn.preprocessing import OrdinalEncoder, FunctionTransformer
 from sklearn.utils import resample
 
 from benchmark_node_gam_datasets import process_model
-from mothernet.prediction import MotherNetAdditiveClassifier
-from mothernet.utils import get_mn_model
+from ticl.prediction import MotherNetAdditiveClassifier
+from ticl.utils import get_mn_model
 
 plt.style.use(['science', 'no-latex', 'light'])
 

@@ -1,6 +1,6 @@
 import torch
 
-from mothernet.config_utils import merge_dicts
+from ticl.config_utils import merge_dicts
 
 
 def get_optimizer_config():

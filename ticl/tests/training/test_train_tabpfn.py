@@ -3,11 +3,11 @@ import tempfile
 import lightning as L
 import pytest
 
-from mothernet.fit_model import main
-from mothernet.models.tabpfn import TabPFN
-from mothernet.prediction import TabPFNClassifier
+from ticl.fit_model import main
+from ticl.models.tabpfn import TabPFN
+from ticl.prediction import TabPFNClassifier
 
-from mothernet.testing_utils import count_parameters, check_predict_iris
+from ticl.testing_utils import count_parameters, check_predict_iris
 
 TESTING_DEFAULTS = ['-C', '-E', '10', '-n', '1', '-A', 'False', '-e', '128', '-N', '4', '--experiment',
                     'testing_experiment', '--train-mixed-precision', 'False', '--validate', 'False']

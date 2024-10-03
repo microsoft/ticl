@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import math
 
-from mothernet.utils import normalize_data
+from ticl.utils import normalize_data
 
 
 def get_fourier_features(x, n_features):

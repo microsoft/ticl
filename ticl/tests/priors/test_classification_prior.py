@@ -1,11 +1,11 @@
-from mothernet.model_configs import get_prior_config
+from ticl.model_configs import get_prior_config
 import lightning as L
 import torch
 import pytest
 import numpy as np
 
-from mothernet.priors import ClassificationAdapterPrior, MLPPrior
-from mothernet.priors.classification_adapter import ClassificationAdapter
+from ticl.priors import ClassificationAdapterPrior, MLPPrior
+from ticl.priors.classification_adapter import ClassificationAdapter
 
 
 @pytest.mark.parametrize("num_features", [11, 51])

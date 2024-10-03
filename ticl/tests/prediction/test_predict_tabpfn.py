@@ -2,7 +2,7 @@ import pickle
 
 import numpy as np
 
-from mothernet.prediction import TabPFNClassifier
+from ticl.prediction import TabPFNClassifier
 from sklearn.model_selection import train_test_split
 
 

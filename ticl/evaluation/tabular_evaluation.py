@@ -12,10 +12,10 @@ from tqdm import tqdm
 
 from sklearn.base import BaseEstimator
 
-from mothernet.evaluation import tabular_metrics
-from mothernet.utils import torch_nanmean
-from mothernet.prediction.tabpfn import transformer_predict, TabPFNClassifier
-from mothernet.evaluation.baselines.baseline_prediction_interface import baseline_predict
+from ticl.evaluation import tabular_metrics
+from ticl.utils import torch_nanmean
+from ticl.prediction.tabpfn import transformer_predict, TabPFNClassifier
+from ticl.evaluation.baselines.baseline_prediction_interface import baseline_predict
 
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer

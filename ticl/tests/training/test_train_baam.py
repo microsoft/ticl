@@ -3,12 +3,12 @@ import tempfile
 import lightning as L
 import pytest
 
-from mothernet.fit_model import main
-from mothernet.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
+from ticl.fit_model import main
+from ticl.models.biattention_additive_mothernet import BiAttentionMotherNetAdditive
+from ticl.prediction.mothernet_additive import MotherNetAdditiveClassifier, MotherNetAdditiveRegressor
 
-from mothernet.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_linear
-from mothernet.models import encoders
+from ticl.testing_utils import count_parameters, check_predict_iris, get_model_path, check_predict_linear
+from ticl.models import encoders
 
 TESTING_DEFAULTS = ['baam', '-C', '-E', '8', '-n', '1', '-A', 'False', '-e', '16', '-N', '2', '--experiment',
                     'testing_experiment',  '--train-mixed-precision', 'False', '--num-features', '20', '--n-samples', '200',

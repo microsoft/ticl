@@ -2,7 +2,7 @@ import lightning as L
 import pytest
 import torch
 
-from mothernet.priors.step_function_prior import StepFunctionPrior
+from ticl.priors.step_function_prior import StepFunctionPrior
 
 
 @pytest.mark.parametrize("num_features", [11, 51])

@@ -10,9 +10,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from tqdm import tqdm
 
-from mothernet.datasets import load_openml_list, open_cc_valid_dids
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
-from mothernet.prediction.tabpfn import TabPFNClassifier
+from ticl.datasets import load_openml_list, open_cc_valid_dids
+from ticl.evaluation.baselines.distill_mlp import DistilledTabPFNMLP, TorchMLP
+from ticl.prediction.tabpfn import TabPFNClassifier
 
 
 def make_logreg(categorical_features):

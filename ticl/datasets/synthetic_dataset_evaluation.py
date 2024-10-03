@@ -1,9 +1,9 @@
 from sklearn.model_selection import train_test_split
 
-from mothernet.datasets import linear_correlated_logistic_regression, linear_correlated_step_function
-from mothernet.evaluation.plot_shape_function import plot_shape_function
-from mothernet.prediction import MotherNetAdditiveClassifier
-from mothernet.utils import get_mn_model
+from ticl.datasets import linear_correlated_logistic_regression, linear_correlated_step_function
+from ticl.evaluation.plot_shape_function import plot_shape_function
+from ticl.prediction import MotherNetAdditiveClassifier
+from ticl.utils import get_mn_model
 
 
 def logistic_regression(model_string: str):

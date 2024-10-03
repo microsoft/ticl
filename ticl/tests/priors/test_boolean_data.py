@@ -1,4 +1,4 @@
-from mothernet.priors.boolean_conjunctions import BooleanConjunctionPrior
+from ticl.priors.boolean_conjunctions import BooleanConjunctionPrior
 import torch
 import pytest
 import lightning as L

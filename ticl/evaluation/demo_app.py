@@ -13,7 +13,7 @@ import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import make_column_transformer
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from ticl.prediction.mothernet_additive import MotherNetAdditiveClassifier
 from interpret.glassbox import ExplainableBoostingClassifier
 
 
@@ -26,7 +26,7 @@ import numpy as np
 from bokeh.models import Div, CheckboxButtonGroup
 from sklearn.datasets import load_iris
 
-from mothernet.utils import get_mn_model
+from ticl.utils import get_mn_model
 
 grid_figures = {}
 

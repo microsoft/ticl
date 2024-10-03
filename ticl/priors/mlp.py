@@ -5,9 +5,9 @@ import numpy as np
 import torch
 from torch import nn
 
-from mothernet.utils import default_device
-from mothernet.distributions import parse_distributions, sample_distributions
-from mothernet.config_utils import str2bool
+from ticl.utils import default_device
+from ticl.distributions import parse_distributions, sample_distributions
+from ticl.config_utils import str2bool
 
 
 class GaussianNoise(nn.Module):

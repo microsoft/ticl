@@ -1,6 +1,6 @@
 import argparse
-from mothernet.config_utils import str2bool
-from mothernet.model_configs import get_model_default_config
+from ticl.config_utils import str2bool
+from ticl.model_configs import get_model_default_config
 
 
 class GroupedArgParser(argparse.ArgumentParser):

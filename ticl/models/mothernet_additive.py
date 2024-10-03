@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 
-from mothernet.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
-from mothernet.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
-from mothernet.models.layer import TransformerEncoderLayer
-from mothernet.models.tabpfn import TransformerEncoderDiffInit
-from mothernet.models.utils import bin_data
-from mothernet.utils import SeqBN, get_init_method
+from ticl.models.decoders import AdditiveModelDecoder, FactorizedAdditiveModelDecoder
+from ticl.models.encoders import BinEmbeddingEncoder, Linear, OneHotAndLinear
+from ticl.models.layer import TransformerEncoderLayer
+from ticl.models.tabpfn import TransformerEncoderDiffInit
+from ticl.models.utils import bin_data
+from ticl.utils import SeqBN, get_init_method
 
 
 class MotherNetAdditive(nn.Module):

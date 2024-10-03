@@ -19,8 +19,8 @@ from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-from mothernet.evaluation import tabular_metrics
-from mothernet.evaluation.tabular_evaluation import is_classification
+from ticl.evaluation import tabular_metrics
+from ticl.evaluation.tabular_evaluation import is_classification
 
 
 tabpfn_path = '../../'
@@ -1002,7 +1002,7 @@ def resnet_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300,
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
-    from mothernet.evaluation.baselines.resnet import ResNetClassifier
+    from ticl.evaluation.baselines.resnet import ResNetClassifier
 
     def clf_(**params):
         if is_classification(metric_used):
@@ -1025,8 +1025,8 @@ def mothernet_init_metric(x, y, test_x, test_y, cat_features, metric_used, max_t
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
-    from mothernet.prediction.mothernet import MotherNetInitMLPClassifier
-    from mothernet.utils import get_mn_model
+    from ticl.prediction.mothernet import MotherNetInitMLPClassifier
+    from ticl.utils import get_mn_model
     from sklearn.pipeline import make_pipeline
     from sklearn.feature_selection import SelectKBest
 
@@ -1056,7 +1056,7 @@ def mlp_metric(x, y, test_x, test_y, cat_features, metric_used, max_time=300, de
     x, y, test_x, test_y = preprocess_impute(x, y, test_x, test_y,
                                              one_hot=True, impute=True, standardize=True,
                                              cat_features=cat_features)
-    from mothernet.evaluation.baselines.distill_mlp import TorchMLP
+    from ticl.evaluation.baselines.distill_mlp import TorchMLP
 
     def clf_(**params):
         if is_classification(metric_used):

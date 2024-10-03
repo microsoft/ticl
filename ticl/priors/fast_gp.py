@@ -1,8 +1,8 @@
 import gpytorch
 import torch
 
-from mothernet.utils import default_device
-from mothernet.distributions import parse_distributions, sample_distributions
+from ticl.utils import default_device
+from ticl.distributions import parse_distributions, sample_distributions
 import time
 
 # We will use the simplest form of GP model, exact inference

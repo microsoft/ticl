@@ -11,10 +11,10 @@ import scienceplots  # noqa
 from scipy.special import expit as sigmoid
 from sklearn.model_selection import train_test_split
 
-from mothernet.datasets import linear_correlated_logistic_regression
-from mothernet.evaluation.imbalanced_data import eval_gamformer_and_ebm
-from mothernet.evaluation.node_gam_data import DATASETS
-from mothernet.evaluation.plot_shape_function import plot_individual_shape_function
+from ticl.datasets import linear_correlated_logistic_regression
+from ticl.evaluation.imbalanced_data import eval_gamformer_and_ebm
+from ticl.evaluation.node_gam_data import DATASETS
+from ticl.evaluation.plot_shape_function import plot_individual_shape_function
 
 plt.style.use(['science', 'no-latex', 'light'])
 plt.rcParams["figure.constrained_layout.use"] = True

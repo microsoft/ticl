@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 
-from mothernet.prediction.mothernet import MotherNetInitMLPClassifier
-from mothernet.utils import get_mn_model
+from ticl.prediction.mothernet import MotherNetInitMLPClassifier
+from ticl.utils import get_mn_model
 
 from sklearn.datasets import load_iris
 from sklearn.pipeline import make_pipeline

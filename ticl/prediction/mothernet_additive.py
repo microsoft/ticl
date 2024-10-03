@@ -6,11 +6,11 @@ import torch
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from mothernet.model_builder import load_model
-from mothernet.models.biattention_additive_mothernet import _determine_is_categorical
-from mothernet.models.encoders import get_fourier_features
-from mothernet.models.utils import bin_data
-from mothernet.utils import normalize_data
+from ticl.model_builder import load_model
+from ticl.models.biattention_additive_mothernet import _determine_is_categorical
+from ticl.models.encoders import get_fourier_features
+from ticl.models.utils import bin_data
+from ticl.utils import normalize_data
 
 from interpret.glassbox._ebm._ebm import EBMExplanation
 from interpret.utils._explanation import gen_global_selector

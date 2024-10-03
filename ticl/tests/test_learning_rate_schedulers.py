@@ -6,9 +6,9 @@ import pytest
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
-from mothernet.fit_model import main
+from ticl.fit_model import main
 # from tabpfn.fit_tabpfn import main as tabpfn_main
-from mothernet.utils import ExponentialLR
+from ticl.utils import ExponentialLR
 
 
 @pytest.mark.parametrize('learning_rate_schedule', ['cosine', 'exponential', 'constant'])

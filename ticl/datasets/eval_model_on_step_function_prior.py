@@ -3,10 +3,10 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
-from mothernet.evaluation.concurvity import pairwise
-from mothernet.prediction import MotherNetAdditiveClassifier
-from mothernet.priors import StepFunctionPrior
-from mothernet.utils import get_mn_model
+from ticl.evaluation.concurvity import pairwise
+from ticl.prediction import MotherNetAdditiveClassifier
+from ticl.priors import StepFunctionPrior
+from ticl.utils import get_mn_model
 
 
 def plot_shape_function(bin_edges: np.ndarray, w: np.ndarray):

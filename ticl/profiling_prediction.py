@@ -9,14 +9,14 @@ import warnings
 warnings.simplefilter("ignore", UserWarning)  # scikit-learn select k best
 warnings.simplefilter("ignore", RuntimeWarning)  # scikit-learn select k best
 
-from mothernet.datasets import load_openml_list, open_cc_valid_dids, open_cc_dids
-from mothernet.evaluation.baselines.tabular_baselines import knn_metric, catboost_metric, logistic_metric, xgb_metric, random_forest_metric, mlp_metric, hyperfast_metric, resnet_metric, mothernet_init_metric
-from mothernet.evaluation.tabular_evaluation import evaluate, eval_on_datasets, transformer_metric
-from mothernet.evaluation import tabular_metrics
-from mothernet.prediction.tabpfn import TabPFNClassifier
-from mothernet.evaluation.baselines import tabular_baselines
+from ticl.datasets import load_openml_list, open_cc_valid_dids, open_cc_dids
+from ticl.evaluation.baselines.tabular_baselines import knn_metric, catboost_metric, logistic_metric, xgb_metric, random_forest_metric, mlp_metric, hyperfast_metric, resnet_metric, mothernet_init_metric
+from ticl.evaluation.tabular_evaluation import evaluate, eval_on_datasets, transformer_metric
+from ticl.evaluation import tabular_metrics
+from ticl.prediction.tabpfn import TabPFNClassifier
+from ticl.evaluation.baselines import tabular_baselines
 
-from mothernet.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
+from ticl.datasets import load_openml_list, open_cc_dids, open_cc_valid_dids, test_dids_classification
 
 cc_valid_datasets_multiclass, cc_valid_datasets_multiclass_df = load_openml_list(open_cc_valid_dids, multiclass=True, shuffled=True, filter_for_nan=False, max_samples = 10000, num_feats=100, return_capped=True, classification=True)
 
@@ -32,10 +32,10 @@ task_type = 'multiclass'
 from sklearn import set_config
 set_config(skip_parameter_validation=True, assume_finite=True)
 
-from mothernet.evaluation.tabular_evaluation import eval_on_datasets
-from mothernet.prediction.mothernet import ShiftClassifier, EnsembleMeta, MotherNetClassifier, MotherNetInitMLPClassifier
-from mothernet.prediction.mothernet_additive import MotherNetAdditiveClassifier
-from mothernet.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
+from ticl.evaluation.tabular_evaluation import eval_on_datasets
+from ticl.prediction.mothernet import ShiftClassifier, EnsembleMeta, MotherNetClassifier, MotherNetInitMLPClassifier
+from ticl.prediction.mothernet_additive import MotherNetAdditiveClassifier
+from ticl.evaluation.baselines.distill_mlp import DistilledTabPFNMLP
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from interpret.glassbox import ExplainableBoostingClassifier

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-from mothernet.utils import default_device, normalize_data
-from mothernet.distributions import safe_randint
+from ticl.utils import default_device, normalize_data
+from ticl.distributions import safe_randint
 
 
 def sample_boolean_data_enumerate(hyperparameters, n_samples, num_features):
