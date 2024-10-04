@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mothernet"
+name = "ticl"
 version = "0.1.0"
 authors = [
 {name="Andras Mueller", email="amueller@microsoft.com"},
@@ -12,7 +12,7 @@ authors = [
 {name="Katharina Eggensperger"},
 {name="Frank Hutter"},
 ]
-description = "Implementation of the MotherNet algorighm"
+description = "Tabular In-Context learning based on TabPFN"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies=[
@@ -47,4 +47,4 @@ full = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/Microsoft/mothernet"
+"Homepage" = "https://github.com/Microsoft/ticl"
