@@ -368,8 +368,8 @@ class ShiftClassifier(ClassifierMixin, BaseEstimator):
 
 
 class EnsembleMeta(ClassifierMixin, BaseEstimator):
-    def __init__(self, base_estimator, n_estimators=32, cat_features=None, random_state=None, power=True,
-                 label_shift=True, feature_shift=True, onehot=False, n_jobs=-1):
+    def __init__(self, base_estimator, n_estimators=8, cat_features=None, random_state=None, power=True,
+                 label_shift=True, feature_shift=True, onehot=True, n_jobs=-1):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.random_state = random_state
