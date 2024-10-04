@@ -231,7 +231,7 @@ class MotherNetClassifier(ClassifierMixin, BaseEstimator):
         self.config = config
 
         if path is None and model is None:
-            model_string = "mn_d2048_H4096_L2_W32_P512_1_gpu_warm_08_25_2023_21_46_25_epoch_3940_no_optimizer.pickle"
+            model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_3970.pickle"
             path = get_mn_model(model_string)
         self.path = path
 

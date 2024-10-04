@@ -56,10 +56,10 @@ def test_mothernet_no_model_passed():
     assert classifier.score(X_test, y_test) > 0.9
 
 
-def test_mothernet_jan_2024():
+def test_mothernet_march_2024():
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    model_string = "mn_P512_SFalse_L2_1_gpu_01_24_2024_00_31_59_epoch_3950.cpkt"
+    model_string = "mn_Dclass_average_03_25_2024_17_14_32_epoch_3970.cpkt"
     model_path = get_mn_model(model_string)
     classifier = MotherNetClassifier(device='cpu', path=model_path)
     classifier.fit(X_train, y_train)
