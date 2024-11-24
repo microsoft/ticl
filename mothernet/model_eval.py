@@ -28,6 +28,7 @@ parser.add_argument('--overwrite', action='store_true', default = False)
 parser.add_argument('--max_features', type = int, default = 5000)
 parser.add_argument('--n_samples', type = int, default = 1000000)
 parser.add_argument('--n_jobs', type = int, default = 1)
+
 args = parser.parse_args()
 
 if args.datasets == 'large':
@@ -68,6 +69,7 @@ device_dict = {
     'tabfast': 'cuda',
     'tabsmall': 'cuda',
     'tabflex': 'cuda',
+    'tabpfn_3000': 'cuda',
 }
 
 clf_dict = {}
@@ -88,19 +90,29 @@ if args.model in ['tabflex', 'tabsmall', 'tabfast']:
         N_ensemble_configurations=3,
         dimension_reduction = 'random_proj',
     )
-elif 'tabpfn' == args.model:
+elif args.model in ['tabpfn', 'tabpfn_3000']:
     model_string = 'prior_diff_real_checkpoint_n_0'
     epoch = '100'
-    tabpfn = TabPFNClassifier(
-        device = device_dict.get(args.model, 'cpu'),
-        model_string = model_string,
-        epoch = epoch,
-        N_ensemble_configurations=3,
-    )
+
+    if args.model == 'tabpfn':
+        tabpfn = TabPFNClassifier(
+            device = device_dict.get(args.model, 'cpu'),
+            model_string = model_string,
+            epoch = epoch,
+            N_ensemble_configurations=3,
+        )
+    elif args.model == 'tabpfn_3000':
+        tabpfn = TabPFNClassifier(
+            device = device_dict.get(args.model, 'cpu'),
+            model_string = model_string,
+            epoch = epoch,
+            N_ensemble_configurations=3,
+            max_num_train_samples = 3000,
+        )
     clf_dict[args.model] = tabpfn
 
     
-
+print(device_dict.get(args.model, 'cpu'))
 results_baselines = [
     eval_on_datasets(
         'multiclass', 

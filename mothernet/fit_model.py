@@ -22,6 +22,8 @@ from argparse import Namespace
 
 import pandas as pd
 import pdb
+if torch.__version__ >= '2.5':
+    torch._dynamo.config.optimize_ddp = False
 
 def main(argv, extra_config=None):
     # extra config is used for testing purposes only

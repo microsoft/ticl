@@ -1,0 +1,36 @@
+[I 2024-09-24 00:10:04.743 ServerApp] Extension package jupyter_lsp took 0.1735s to import
+[I 2024-09-24 00:10:05.575 ServerApp] jupyter_lsp | extension was successfully linked.
+[I 2024-09-24 00:10:05.582 ServerApp] jupyter_server_terminals | extension was successfully linked.
+[I 2024-09-24 00:10:05.588 ServerApp] jupyterlab | extension was successfully linked.
+[I 2024-09-24 00:10:05.594 ServerApp] notebook | extension was successfully linked.
+[I 2024-09-24 00:10:07.268 ServerApp] notebook_shim | extension was successfully linked.
+[I 2024-09-24 00:10:07.413 ServerApp] notebook_shim | extension was successfully loaded.
+[I 2024-09-24 00:10:07.416 ServerApp] jupyter_lsp | extension was successfully loaded.
+[I 2024-09-24 00:10:07.417 ServerApp] jupyter_server_terminals | extension was successfully loaded.
+[I 2024-09-24 00:10:07.444 LabApp] JupyterLab extension loaded from /data/home/yuchenzeng/anaconda3/envs/linear_attention/lib/python3.10/site-packages/jupyterlab
+[I 2024-09-24 00:10:07.444 LabApp] JupyterLab application directory is /opt/hpcaas/.mounts/fs-0663e2d3c38211883/home/yuchenzeng/anaconda3/envs/linear_attention/share/jupyter/lab
+[I 2024-09-24 00:10:07.446 LabApp] Extension Manager is 'pypi'.
+[I 2024-09-24 00:10:07.476 ServerApp] jupyterlab | extension was successfully loaded.
+[I 2024-09-24 00:10:07.490 ServerApp] notebook | extension was successfully loaded.
+[I 2024-09-24 00:10:07.490 ServerApp] Serving notebooks from local directory: /opt/hpcaas/.mounts/fs-0663e2d3c38211883/home/yuchenzeng/tabflex/train_tabflex/mothernet/notebooks
+[I 2024-09-24 00:10:07.490 ServerApp] Jupyter Server 2.14.2 is running at:
+[I 2024-09-24 00:10:07.490 ServerApp] http://a100-st-p4de24xlarge-248:8992/tree?token=5418f4096aa3dff3df38c70c76fb3a17f346b32201b3cd77
+[I 2024-09-24 00:10:07.490 ServerApp]     http://127.0.0.1:8992/tree?token=5418f4096aa3dff3df38c70c76fb3a17f346b32201b3cd77
+[I 2024-09-24 00:10:07.490 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 2024-09-24 00:10:07.503 ServerApp] 
+    
+    To access the server, open this file in a browser:
+        file:///opt/hpcaas/.mounts/fs-0663e2d3c38211883/home/yuchenzeng/.local/share/jupyter/runtime/jpserver-2013081-open.html
+    Or copy and paste one of these URLs:
+        http://a100-st-p4de24xlarge-248:8992/tree?token=5418f4096aa3dff3df38c70c76fb3a17f346b32201b3cd77
+        http://127.0.0.1:8992/tree?token=5418f4096aa3dff3df38c70c76fb3a17f346b32201b3cd77
+[I 2024-09-24 00:10:09.278 ServerApp] Skipped non-installed server(s): bash-language-server, dockerfile-language-server-nodejs, javascript-typescript-langserver, jedi-language-server, julia-language-server, pyright, python-language-server, python-lsp-server, r-languageserver, sql-language-server, texlab, typescript-language-server, unified-language-server, vscode-css-languageserver-bin, vscode-html-languageserver-bin, vscode-json-languageserver-bin, yaml-language-server
+[W 2024-09-24 00:10:35.928 ServerApp] 404 GET /hub/api (@10.200.214.91) 65.22ms referer=None
+[I 2024-09-24 00:10:35.932 ServerApp] 302 GET / (@10.200.214.91) 0.33ms
+[I 2024-09-24 00:10:35.935 JupyterNotebookApp] 302 GET /tree? (@10.200.214.91) 0.41ms
+[I 2024-09-24 00:10:41.735 ServerApp] User 3f9fb7d7f1774d48b1bcb9fc5646cdec logged in.
+[I 2024-09-24 00:10:41.735 ServerApp] 302 POST /login? (3f9fb7d7f1774d48b1bcb9fc5646cdec@10.200.214.91) 0.87ms
+[W 2024-09-24 00:10:43.557 ServerApp] 404 GET /hub/api (@10.200.214.91) 1.15ms referer=None
+[W 2024-09-24 00:10:47.652 ServerApp] 404 GET /hub/api (@10.200.214.91) 0.90ms referer=None
+[I 2024-09-24 00:10:47.722 ServerApp] Kernel started: 1c67b2d4-1b80-4525-95da-a2021a9b0ccc
+[I 2024-09-24 00:10:49.693 ServerApp] Connecting to kernel 1c67b2d4-1b80-4525-95da-a2021a9b0ccc.

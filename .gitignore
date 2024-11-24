@@ -191,4 +191,5 @@ mlruns
 
 
 NVIDIA Linux x86 64 550.90.07.run
-datasets/
+**/datasets/
+**/submit/

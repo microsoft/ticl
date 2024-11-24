@@ -107,8 +107,11 @@ class MultiheadAttention(Module):
         dtype=None,
         attn_name='flash_attention', 
         feature_map = 'identity',
-        norm_output = False
-    ) -> None:
+        norm_output = False,
+        flex_attn_mode = 'noop',
+        flex_attn_softcap = 20,
+        flex_attn_sliding_window_size = 1024,
+        ) -> None:
         """
         attn_name: str, the name of the attention module to use. Default: 'flash_attention'.
                 Options:
@@ -168,6 +171,33 @@ class MultiheadAttention(Module):
 
         if attn_name == 'flash_attention':
             self.attn = scaled_dot_product_attention
+
+        elif attn_name == 'flex_attention':
+            from torch.nn.attention.flex_attention import flex_attention
+            from torch.nn.attention.flex_attention import create_block_mask
+            if flex_attn_mode == 'noop':
+                def score_mod(score, b, h, q_idx, kv_idx):
+                    return score
+                self.attn = lambda q, k, v: flex_attention(q, k, v, score_mod = score_mod)
+            elif flex_attn_mode == 'relative_position':
+                def score_mod(score, b, h, q_idx, kv_idx):
+                    return score + (q_idx - kv_idx)
+                self.attn = lambda q, k, v: flex_attention(q, k, v, score_mod = score_mod)
+            elif flex_attn_mode == 'soft_capping':
+                def score_mod(score, b, h, q_idx, kv_idx):
+                    score = score / flex_attn_softcap
+                    score = torch.tanh(score)
+                    score = score * flex_attn_softcap
+                    return score
+                self.attn = lambda q, k, v: flex_attention(q, k, v, score_mod = score_mod)
+            elif flex_attn_mode == 'sliding_window':
+                def sliding_window(b, h, q_idx, kv_idx):
+                    return torch.abs(q_idx - kv_idx) <= flex_attn_sliding_window_size
+                block_mask = create_block_mask(sliding_window, B=None, H=None, Q_LEN=flex_attn_sliding_window_size, KV_LEN=flex_attn_sliding_window_size, device='cuda')
+                self.attn = lambda q, k, v: flex_attention(q, k, v, block_mask = block_mask)
+            else:
+                raise ValueError(f"flex_attn_score_mod={flex_attn_mode} is not supported. Supported options: 'noop', 'relative_position', 'soft_capping', 'sliding_window'")
+            
         elif attn_name == 'flash_linear_attention':
             from fla.ops.linear_attn import chunk_linear_attn 
             from fla.ops.linear_attn.chunk import normalize_output
@@ -439,6 +469,7 @@ class MultiheadAttention(Module):
             else:
                 query, key, value = (x.transpose(1, 0) for x in (query, key, value))
 
+
         if not self._qkv_same_embed_dim:
             attn_output, attn_output_weights = multi_head_attention_forward(
                 query, key, value, self.embed_dim, self.num_heads,
@@ -471,6 +502,7 @@ class MultiheadAttention(Module):
                 attn = self.attn,
                 attn_name=self.attn_name,
             )
+        
         if self.batch_first and is_batched:
             return attn_output.transpose(1, 0), attn_output_weights
         else:
@@ -905,13 +937,16 @@ def multi_head_attention_forward(
         k = k.view(bsz, num_heads, src_len, head_dim)
         v = v.view(bsz, num_heads, src_len, head_dim)
 
-        # attn_output: (batch_size, num_heads, tgt_len, head_dim)
-        attn_output = attn(
-            q, k, v, 
-            attn_mask = attn_mask, 
-            dropout_p = dropout_p, 
-            is_causal = is_causal,
-        )
+        if attn_name == 'flex_attention':
+            attn_output = attn(q, k, v)
+        else:
+            # attn_output: (batch_size, num_heads, tgt_len, head_dim)
+            attn_output = attn(
+                q, k, v, 
+                attn_mask = attn_mask, 
+                dropout_p = dropout_p, 
+                is_causal = is_causal,
+            )
 
         # attn_output: (batch_size * tgt_len * num_heads, head_dim)
         attn_output = attn_output.permute(2, 0, 1, 3).contiguous().view(bsz * tgt_len, embed_dim)

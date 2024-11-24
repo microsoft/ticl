@@ -40,6 +40,9 @@ def get_transformer_config():
         'tabpfn_zero_weights': True,
         'model': 'standard_attention',
         'causal_mask': False,
+        'flex_attn_mode': 'noop',
+        'flex_attn_softcap': 20,
+        'flex_attn_sliding_window_size': 1024,
     }
     return {'transformer': transformer}
 

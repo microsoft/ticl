@@ -76,6 +76,9 @@ class TransformerEncoderLayer(Module):
         attn_name = 'default',
         feature_map='identity',
         norm_output = False,
+        flex_attn_mode = 'noop',
+        flex_attn_softcap = 20,
+        flex_attn_sliding_window_size = 1024,
     ) -> None:
         # batch_first is set to True for using flash attention II
         # check the details of when flash attention can be triggered here: https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html
@@ -96,6 +99,9 @@ class TransformerEncoderLayer(Module):
                 attn_name = attn_name,
                 feature_map = feature_map,
                 norm_output = norm_output,
+                flex_attn_mode = flex_attn_mode,
+                flex_attn_softcap = flex_attn_softcap,
+                flex_attn_sliding_window_size = flex_attn_sliding_window_size,
                 **factory_kwargs,
             )
         else: 

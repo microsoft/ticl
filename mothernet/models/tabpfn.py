@@ -11,10 +11,34 @@ from mothernet.models.encoders import Linear
 
 
 class TabPFN(nn.Module):
-    def __init__(self, *, n_out, emsize, nhead, nhid_factor, nlayers, n_features, causal_mask=False, dropout=0.0,  y_encoder_layer=None,
-                 decoder=None, input_normalization=False, init_method=None, pre_norm=False,
-                 activation='gelu', recompute_attn=False, classification_task=True,
-                 all_layers_same_init=False, efficient_eval_masking=True, y_encoder=None, tabpfn_zero_weights=False, model = "standard_attention"):
+    def __init__(
+        self, 
+        *, 
+        n_out, 
+        emsize, 
+        nhead, 
+        nhid_factor, 
+        nlayers, 
+        n_features, 
+        causal_mask=False, 
+        dropout=0.0, 
+        y_encoder_layer=None,
+        decoder=None, 
+        input_normalization=False, 
+        init_method=None, 
+        pre_norm=False,
+        activation='gelu', 
+        recompute_attn=False, 
+        classification_task=True,
+        all_layers_same_init=False, 
+        efficient_eval_masking=True, 
+        y_encoder=None, 
+        tabpfn_zero_weights=False, 
+        model = "standard_attention",
+        flex_attn_mode = 'noop',
+        flex_attn_softcap = 20,
+        flex_attn_sliding_window_size = 1024,
+    ):
         super().__init__()
         self.classification_task = classification_task
         self.y_encoder = y_encoder_layer
@@ -30,6 +54,10 @@ class TabPFN(nn.Module):
             activation=activation,
             pre_norm=pre_norm, 
             recompute_attn=recompute_attn,
+            attn_name = model,
+            flex_attn_mode = flex_attn_mode,
+            flex_attn_softcap = flex_attn_softcap,
+            flex_attn_sliding_window_size = flex_attn_sliding_window_size,
         )
         self.transformer_encoder = TransformerEncoder(encoder_layer_creator(), nlayers)\
             if all_layers_same_init else TransformerEncoderDiffInit(encoder_layer_creator, nlayers)

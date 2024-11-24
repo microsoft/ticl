@@ -39,6 +39,9 @@ class SSMTabPFN(nn.Module):
         norm_output = False,
         feature_map = 'identity',
         ssm_cfg={},
+        flex_attn_score_mod = 'noop',
+        flex_attn_softcap = 20,
+        flex_attn_sliding_window_size = 1024,
     ):
         super().__init__()
         self.classification_task = classification_task
