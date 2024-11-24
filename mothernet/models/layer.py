@@ -88,7 +88,7 @@ class TransformerEncoderLayer(Module):
 
         if attn_name == 'fla': attn_name = 'flash_linear_attention'
 
-        if torch.__version__ >= '2.2.0'
+        if torch.__version__ >= '2.2.0':
             if attn_name == "standard_attention":
                 print(f"You set attn_name to {attn_name}, but torch version is >= 2.2.0, so it will be updated to flash_attention automatically")
                 attn_name = 'flash_attention'
