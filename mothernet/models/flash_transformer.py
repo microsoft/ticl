@@ -958,6 +958,8 @@ def multi_head_attention_forward(
 
         if attn_name == 'flex_attention':
             attn_output = attn(q, k, v)
+        elif attn_name == 'naive_linear_attention':
+            attn_output = attn(q, k, v)
         else:
             # attn_output: (batch_size, num_heads, tgt_len, head_dim)
             attn_output = attn(
