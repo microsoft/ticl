@@ -6,7 +6,7 @@ from torch.nn.modules.transformer import (Dropout, LayerNorm, Linear, Module, Op
                                           _get_activation_fn)
 from torch.utils.checkpoint import checkpoint
 
-import torch
+import torch, pdb
 from torch.nn import Dropout, LayerNorm, Linear, Module
 
 class BiAttentionEncoderLayer(Module):
@@ -73,7 +73,7 @@ class TransformerEncoderLayer(Module):
         device=None, 
         dtype=None, 
         recompute_attn=False,
-        attn_name = 'default',
+        attn_name = 'standard_attention',
         feature_map='identity',
         norm_output = False,
         flex_attn_mode = 'noop',
@@ -88,8 +88,8 @@ class TransformerEncoderLayer(Module):
 
         if attn_name == 'fla': attn_name = 'flash_linear_attention'
 
-        if (torch.__version__ >= '2.2.0') or (not attn_name in ['default', 'flash_attention']):
-            if attn_name == 'default': attn_name = 'flash_attention'
+        if (torch.__version__ >= '2.2.0') or (not attn_name in ['standard_attention', 'flash_attention']):
+            if attn_name == 'standard_attention': attn_name = 'flash_attention'
             from mothernet.models.flash_transformer import MultiheadAttention
             self.self_attn = MultiheadAttention(
                 d_model, 

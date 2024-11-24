@@ -171,6 +171,25 @@ class MultiheadAttention(Module):
 
         if attn_name == 'flash_attention':
             self.attn = scaled_dot_product_attention
+        elif attn_name == 'naive_linear_attention':
+            def naive_linear_product(q, k, v):
+                scale = q.size(-1) ** -0.5
+    
+                # kv = torch.matmul(k.transpose(2, 3), v)
+                # o = torch.matmul(q, kv) * scale
+                
+                kv = torch.einsum("bhnd,bhnm->bhdm", k, v)
+                # attention output o: (batch_size, seq_len_q, num_head, head_dim_v)
+                o = torch.einsum("bhld,bhdm->bhlm", q, kv) * scale
+                
+                # o = torch.einsum('bhnd,bhnm,bhld->bhlm', k, v, q) * scale
+
+                # When you call contiguous(), it actually makes a copy of the tensor such that 
+                # the order of its elements in memory is the same as if it had been created 
+                # from scratch with the same data.
+                # If o is not contiguous, it creates a new contiguous tensor, temporarily doubling the memory of o.
+                return o.contiguous()
+            self.attn = naive_linear_product
 
         elif attn_name == 'flex_attention':
             from torch.nn.attention.flex_attention import flex_attention

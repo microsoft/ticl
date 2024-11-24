@@ -116,7 +116,7 @@ def argparser_from_config(parser, description="Train Mothernet"):
         transformer.add_argument('--tabpfn-zero-weights', help='Whether to use zeroing of weights from tabpfn code.', type=str2bool)
         transformer.add_argument('--pre-norm', action='store_true')
         transformer.add_argument('--classification-task', type=str2bool, help='Whether to use classification or regression.')
-        transformer.add_argument('--model', type = str, choices = ['standard_attention', 'flash_attention', 'flex_attention'], help = 'which ssm model to use')
+        transformer.add_argument('--model', type = str, choices = ['standard_attention', 'flash_attention', 'flex_attention', 'naive_linear_attention'], help = 'which ssm model to use')
         transformer.add_argument('--causal-mask', help='Whether to use causal attention', action='store_true', default=False)
         transformer.add_argument('--flex-attn-mode', type = str, choices = ['noop', 'relative_position', 'soft_capping', 'sliding_window'], help = 'which score mode to use for flex attention')
         transformer.add_argument('--flex-attn-softcap', type = int, help = 'softcap for flex attention')
