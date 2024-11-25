@@ -8,6 +8,7 @@ import pandas as pd
 from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
 import torch.nn as nn
+from fast_transformers.masking import FullMask
 
 # Parameters
 n_layers = 2
@@ -16,9 +17,13 @@ embed_dim = 32
 n_hid = 128
 vocab_size = 10
 device = 'cuda'
-seq_lengths = [2]
+seq_lengths = [30]
 batch_size = 1024
-kv_pairs = torch.randint(0, vocab_size // 2, (batch_size, vocab_size), device=device)
+kv_pairs = torch.randint(0, vocab_size // 2, (vocab_size,), device=device)
+kv_pairs = kv_pairs.unsqueeze(0).expand(batch_size, -1)
+# Repeat kv_pairs for batch_size to create lookup table
+# kv_pairs = torch.randint(0, vocab_size // 2, (batch_size, vocab_size), device=device)
+
 
 # Transformer builder
 torch.manual_seed(0)
@@ -28,7 +33,7 @@ builder = TransformerEncoderBuilder.from_kwargs(
     query_dimensions=embed_dim // num_heads,
     value_dimensions=embed_dim // num_heads,
     feed_forward_dimensions=n_hid,
-    dropout=0.5
+    dropout=0.1
 )
 
 # Positional Encoding Class
@@ -62,7 +67,8 @@ class AssociativeRecallModel(nn.Module):
     def forward(self, input_seq):
         embedded = self.embedding(input_seq)  # Shape [batch_size, seq_len, embed_dim]
         embedded = self.pos_encoder(embedded)
-        output = self.transformer_encoder(embedded)  # Shape [batch_size, seq_len, embed_dim]
+        attention_mask = FullMask(seq_len*2 + 1)
+        output = self.transformer_encoder(embedded, attn_mask=attention_mask)  # Shape [batch_size, seq_len, embed_dim]
         output = self.fc_out(output[:, -1, :])  # Use the output corresponding to the query
         return output
 
@@ -70,6 +76,7 @@ class AssociativeRecallModel(nn.Module):
 def generate_associative_recall_batch(seq_len=10, batch_size=32, vocab_size=10, device='cuda'):
     """Generate a batch of associative recall training data with discrete tokens."""
     batch_indices = torch.arange(batch_size, device=device)
+    # kv_pairs = torch.randint(0, vocab_size // 2, (batch_size, vocab_size), device=device)
     
     keys = torch.randint(0, vocab_size // 2, (batch_size, seq_len), device=device)
     values = torch.gather(kv_pairs, 1, keys)
@@ -91,9 +98,9 @@ def generate_associative_recall_batch(seq_len=10, batch_size=32, vocab_size=10, 
     return input_seq, targets
 
 # Training Function
-def train_model(model, seq_len, vocab_size=10, n_epochs=500, batch_size=1024, device='cuda'):
+def train_model(model, seq_len, vocab_size=10, n_epochs=50, batch_size=1024, device='cuda'):
     """Train model on associative recall classification task."""
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=0.01)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9)
 
     criterion = torch.nn.CrossEntropyLoss()
