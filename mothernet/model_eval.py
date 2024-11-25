@@ -70,6 +70,7 @@ device_dict = {
     'tabsmall': 'cuda',
     'tabflex': 'cuda',
     'tabpfn_3000': 'cuda',
+    'tablinear': 'cuda',
 }
 
 clf_dict = {}
