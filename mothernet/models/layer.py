@@ -88,8 +88,10 @@ class TransformerEncoderLayer(Module):
 
         if attn_name == 'fla': attn_name = 'flash_linear_attention'
 
-        if (torch.__version__ >= '2.2.0') or (not attn_name in ['standard_attention', 'flash_attention']):
-            if attn_name == 'standard_attention': attn_name = 'flash_attention'
+        if torch.__version__ >= '2.2.0':
+            if attn_name == "standard_attention":
+                print(f"You set attn_name to {attn_name}, but torch version is >= 2.2.0, so it will be updated to flash_attention automatically")
+                attn_name = 'flash_attention'
             from mothernet.models.flash_transformer import MultiheadAttention
             self.self_attn = MultiheadAttention(
                 d_model, 
@@ -105,7 +107,9 @@ class TransformerEncoderLayer(Module):
                 **factory_kwargs,
             )
         else: 
-            # cannot use 'flash_attention'
+            if attn_name in ["flash_attention", "naive_linear_attention", "flash_linear_attention", "flex_attention"]:
+                raise ValueError(f"You set attn_name to {attn_name}, but torch version is < 2.2.0, and it doesn't support {attn_name}. Please upgrade your torch version.")
+            
             from torch.nn import MultiheadAttention
             self.self_attn = MultiheadAttention(
                 d_model, 
