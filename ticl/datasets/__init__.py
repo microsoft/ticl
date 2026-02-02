@@ -3,7 +3,7 @@ import openml
 import pandas as pd
 import torch
 from scipy.special import expit as sigmoid
-from typing import Optional
+from typing import Optional, Union
 
 
 def linear_correlated_logistic_regression(
@@ -39,7 +39,7 @@ def linear_correlated_step_function(
         n_features: int,
         n_tasks: int,
         n_datapoints: int,
-        seed: int | None = 42,
+        seed: Optional[int] = 42,
         sampling_correlation: float = 0.0,
         weights: np.array = None,
         plot: bool = False,
@@ -78,7 +78,7 @@ def linear_correlated_step_function(
     return X, y
 
 
-def _encode_if_category(column: pd.Series | np.ndarray) -> pd.Series | np.ndarray:
+def _encode_if_category(column: Union[pd.Series, np.ndarray]) -> Union[pd.Series, np.ndarray]:
     # copied from old OpenML Python adapter to maintain comparison with tabpfn
     if column.dtype.name == "category":
         column = column.cat.codes.astype(np.float32)
