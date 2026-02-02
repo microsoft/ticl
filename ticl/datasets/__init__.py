@@ -3,13 +3,14 @@ import openml
 import pandas as pd
 import torch
 from scipy.special import expit as sigmoid
+from typing import Optional
 
 
 def linear_correlated_logistic_regression(
         n_features: int,
         n_tasks: int,
         n_datapoints: int,
-        seed: int | None = 42,
+        seed: Optional[int] = 42, # Compatibility with older versions
         sampling_correlation: float = 0.0,
         weights: np.array = None,
         *args,
