@@ -97,7 +97,7 @@ def main(argv, extra_config=None):
     model_state, optimizer_state, scheduler = None, None, None
     if warm_start_weights is not None:
         model_state, old_optimizer_state, old_scheduler, old_config = torch.load(
-            warm_start_weights, map_location='cpu')
+            warm_start_weights, map_location='cpu', weights_only=False)
         module_prefix = 'module.'
         model_state = {k.replace(module_prefix, ''): v for k, v in model_state.items()}
         if args.orchestration.continue_run:
