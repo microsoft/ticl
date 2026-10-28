@@ -27,6 +27,6 @@ jobs:
       - run: |
           echo "Activating Conda environment..."
           source $HOME/miniconda/bin/activate
-          conda activate mothernet
+          conda activate ticl
           echo "Running tests..."
-          pytest -sv mothernet/tests/
+          pytest -sv ticl/tests/
